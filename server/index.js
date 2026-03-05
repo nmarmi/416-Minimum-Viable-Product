@@ -32,7 +32,7 @@ const db = require('./db');
         console.log("db initialized");
 
         app.listen(PORT, () => 
-            console.log(`Playlister Server running on port ${PORT}`)
+            console.log(`DraftIQ Server running on port ${PORT}`)
         );
     } catch (err) {
         console.error("Failed to initialize database:", err);
