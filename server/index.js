@@ -19,6 +19,10 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }))
 app.use(cookieParser())
 
+// setup routes as middleware
+const authRouter = require('./routes/auth-router')
+app.use('/auth', authRouter)
+
 // init database
 const db = require('./db');
 
