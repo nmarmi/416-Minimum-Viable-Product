@@ -8,6 +8,7 @@ class MongoDBManager extends DatabaseManager {
             .connect(process.env.MONGODB_CONNECT, { useNewUrlParser: true })
             .catch(e => {
                 console.error('MongoDB Connection error', e.message)
+                return;
             })
         console.log("MongoDB Connected")
     }
