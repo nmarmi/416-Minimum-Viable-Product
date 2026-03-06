@@ -4,13 +4,23 @@ const User = require("../../models/user-model.js");
 
 class MongoDBManager extends DatabaseManager {
     async init() {
-        await mongoose
-            .connect(process.env.MONGODB_CONNECT, { useNewUrlParser: true })
-            .catch(e => {
-                console.error('MongoDB Connection error', e.message)
-                return;
-            })
-        console.log("MongoDB Connected")
+        mongoose.set("bufferCommands", false);
+
+        const mongoUri = process.env.MONGODB_CONNECT;
+        if (!mongoUri) {
+            throw new Error("Missing MONGODB_CONNECT environment variable.");
+        }
+
+        try {
+            await mongoose.connect(mongoUri, {
+                useNewUrlParser: true,
+                serverSelectionTimeoutMS: 5000
+            });
+            console.log("MongoDB Connected");
+        } catch (e) {
+            console.error("MongoDB Connection error", e.message);
+            throw e;
+        }
     }
     
     

@@ -2,6 +2,16 @@ const auth = require('../auth')
 const db = require("../db")
 const bcrypt = require('bcryptjs')
 
+const getCookieOptions = (overrides = {}) => {
+    const isProduction = process.env.NODE_ENV === "production";
+    return {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        ...overrides
+    };
+};
+
 getLoggedIn = async (req, res) => {
     try {
         let userId = auth.verifyUser(req);
@@ -67,11 +77,7 @@ loginUser = async (req, res) => {
         const token = auth.signToken(existingUser._id);
         console.log(token);
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: true
-        }).status(200).json({
+        res.cookie("token", token, getCookieOptions()).status(200).json({
             success: true,
             user: {
                 _id: existingUser._id,
@@ -82,18 +88,18 @@ loginUser = async (req, res) => {
         })
 
     } catch (err) {
-        console.error(err);
-        res.status(500).send();
+        console.error("loginUser error:", err);
+        res.status(500).json({
+            success: false,
+            errorMessage: "Unable to login right now. Check server config and database connection."
+        });
     }
 }
 
 logoutUser = async (req, res) => {
-    res.cookie("token", "", {
-        httpOnly: true,
-        expires: new Date(0),
-        secure: true,
-        sameSite: "none"
-    }).send();
+    res.cookie("token", "", getCookieOptions({
+        expires: new Date(0)
+    })).send();
 }
 
 updateUser = async (req, res) => {
@@ -188,11 +194,7 @@ registerUser = async (req, res) => {
         const token = auth.signToken(savedUser._id);
         console.log("token:" + token);
 
-        await res.cookie("token", token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none"
-        }).status(200).json({
+        await res.cookie("token", token, getCookieOptions()).status(200).json({
             success: true,
             user: {
                 _id: savedUser._id,
@@ -205,8 +207,19 @@ registerUser = async (req, res) => {
         console.log("token sent");
 
     } catch (err) {
-        console.error(err);
-        res.status(500).send();
+        console.error("registerUser error:", err);
+
+        if (err && err.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                errorMessage: "An account with this email address already exists."
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            errorMessage: "Unable to create account right now. Check server config and database connection."
+        });
     }
 }
 

@@ -51,7 +51,7 @@ export default function RegisterScreen() {
                         className="login-input"
                     />
 
-                    <p className="password-hint">Must be 8+ characters with at least one number and special character</p>
+                    <p className="password-hint">Must be 8+ characters with at least one number</p>
 
                     <button className="login-submit-btn" type="submit">
                         Create

@@ -1,7 +1,19 @@
 const jwt = require("jsonwebtoken")
 
 function authManager() {
-    verify = (req, res, next) => {
+    const getJwtSecret = () => {
+        if (process.env.JWT_SECRET) {
+            return process.env.JWT_SECRET;
+        }
+
+        if (process.env.NODE_ENV !== "production") {
+            return "local-dev-jwt-secret";
+        }
+
+        throw new Error("Missing JWT_SECRET environment variable.");
+    };
+
+    const verify = (req, res, next) => {
         console.log("req: " + req);
         console.log("next: " + next);
         console.log("Who called verify?");
@@ -15,7 +27,7 @@ function authManager() {
                 })
             }
 
-            const verified = jwt.verify(token, process.env.JWT_SECRET)
+            const verified = jwt.verify(token, getJwtSecret())
             console.log("verified.userId: " + verified.userId);
             req.userId = verified.userId;
 
@@ -30,27 +42,31 @@ function authManager() {
         }
     }
 
-    verifyUser = (req) => {
+    const verifyUser = (req) => {
         try {
             const token = req.cookies.token;
             if (!token) {
                 return null;
             }
 
-            const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+            const decodedToken = jwt.verify(token, getJwtSecret());
             return decodedToken.userId;
         } catch (err) {
             return null;
         }
     }
 
-    signToken = (userId) => {
+    const signToken = (userId) => {
         return jwt.sign({
             userId: userId
-        }, process.env.JWT_SECRET);
+        }, getJwtSecret());
     }
 
-    return this;
+    return {
+        verify,
+        verifyUser,
+        signToken
+    };
 }
 
 const auth = authManager();
