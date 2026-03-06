@@ -3,28 +3,47 @@ import { useHistory } from 'react-router-dom';
 import authRequestSender from './requests';
 
 const AuthContext = createContext();
-const ROLE_KEY = "draftiq_user_role";
+const ROLES_KEY = "draftiq_user_roles";
 
-const readStoredRole = () => {
+const readRoleMap = () => {
     if (typeof window === "undefined") return null;
-    const role = window.localStorage.getItem(ROLE_KEY);
+    try {
+        const raw = window.localStorage.getItem(ROLES_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (err) {
+        return {};
+    }
+};
+
+const readStoredRoleForUser = (userId) => {
+    if (!userId) return null;
+    const roleMap = readRoleMap();
+    const role = roleMap[userId];
     return role === "player" || role === "commissioner" ? role : null;
 };
 
-const writeStoredRole = (role) => {
+const writeStoredRoleForUser = (userId, role) => {
     if (typeof window === "undefined") return;
-    if (!role) {
-        window.localStorage.removeItem(ROLE_KEY);
+    if (!userId) {
         return;
     }
-    window.localStorage.setItem(ROLE_KEY, role);
+
+    const roleMap = readRoleMap();
+    if (!role) {
+        delete roleMap[userId];
+    } else {
+        roleMap[userId] = role;
+    }
+    window.localStorage.setItem(ROLES_KEY, JSON.stringify(roleMap));
 };
 
 function AuthContextProvider(props) {
     const history = useHistory();
     const [authState, setAuthState] = useState({
         user: null,
-        role: readStoredRole(),
+        role: null,
         loggedIn: false,
         loading: true,
         errorMessage: null
@@ -40,22 +59,26 @@ function AuthContextProvider(props) {
     const getLoggedIn = async () => {
         const response = await authRequestSender.getLoggedIn();
         const loggedIn = response.status === 200 && !!response.data.loggedIn;
-        const storedRole = readStoredRole();
+        const user = loggedIn ? response.data.user : null;
+        const storedRole = readStoredRoleForUser(user?._id);
 
         setAuthState({
-            user: loggedIn ? response.data.user : null,
+            user,
             role: loggedIn ? storedRole : null,
             loggedIn,
             loading: false,
             errorMessage: null
         });
+        if (loggedIn && storedRole) {
+            console.log(`user type: ${storedRole}`);
+        }
     };
 
     const loginUser = async (email, password) => {
         const response = await authRequestSender.loginUser(email, password);
 
         if (response.status === 200) {
-            const role = readStoredRole() || "player";
+            const role = readStoredRoleForUser(response.data.user?._id) || "player";
             setAuthState({
                 user: response.data.user,
                 role,
@@ -63,6 +86,7 @@ function AuthContextProvider(props) {
                 loading: false,
                 errorMessage: null
             });
+            console.log(`user type: ${role}`);
             history.push(role === "commissioner" ? "/commissioner-home" : "/player-home");
             return;
         }
@@ -82,15 +106,15 @@ function AuthContextProvider(props) {
         );
 
         if (response.status === 200) {
+            const registeredUser = response.data.user;
             setAuthState({
-                user: response.data.user,
+                user: registeredUser,
                 role: null,
                 loggedIn: true,
                 loading: false,
                 errorMessage: null
             });
-            writeStoredRole(null);
-            return { success: true };
+            return { success: true, userId: registeredUser?._id };
         }
 
         setAuthState((prev) => ({
@@ -100,16 +124,18 @@ function AuthContextProvider(props) {
         return { success: false };
     };
 
-    const setUserRole = (role) => {
+    const setUserRole = (role, userId) => {
         if (role !== "player" && role !== "commissioner") {
             return;
         }
 
-        writeStoredRole(role);
+        const targetUserId = userId || authState.user?._id;
+        writeStoredRoleForUser(targetUserId, role);
         setAuthState((prev) => ({
             ...prev,
             role
         }));
+        console.log(`user type: ${role}`);
 
         history.push(role === "commissioner" ? "/commissioner-home" : "/player-home");
     };
@@ -127,7 +153,6 @@ function AuthContextProvider(props) {
             loading: false,
             errorMessage: null
         });
-        writeStoredRole(null);
         history.push("/");
     };
 

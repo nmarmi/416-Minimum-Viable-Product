@@ -7,6 +7,7 @@ import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 export default function RegisterScreen() {
     const { auth } = useContext(AuthContext);
     const [showRoleModal, setShowRoleModal] = useState(false);
+    const [newUserId, setNewUserId] = useState(null);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -19,13 +20,14 @@ export default function RegisterScreen() {
             password
         );
         if (result?.success) {
+            setNewUserId(result.userId || null);
             setShowRoleModal(true);
         }
     };
 
     const handleRoleChoice = (role) => {
         setShowRoleModal(false);
-        auth.setUserRole(role);
+        auth.setUserRole(role, newUserId);
     };
 
     return (
