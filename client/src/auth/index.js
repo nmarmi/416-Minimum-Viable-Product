@@ -3,11 +3,28 @@ import { useHistory } from 'react-router-dom';
 import authRequestSender from './requests';
 
 const AuthContext = createContext();
+const ROLE_KEY = "draftiq_user_role";
+
+const readStoredRole = () => {
+    if (typeof window === "undefined") return null;
+    const role = window.localStorage.getItem(ROLE_KEY);
+    return role === "player" || role === "commissioner" ? role : null;
+};
+
+const writeStoredRole = (role) => {
+    if (typeof window === "undefined") return;
+    if (!role) {
+        window.localStorage.removeItem(ROLE_KEY);
+        return;
+    }
+    window.localStorage.setItem(ROLE_KEY, role);
+};
 
 function AuthContextProvider(props) {
     const history = useHistory();
     const [authState, setAuthState] = useState({
         user: null,
+        role: readStoredRole(),
         loggedIn: false,
         loading: true,
         errorMessage: null
@@ -23,9 +40,11 @@ function AuthContextProvider(props) {
     const getLoggedIn = async () => {
         const response = await authRequestSender.getLoggedIn();
         const loggedIn = response.status === 200 && !!response.data.loggedIn;
+        const storedRole = readStoredRole();
 
         setAuthState({
             user: loggedIn ? response.data.user : null,
+            role: loggedIn ? storedRole : null,
             loggedIn,
             loading: false,
             errorMessage: null
@@ -36,13 +55,15 @@ function AuthContextProvider(props) {
         const response = await authRequestSender.loginUser(email, password);
 
         if (response.status === 200) {
+            const role = readStoredRole() || "player";
             setAuthState({
                 user: response.data.user,
+                role,
                 loggedIn: true,
                 loading: false,
                 errorMessage: null
             });
-            history.push("/");
+            history.push(role === "commissioner" ? "/commissioner-home" : "/player-home");
             return;
         }
 
@@ -63,18 +84,34 @@ function AuthContextProvider(props) {
         if (response.status === 200) {
             setAuthState({
                 user: response.data.user,
+                role: null,
                 loggedIn: true,
                 loading: false,
                 errorMessage: null
             });
-            history.push("/");
-            return;
+            writeStoredRole(null);
+            return { success: true };
         }
 
         setAuthState((prev) => ({
             ...prev,
             errorMessage: response.data.errorMessage || "Unable to create account."
         }));
+        return { success: false };
+    };
+
+    const setUserRole = (role) => {
+        if (role !== "player" && role !== "commissioner") {
+            return;
+        }
+
+        writeStoredRole(role);
+        setAuthState((prev) => ({
+            ...prev,
+            role
+        }));
+
+        history.push(role === "commissioner" ? "/commissioner-home" : "/player-home");
     };
 
     const logoutUser = async () => {
@@ -85,10 +122,12 @@ function AuthContextProvider(props) {
 
         setAuthState({
             user: null,
+            role: null,
             loggedIn: false,
             loading: false,
             errorMessage: null
         });
+        writeStoredRole(null);
         history.push("/");
     };
 
@@ -102,6 +141,7 @@ function AuthContextProvider(props) {
         getLoggedIn,
         loginUser,
         registerUser,
+        setUserRole,
         logoutUser
     };
 

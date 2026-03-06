@@ -1,4 +1,5 @@
 import { useContext } from 'react'
+import CommissionerHomeScreen from './CommissionerHomeScreen'
 import PlayerHomeScreen from './PlayerHomeScreen'
 import SplashScreen from './SplashScreen'
 import AuthContext from '../auth'
@@ -10,6 +11,9 @@ export default function HomeWrapper() {
     }
 
     if (auth.loggedIn) {
+        if (auth.role === "commissioner") {
+            return <CommissionerHomeScreen />
+        }
         return <PlayerHomeScreen />
     }
 

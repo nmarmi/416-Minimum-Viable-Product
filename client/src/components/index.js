@@ -4,11 +4,15 @@ import LoginScreen from './LoginScreen'
 import RegisterScreen from './RegisterScreen'
 import SplashScreen from './SplashScreen'
 import ForgotPasswordScreen from './ForgotPasswordScreen'
+import PlayerHomeScreen from './PlayerHomeScreen'
+import CommissionerHomeScreen from './CommissionerHomeScreen'
 export { 
     AppBanner,  
     HomeWrapper,
     LoginScreen,
     RegisterScreen,
     SplashScreen,
-    ForgotPasswordScreen
+    ForgotPasswordScreen,
+    PlayerHomeScreen,
+    CommissionerHomeScreen
  }

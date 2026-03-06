@@ -27,7 +27,7 @@ export default function AppBanner() {
             <nav className="app-banner-nav">
                 {auth.loggedIn ? (
                     <>
-                        <span className="player-pill">Player</span>
+                        <span className="player-pill">{auth.role === "commissioner" ? "Commissioner" : "Player"}</span>
                         <span className="avatar-pill" aria-label="profile">
                             <PersonOutlineRoundedIcon sx={{ fontSize: 30 }} />
                         </span>

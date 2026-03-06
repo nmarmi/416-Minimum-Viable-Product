@@ -98,7 +98,8 @@ body {
 
 .player-pill {
   height: 34px;
-  min-width: 86px;
+  min-width: 110px;
+  padding: 0 12px;
   border-radius: 11px;
   background: #f2f2f2;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.09);
@@ -466,6 +467,47 @@ body {
   margin-top: 22px;
 }
 
+.role-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(15, 23, 42, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.role-modal-card {
+  width: min(420px, 100%);
+  background: #f1f1f2;
+  border: 1px solid #d8d8d8;
+  border-radius: 16px;
+  padding: 22px 20px;
+  text-align: center;
+}
+
+.role-modal-card h3 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.role-modal-card p {
+  margin: 8px 0 16px;
+  color: #5c5c69;
+}
+
+.role-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.role-modal-actions .home-light-btn,
+.role-modal-actions .home-dark-btn {
+  height: 42px;
+}
+
 .app-home {
   min-height: calc(100vh - 62px);
   display: grid;
@@ -662,7 +704,8 @@ body {
 
   .player-pill {
     font-size: 16px;
-    min-width: 70px;
+    min-width: 88px;
+    padding: 0 8px;
     height: 30px;
   }
 
@@ -774,6 +817,15 @@ body {
 
   .register-terms {
     margin-top: 18px;
+  }
+
+  .role-modal-card h3 {
+    font-size: 23px;
+  }
+
+  .role-modal-card p {
+    margin-bottom: 12px;
+    font-size: 14px;
   }
 
   .app-home {
