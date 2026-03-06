@@ -6,7 +6,11 @@ export default function AppBanner() {
     const { auth } = useContext(AuthContext);
     const history = useHistory();
     const location = useLocation();
-    const inAuthRoute = location.pathname === '/login' || location.pathname === '/register';
+    const inAuthRoute = (
+        location.pathname === '/login' ||
+        location.pathname === '/register' ||
+        location.pathname === '/forgot-password'
+    );
 
     const handleLogout = async () => {
         await auth.logoutUser();

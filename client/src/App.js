@@ -4,6 +4,7 @@ import { BrowserRouter, Redirect, Route, Switch } from 'react-router-dom'
 import { AuthContextProvider } from './auth';
 import {
     AppBanner,
+    ForgotPasswordScreen,
     HomeWrapper,
     LoginScreen,
     RegisterScreen
@@ -19,6 +20,7 @@ const App = () => {
                         <Route path="/" exact component={HomeWrapper} />
                         <Route path="/login" exact component={LoginScreen} />
                         <Route path="/register" exact component={RegisterScreen} />
+                        <Route path="/forgot-password" exact component={ForgotPasswordScreen} />
                         <Redirect to="/" />
                     </Switch>
                 </div>

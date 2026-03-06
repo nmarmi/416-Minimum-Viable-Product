@@ -436,6 +436,38 @@ body {
   margin-top: 22px;
 }
 
+.forgot-card {
+  padding-top: 44px;
+}
+
+.forgot-icon-wrap {
+  width: 86px;
+  height: 86px;
+  margin: 8px auto 0;
+  display: grid;
+  place-items: center;
+}
+
+.forgot-heading {
+  margin-top: 8px;
+}
+
+.forgot-form {
+  margin-top: 10px;
+}
+
+.forgot-form .login-label {
+  margin-bottom: 8px;
+}
+
+.forgot-form .login-input {
+  margin-bottom: 24px;
+}
+
+.forgot-terms {
+  margin-top: 44px;
+}
+
 .action-link {
   border: 0;
   background: #2f3e74;
@@ -584,5 +616,30 @@ body {
 
   .register-terms {
     margin-top: 18px;
+  }
+
+  .forgot-card {
+    padding-top: 30px;
+  }
+
+  .forgot-icon-wrap {
+    width: 74px;
+    height: 74px;
+  }
+
+  .forgot-heading {
+    margin-top: 4px;
+  }
+
+  .forgot-form {
+    margin-top: 8px;
+  }
+
+  .forgot-form .login-input {
+    margin-bottom: 14px;
+  }
+
+  .forgot-terms {
+    margin-top: 24px;
   }
 }
