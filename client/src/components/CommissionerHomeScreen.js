@@ -230,41 +230,43 @@ const CommissionerHomeScreen = () => {
             </section>
 
             <section className="commissioner-right">
-                <h2 className="league-section-title">My Leagues</h2>
+    <h2 className="league-section-title">My Leagues</h2>
 
-                {leagues.length === 0 ? (
-                    <article className="league-display-card">
-                        <h3 className="league-display-name">No leagues yet</h3>
-                        <p className="league-display-details">Create your first league from the left panel.</p>
-                    </article>
-                ) : (
-                    leagues.map((league) => (
-                        <article key={league._id} className="league-display-card">
-                            <div className="league-display-top">
-                                <div>
-                                    <h3 className="league-display-name">{league.name}</h3>
-                                    <p className="league-display-subline">
-                                        {league.numberOfTeams || 12} Join Draft • {league.draftType || 'Auction Draft'}
-                                    </p>
-                                </div>
-                                <span className={`league-status ${league.isActive ? 'active' : 'inactive'}`}>
-                                    {league.isActive ? 'Active' : 'Inactive'}
-                                </span>
-                            </div>
+    <div className="league-scroll-area">
+        {leagues.length === 0 ? (
+            <article className="league-display-card">
+                <h3 className="league-display-name">No leagues yet</h3>
+                <p className="league-display-details">Create your first league from the left panel.</p>
+            </article>
+        ) : (
+            leagues.map((league) => (
+                <article key={league._id} className="league-display-card">
+                    <div className="league-display-top">
+                        <div>
+                            <h3 className="league-display-name">{league.name}</h3>
+                            <p className="league-display-subline">
+                                {league.numberOfTeams || 12} Join Draft • {league.draftType || 'Auction Draft'}
+                            </p>
+                        </div>
+                        <span className={`league-status ${league.isActive ? 'active' : 'inactive'}`}>
+                            {league.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
 
-                            <div className="league-display-meta">
-                                <p>{league.currentTeams || 0}/{league.numberOfTeams || 12} teams joined</p>
-                                <p>Season: {league.seasonYear || 'N/A'}</p>
-                                <p>Invite Code: {league.inviteCode}</p>
-                            </div>
+                    <div className="league-display-meta">
+                        <p>{league.currentTeams || 0}/{league.numberOfTeams || 12} teams joined</p>
+                        <p>Season: {league.seasonYear || 'N/A'}</p>
+                        <p>Invite Code: {league.inviteCode}</p>
+                    </div>
 
-                            <button type="button" className="dark-button full-width">
-                                Join Draft Room
-                            </button>
-                        </article>
-                    ))
-                )}
-            </section>
+                    <button type="button" className="dark-button full-width">
+                        Join Draft Room
+                    </button>
+                </article>
+            ))
+        )}
+    </div>
+</section>
         </main>
     );
 };

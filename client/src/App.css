@@ -1,3 +1,10 @@
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
 * {
   box-sizing: border-box;
 }
@@ -893,46 +900,70 @@ body {
 .commissioner-page {
     display: grid;
     grid-template-columns: 46% 54%;
-    min-height: calc(100vh - 85px);
+    height: calc(100vh - 85px);
     background: #dbe5fb;
+    overflow: hidden;
 }
 
 .commissioner-left {
-    padding: 36px 34px;
+    padding: 24px 24px 20px 24px;
     background: #dbe5fb;
+    height: 100%;
+    overflow: hidden;
 }
 
 .commissioner-right {
-    padding: 26px 42px;
+    padding: 20px 28px 20px 28px;
     background: #cfdcf7;
+    height: 100%;
+    overflow: hidden;
+}
+
+.league-scroll-area {
+    height: calc(100% - 60px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+}
+
+.league-section-title {
+    margin: 0 0 18px 0;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #111111;
+    position: sticky;
+    top: 0;
+    background: #cfdcf7;
+    padding-bottom: 10px;
+    z-index: 2;
 }
 
 .commissioner-card {
     background: #ffffff;
-    border-radius: 28px;
-    padding: 26px 24px;
-    margin-bottom: 28px;
+    border-radius: 24px;
+    padding: 20px 20px;
+    margin-bottom: 18px;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 .card-title {
-    margin: 0 0 12px 0;
-    font-size: 1.9rem;
+    margin: 0 0 10px 0;
+    font-size: 1.45rem;
     font-weight: 700;
     color: #111111;
 }
 
 .card-subtitle {
-    margin: 0 0 20px 0;
+    margin: 0 0 14px 0;
     color: #7d7d7d;
-    font-size: 0.98rem;
+    font-size: 0.9rem;
 }
 
 .form-label {
     display: block;
-    margin-bottom: 8px;
-    margin-top: 18px;
-    font-size: 0.95rem;
+    margin-bottom: 6px;
+    margin-top: 12px;
+    font-size: 0.9rem;
     font-weight: 600;
     color: #111111;
 }
@@ -944,11 +975,11 @@ body {
 .form-input,
 .form-select {
     width: 100%;
-    height: 46px;
+    height: 40px;
     border: 1px solid #d8d8d8;
-    border-radius: 12px;
-    padding: 0 14px;
-    font-size: 1rem;
+    border-radius: 10px;
+    padding: 0 12px;
+    font-size: 0.95rem;
     background: #ffffff;
     box-sizing: border-box;
     outline: none;
@@ -960,45 +991,41 @@ body {
 }
 
 .season-input {
-    max-width: 250px;
+    max-width: 220px;
 }
 
 .team-count-row {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
 }
 
 .teams-input {
-    max-width: 180px;
+    max-width: 150px;
 }
 
 .team-stepper {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     margin-top: 2px;
 }
 
 .stepper-btn {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border: none;
     border-radius: 50%;
     background: #f2f2f2;
-    font-size: 1.6rem;
+    font-size: 1.35rem;
     cursor: pointer;
-}
-
-.stepper-btn:hover {
-    background: #e4e4e4;
 }
 
 .double-select-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 26px;
-    margin-top: 14px;
-    margin-bottom: 26px;
+    gap: 18px;
+    margin-top: 10px;
+    margin-bottom: 18px;
 }
 
 .select-group {
@@ -1007,48 +1034,40 @@ body {
 }
 
 .dark-button {
-    height: 48px;
+    height: 42px;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #2a2a2a;
     color: #ffffff;
-    font-size: 1.05rem;
+    font-size: 0.98rem;
     cursor: pointer;
 }
 
-.dark-button:hover {
-    background: #1d1d1d;
-}
-
 .light-button {
-    height: 48px;
+    height: 42px;
     border: 1px solid #d9d9d9;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #ffffff;
     color: #111111;
-    font-size: 1.05rem;
+    font-size: 0.98rem;
     font-weight: 600;
     cursor: pointer;
 }
 
-.light-button:hover {
-    background: #f7f7f7;
-}
-
 .full-width {
     width: 100%;
-    margin-top: 22px;
+    margin-top: 16px;
 }
 
 .team-subtitle {
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: #6f6f7a;
-    margin-bottom: 22px;
+    margin-bottom: 16px;
 }
 
 .form-message {
-    margin-top: 14px;
-    font-size: 0.95rem;
+    margin-top: 10px;
+    font-size: 0.9rem;
     font-weight: 500;
 }
 
@@ -1060,18 +1079,11 @@ body {
     color: #2b8f47;
 }
 
-.league-section-title {
-    margin: 4px 0 26px 0;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #111111;
-}
-
 .league-display-card {
     background: #ffffff;
-    border-radius: 28px;
-    padding: 26px 28px;
-    margin-bottom: 28px;
+    border-radius: 24px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
     max-width: 640px;
 }
 
@@ -1079,25 +1091,25 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 18px;
+    gap: 14px;
 }
 
 .league-display-name {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.55rem;
     font-weight: 700;
     color: #111111;
 }
 
 .league-display-subline {
-    margin: 10px 0 18px 0;
-    font-size: 1.1rem;
+    margin: 8px 0 14px 0;
+    font-size: 0.98rem;
     color: #202020;
 }
 
 .league-display-meta p {
-    margin: 8px 0;
-    font-size: 1rem;
+    margin: 6px 0;
+    font-size: 0.95rem;
     color: #222222;
 }
 
@@ -1105,10 +1117,10 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 92px;
-    padding: 10px 16px;
+    min-width: 88px;
+    padding: 8px 14px;
     border-radius: 999px;
-    font-size: 0.96rem;
+    font-size: 0.9rem;
     font-weight: 600;
     border: 1px solid #e1e1e1;
     background: #ffffff;
@@ -1120,44 +1132,4 @@ body {
 
 .league-status.inactive {
     color: #d66b6b;
-}
-
-@media (max-width: 1100px) {
-    .commissioner-page {
-        grid-template-columns: 1fr;
-    }
-
-    .commissioner-right,
-    .commissioner-left {
-        padding: 24px;
-    }
-
-    .league-display-card {
-        max-width: 100%;
-    }
-}
-
-@media (max-width: 700px) {
-    .double-select-row {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-
-    .team-count-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .teams-input,
-    .season-input {
-        max-width: 100%;
-    }
-
-    .league-display-top {
-        flex-direction: column;
-    }
-
-    .league-display-name {
-        font-size: 1.5rem;
-    }
 }
