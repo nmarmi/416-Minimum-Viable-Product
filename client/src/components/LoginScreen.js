@@ -3,16 +3,6 @@ import { Link } from 'react-router-dom';
 import AuthContext from '../auth';
 import MUIErrorModal from './MUIErrorModal';
 
-import Avatar from '@mui/material/Avatar';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import CssBaseline from '@mui/material/CssBaseline';
-import Grid from '@mui/material/Grid';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import Paper from '@mui/material/Paper';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-
 export default function LoginScreen() {
     const { auth } = useContext(AuthContext);
 
@@ -26,66 +16,44 @@ export default function LoginScreen() {
     };
 
     return (
-        <Grid container component="main" sx={{ minHeight: 'calc(100vh - 64px)' }}>
-            <CssBaseline />
-            <Grid
-                item
-                xs={false}
-                md={7}
-                className="auth-side-panel"
-            />
-            <Grid item xs={12} md={5} component={Paper} elevation={4} square>
-                <Box
-                    sx={{
-                        my: 8,
-                        mx: 4,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                    }}
-                >
-                    <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
-                        <LockOutlinedIcon />
-                    </Avatar>
-                    <Typography component="h1" variant="h5">
-                        Sign in
-                    </Typography>
-                    <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 2, width: '100%' }}>
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            id="email"
-                            label="Email Address"
-                            name="email"
-                            autoComplete="email"
-                            autoFocus
-                        />
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            name="password"
-                            label="Password"
-                            type="password"
-                            id="password"
-                            autoComplete="current-password"
-                        />
-                        <Button
-                            type="submit"
-                            fullWidth
-                            variant="contained"
-                            sx={{ mt: 3, mb: 2 }}
-                        >
-                            Sign In
-                        </Button>
-                        <Typography variant="body2">
-                            Don&apos;t have an account? <Link to="/register">Sign up</Link>
-                        </Typography>
-                    </Box>
-                </Box>
-            </Grid>
+        <main className="login-screen">
+            <section className="login-card">
+                <h1 className="login-brand">DraftIQ</h1>
+                <h3 className="login-heading">Log into your account</h3>
+
+                <div className="auth-switch" role="tablist" aria-label="Authentication">
+                    <span className="auth-switch-item active">Login</span>
+                    <Link className="auth-switch-item" to="/register">Register</Link>
+                </div>
+
+                <form className="login-form" noValidate onSubmit={handleSubmit}>
+                    <label htmlFor="email" className="login-label">Email</label>
+                    <input id="email" name="email" type="email" autoComplete="email" required className="login-input" />
+
+                    <label htmlFor="password" className="login-label">Password</label>
+                    <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        className="login-input"
+                    />
+
+                    <button className="forgot-password" type="button">
+                        Forgot Password ?
+                    </button>
+
+                    <button className="login-submit-btn" type="submit">
+                        Sign In
+                    </button>
+                </form>
+
+                <p className="terms-copy">
+                    By clicking Sign In, you agree to our <span>Terms of Service</span> and <span>Privacy Policy</span>
+                </p>
+            </section>
             <MUIErrorModal />
-        </Grid>
+        </main>
     );
 }
