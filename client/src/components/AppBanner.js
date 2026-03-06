@@ -34,9 +34,7 @@ export default function AppBanner() {
                         <button className="link-button logout-icon-btn" type="button" onClick={handleLogout} aria-label="logout">
                             <LogoutRoundedIcon sx={{ fontSize: 24 }} />
                         </button>
-                        <button className="link-button action-link" type="button" onClick={handleLogout}>
-                            Logout
-                        </button>
+                        
                     </>
                 ) : (
                     <>

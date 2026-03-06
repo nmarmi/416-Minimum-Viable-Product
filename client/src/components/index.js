@@ -6,6 +6,7 @@ import SplashScreen from './SplashScreen'
 import ForgotPasswordScreen from './ForgotPasswordScreen'
 import PlayerHomeScreen from './PlayerHomeScreen'
 import CommissionerHomeScreen from './CommissionerHomeScreen'
+import CommissionerLeagueScreen from './CommissionerLeagueScreen'
 export { 
     AppBanner,  
     HomeWrapper,
@@ -14,5 +15,6 @@ export {
     SplashScreen,
     ForgotPasswordScreen,
     PlayerHomeScreen,
-    CommissionerHomeScreen
+    CommissionerHomeScreen,
+    CommissionerLeagueScreen
  }

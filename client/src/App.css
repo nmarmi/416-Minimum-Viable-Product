@@ -643,6 +643,36 @@ body {
   gap: 18px;
 }
 
+.commissioner-workspace-page {
+  min-height: calc(100vh - 62px);
+  padding: 24px 28px 34px;
+  background: #c2cfe9;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.commissioner-workspace-header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.commissioner-workspace-header h2 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.commissioner-workspace-header p {
+  margin: 4px 0 0;
+}
+
+.commissioner-workspace-grid {
+  display: grid;
+  gap: 16px;
+}
+
 .commissioner-home .home-card h2,
 .commissioner-home .home-card h3 {
   font-size: 28px;
@@ -1292,6 +1322,15 @@ body {
 
   .app-home {
     min-height: calc(100vh - 58px);
+    grid-template-columns: 1fr;
+  }
+
+  .commissioner-workspace-page {
+    min-height: calc(100vh - 58px);
+    padding: 14px;
+  }
+
+  .commissioner-workspace-header {
     grid-template-columns: 1fr;
   }
 

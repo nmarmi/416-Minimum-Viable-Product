@@ -5,6 +5,7 @@ import { AuthContextProvider } from './auth';
 import {
     AppBanner,
     CommissionerHomeScreen,
+    CommissionerLeagueScreen,
     ForgotPasswordScreen,
     HomeWrapper,
     LoginScreen,
@@ -25,6 +26,7 @@ const App = () => {
                         <Route path="/forgot-password" exact component={ForgotPasswordScreen} />
                         <Route path="/player-home" exact component={PlayerHomeScreen} />
                         <Route path="/commissioner-home" exact component={CommissionerHomeScreen} />
+                        <Route path="/commissioner-home/league/:leagueId" exact component={CommissionerLeagueScreen} />
                         <Redirect to="/" />
                     </Switch>
                 </div>
