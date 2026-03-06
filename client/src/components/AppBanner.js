@@ -12,25 +12,21 @@ export default function AppBanner() {
 
     return (
         <header className="app-banner">
-            <button
-                className="link-button brand"
-                type="button"
-                onClick={() => history.push('/')}
-            >
-                Auth Skeleton
+            <button className="link-button brand" type="button" onClick={() => history.push('/')}>
+                <span className="brand-mark"></span>
+                <span>DraftIQ</span>
             </button>
             <nav className="app-banner-nav">
                 {auth.loggedIn ? (
                     <>
                         <span className="user-name">{auth.user?.userName || "User"}</span>
-                        <button className="link-button" type="button" onClick={handleLogout}>
+                        <button className="link-button action-link" type="button" onClick={handleLogout}>
                             Logout
                         </button>
                     </>
                 ) : (
                     <>
-                        <Link className="link-button" to="/login">Login</Link>
-                        <Link className="link-button" to="/register">Sign Up</Link>
+                        <Link className="banner-cta-btn" to="/register">Get Started</Link>
                     </>
                 )}
             </nav>
