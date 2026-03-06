@@ -4,7 +4,7 @@
 
 body {
   margin: 0;
-  font-family: "Avenir Next", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Avenir Next";
   background: #dfe6f7;
   color: #0d1321;
 }
@@ -70,7 +70,7 @@ body {
 
 .banner-auth-btn {
   text-decoration: none;
-  font-family: "Avenir Next", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Avenir Next";
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -293,7 +293,7 @@ body {
 .login-heading {
   margin: 8px 0 0;
   text-align: center;
-  font-family: "Avenir Next", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Avenir Next";
   font-size: clamp(24px, 2.2vw, 38px);
   letter-spacing: -0.01em;
   font-weight: 700;
@@ -318,7 +318,7 @@ body {
   align-items: center;
   justify-content: center;
   color: #1f1f1f;
-  font-family: "Avenir Next", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Avenir Next";
   font-size: 15px;
   font-weight: 500;
   line-height: 1;
@@ -336,7 +336,7 @@ body {
 
 .login-label {
   display: block;
-  font-family: "Avenir Next", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Avenir Next";
   font-size: 20px;
   line-height: 1.1;
   font-weight: 500;
@@ -359,7 +359,7 @@ body {
   border: 0;
   background: transparent;
   color: #868686;
-  font-family: "Avenir Next", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Avenir Next";
   font-size: 16px;
   font-weight: 400;
   padding: 0;
@@ -374,7 +374,7 @@ body {
   background: #000;
   color: #fff;
   height: 42px;
-  font-family: "Avenir Next", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Avenir Next";
   font-size: 20px;
   font-weight: 500;
   line-height: 1;
@@ -386,13 +386,54 @@ body {
   max-width: 390px;
   text-align: center;
   color: #787878;
-  font-family: "Avenir Next", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Avenir Next";
   font-size: 17px;
   line-height: 1.35;
 }
 
 .terms-copy span {
   color: #1f1f1f;
+}
+
+.register-card {
+  padding-top: 30px;
+}
+
+.register-icon-wrap {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  margin: 8px auto 0;
+  background: #d7caef;
+  display: grid;
+  place-items: center;
+}
+
+.register-heading {
+  margin-top: 10px;
+}
+
+.register-subtitle {
+  margin: 6px 0 0;
+  text-align: center;
+  font-family: "Avenir Next";
+  font-size: 33px;
+  color: #222;
+}
+
+.register-form {
+  margin-top: 22px;
+}
+
+.password-hint {
+  margin: 2px 0 20px;
+  font-family: "Avenir Next";
+  font-size: 13px;
+  color: #878787;
+}
+
+.register-terms {
+  margin-top: 22px;
 }
 
 .action-link {
@@ -525,5 +566,23 @@ body {
   .terms-copy {
     margin-top: 34px;
     font-size: 14px;
+  }
+
+  .register-icon-wrap {
+    width: 72px;
+    height: 72px;
+  }
+
+  .register-subtitle {
+    font-size: 18px;
+  }
+
+  .password-hint {
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+
+  .register-terms {
+    margin-top: 18px;
   }
 }

@@ -2,16 +2,7 @@ import { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import AuthContext from '../auth';
 import MUIErrorModal from './MUIErrorModal';
-
-import Avatar from '@mui/material/Avatar';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Container from '@mui/material/Container';
-import CssBaseline from '@mui/material/CssBaseline';
-import Grid from '@mui/material/Grid';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
+import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 
 export default function RegisterScreen() {
     const { auth } = useContext(AuthContext);
@@ -19,90 +10,59 @@ export default function RegisterScreen() {
     const handleSubmit = async (event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        const password = formData.get('password');
         await auth.registerUser(
             formData.get('userName'),
             formData.get('email'),
-            formData.get('password'),
-            formData.get('passwordVerify')
+            password,
+            password
         );
     };
 
     return (
-        <Container component="main" maxWidth="sm" sx={{ py: 6 }}>
-            <CssBaseline />
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center'
-                }}
-            >
-                <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
-                    <LockOutlinedIcon />
-                </Avatar>
-                <Typography component="h1" variant="h5">
-                    Create account
-                </Typography>
-                <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3, width: '100%' }}>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <TextField
-                                autoComplete="name"
-                                name="userName"
-                                required
-                                fullWidth
-                                id="userName"
-                                label="User Name"
-                                autoFocus
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                required
-                                fullWidth
-                                id="email"
-                                label="Email Address"
-                                name="email"
-                                autoComplete="email"
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                required
-                                fullWidth
-                                name="password"
-                                label="Password"
-                                type="password"
-                                id="password"
-                                autoComplete="new-password"
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                required
-                                fullWidth
-                                name="passwordVerify"
-                                label="Confirm Password"
-                                type="password"
-                                id="passwordVerify"
-                                autoComplete="new-password"
-                            />
-                        </Grid>
-                    </Grid>
-                    <Button
-                        type="submit"
-                        fullWidth
-                        variant="contained"
-                        sx={{ mt: 3, mb: 2 }}
-                    >
-                        Sign Up
-                    </Button>
-                    <Typography variant="body2">
-                        Already have an account? <Link to="/login">Sign in</Link>
-                    </Typography>
-                </Box>
-            </Box>
+        <main className="login-screen">
+            <section className="login-card register-card">
+                <h1 className="login-brand">DraftIQ</h1>
+                <div className="register-icon-wrap">
+                    <PersonAddAltRoundedIcon sx={{ fontSize: 46, color: '#4f3d97' }} />
+                </div>
+                <h2 className="login-heading register-heading">Create an account</h2>
+                <p className="register-subtitle">Enter your email to sign up for this app</p>
+
+                <div className="auth-switch" role="tablist" aria-label="Authentication">
+                    <Link className="auth-switch-item" to="/login">Login</Link>
+                    <span className="auth-switch-item active">Register</span>
+                </div>
+
+                <form className="login-form register-form" noValidate onSubmit={handleSubmit}>
+                    <label htmlFor="email" className="login-label">Email</label>
+                    <input id="email" name="email" type="email" autoComplete="email" required className="login-input" />
+
+                    <label htmlFor="userName" className="login-label">Username</label>
+                    <input id="userName" name="userName" type="text" autoComplete="username" required className="login-input" />
+
+                    <label htmlFor="password" className="login-label">Password</label>
+                    <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                        className="login-input"
+                    />
+
+                    <p className="password-hint">Must be 8+ characters with at least one number and special character</p>
+
+                    <button className="login-submit-btn" type="submit">
+                        Create
+                    </button>
+                </form>
+
+                <p className="terms-copy register-terms">
+                    By clicking Create, you agree to our <span>Terms of Service</span> and <span>Privacy Policy</span>
+                </p>
+            </section>
             <MUIErrorModal />
-        </Container>
+        </main>
     );
 }
