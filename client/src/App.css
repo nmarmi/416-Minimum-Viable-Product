@@ -181,7 +181,7 @@ body {
 
 .section-title {
   margin: 0 0 18px;
-  font-size: clamp(28px, 4vw, 45px);
+  font-size: clamp(28px, 4vw, 35px);
   text-align: center;
   letter-spacing: -0.01em;
 }
@@ -245,7 +245,7 @@ body {
 
 .bottom-cta h2 {
   margin: 0 0 11px;
-  font-size: clamp(30px, 4.6vw, 52px);
+  font-size: clamp(30px, 4.6vw, 35px);
   letter-spacing: -0.015em;
 }
 
