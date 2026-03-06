@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import HomeScreen from './HomeScreen'
+import PlayerHomeScreen from './PlayerHomeScreen'
 import SplashScreen from './SplashScreen'
 import AuthContext from '../auth'
 
@@ -10,7 +10,7 @@ export default function HomeWrapper() {
     }
 
     if (auth.loggedIn) {
-        return <HomeScreen />
+        return <PlayerHomeScreen />
     }
 
     return <SplashScreen />;

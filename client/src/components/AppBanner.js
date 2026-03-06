@@ -1,5 +1,7 @@
 import { useContext } from 'react';
 import { Link, useHistory, useLocation } from 'react-router-dom';
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded';
 import AuthContext from '../auth';
 
 export default function AppBanner() {
@@ -25,10 +27,14 @@ export default function AppBanner() {
             <nav className="app-banner-nav">
                 {auth.loggedIn ? (
                     <>
-                        <span className="user-name">{auth.user?.userName || "User"}</span>
-                        <button className="link-button action-link" type="button" onClick={handleLogout}>
-                            Logout
+                        <span className="player-pill">Player</span>
+                        <span className="avatar-pill" aria-label="profile">
+                            <PersonOutlineRoundedIcon sx={{ fontSize: 30 }} />
+                        </span>
+                        <button className="link-button logout-icon-btn" type="button" onClick={handleLogout} aria-label="logout">
+                            <LogoutRoundedIcon sx={{ fontSize: 24 }} />
                         </button>
+                        
                     </>
                 ) : (
                     <>

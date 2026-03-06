@@ -96,6 +96,36 @@ body {
   opacity: 0.85;
 }
 
+.player-pill {
+  height: 34px;
+  min-width: 86px;
+  border-radius: 11px;
+  background: #f2f2f2;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.09);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
+.avatar-pill {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #79b8eb;
+  color: #5b3d90;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
 .page-shell {
   min-height: calc(100vh - 62px);
   display: flex;
@@ -436,6 +466,123 @@ body {
   margin-top: 22px;
 }
 
+.app-home {
+  min-height: calc(100vh - 62px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.home-left-column,
+.home-right-column {
+  padding: 24px 28px 34px;
+}
+
+.home-left-column {
+  background: #c9d6ef;
+  display: grid;
+  align-content: start;
+  gap: 24px;
+}
+
+.home-right-column {
+  background: #c2cfe9;
+}
+
+.home-card {
+  background: #f1f1f1;
+  border-radius: 20px;
+  border: 1px solid #d9d9d9;
+  padding: 22px 26px;
+}
+
+.home-card h2,
+.home-card h3 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.home-card p {
+  margin: 10px 0 18px;
+  color: #555;
+  font-size: 16px;
+}
+
+.home-card label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home-input {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #d2d2d2;
+  background: #f4f4f4;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+}
+
+.home-dark-btn,
+.home-light-btn {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.home-dark-btn {
+  border: 0;
+  background: #2d2d2f;
+  color: #fff;
+  font-size: 20px;
+}
+
+.home-light-btn {
+  border: 1px solid #d2d2d2;
+  background: #f4f4f4;
+  color: #1c1c1c;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.home-team-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-team-copy {
+  color: #6d6d7a;
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+.home-leagues-title {
+  margin: 0 0 16px;
+  font-size: 36px;
+}
+
+.home-empty-leagues {
+  min-height: 240px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+}
+
+.home-empty-leagues h3 {
+  font-size: 28px;
+}
+
+.home-empty-leagues p {
+  margin: 0 0 8px;
+}
+
 .forgot-card {
   padding-top: 44px;
 }
@@ -511,6 +658,17 @@ body {
     font-size: 12px;
     padding: 7px 10px;
     border-radius: 9px;
+  }
+
+  .player-pill {
+    font-size: 16px;
+    min-width: 70px;
+    height: 30px;
+  }
+
+  .avatar-pill {
+    width: 34px;
+    height: 34px;
   }
 
   .home-page {
@@ -616,6 +774,43 @@ body {
 
   .register-terms {
     margin-top: 18px;
+  }
+
+  .app-home {
+    min-height: calc(100vh - 58px);
+    grid-template-columns: 1fr;
+  }
+
+  .home-left-column,
+  .home-right-column {
+    padding: 14px;
+  }
+
+  .home-card {
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .home-card h2,
+  .home-card h3,
+  .home-leagues-title {
+    font-size: 30px;
+  }
+
+  .home-dark-btn {
+    font-size: 18px;
+  }
+
+  .home-light-btn {
+    font-size: 17px;
+  }
+
+  .home-empty-leagues {
+    min-height: 180px;
+  }
+
+  .home-empty-leagues h3 {
+    font-size: 26px;
   }
 
   .forgot-card {
