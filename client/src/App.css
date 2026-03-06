@@ -632,6 +632,449 @@ body {
   margin: 0 0 8px;
 }
 
+.commissioner-home .home-left-column {
+  gap: 22px;
+}
+
+.commissioner-sections {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.commissioner-home .home-card h2,
+.commissioner-home .home-card h3 {
+  font-size: 28px;
+}
+
+.commissioner-home .home-card label {
+  font-size: 13px;
+}
+
+.commissioner-home .home-dark-btn {
+  height: 38px;
+  font-size: 16px;
+}
+
+.commissioner-home .home-light-btn {
+  height: 38px;
+  font-size: 16px;
+}
+
+.create-league-card {
+  padding-bottom: 18px;
+}
+
+.create-league-card > h2 {
+  margin-bottom: 10px;
+}
+
+.input-with-icon {
+  position: relative;
+  width: 52%;
+  margin-bottom: 12px;
+}
+
+.input-with-icon .home-input {
+  margin-bottom: 0;
+  padding-right: 36px;
+}
+
+.input-with-icon svg {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  color: #3a3a3a;
+}
+
+.home-input.compact {
+  width: 100%;
+}
+
+.team-count-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 46%;
+  margin-bottom: 12px;
+}
+
+.team-count-row .home-input {
+  margin-bottom: 0;
+}
+
+.count-btn {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #ececec;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.league-select-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.pill-select {
+  width: 100%;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #1f1f1f;
+  background: #f6f6f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.league-stack {
+  display: grid;
+  gap: 22px;
+}
+
+.league-card {
+  padding: 18px 22px 16px;
+}
+
+.league-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.league-card-header h3 {
+  font-size: 24px;
+}
+
+.league-status {
+  border: 1px solid #c9c9c9;
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 7px 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.league-status.active {
+  color: #67bd85;
+}
+
+.league-status.inactive {
+  color: #db635f;
+}
+
+.league-subtitle {
+  margin: 8px 0 14px;
+  color: #1f1f1f;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.league-metrics p {
+  margin: 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #222;
+  font-size: 15px;
+}
+
+.league-card .home-dark-btn {
+  margin-top: 10px;
+}
+
+.commissioner-module {
+  margin-top: 18px;
+}
+
+.commissioner-module > h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-field-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: end;
+}
+
+.inline-field-row.three-up {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inline-field-row label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.inline-field-row label span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.inline-field-row input {
+  width: 100%;
+  height: 38px;
+  border-radius: 9px;
+  border: 1px solid #d2d2d2;
+  background: #f4f4f4;
+  padding: 8px 10px;
+}
+
+.inline-field-row .full-width {
+  grid-column: 1 / -1;
+}
+
+.compact-btn {
+  min-width: 150px;
+}
+
+.league-modal-card {
+  width: min(700px, 100%);
+  text-align: left;
+}
+
+.league-modal-card p {
+  margin-bottom: 14px;
+}
+
+.league-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.league-modal-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.league-modal-grid label span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.league-modal-grid input,
+.league-modal-grid select {
+  width: 100%;
+  height: 38px;
+  border-radius: 9px;
+  border: 1px solid #d2d2d2;
+  background: #f4f4f4;
+  padding: 8px 10px;
+}
+
+.league-modal-grid .modal-field {
+  width: 100%;
+  margin: 0;
+}
+
+.league-modal-grid .modal-field .home-input {
+  margin: 0;
+}
+
+.modal-count-row {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.manager-list {
+  border: 1px solid #d4d4d8;
+  border-radius: 12px;
+  padding: 8px;
+  background: #f8f8f8;
+}
+
+.manager-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+}
+
+.manager-row + .manager-row {
+  border-top: 1px solid #e3e3e5;
+}
+
+.manager-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.mini-pill {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mini-pill.approve {
+  background: #dff4e8;
+  color: #1b7f4e;
+}
+
+.mini-pill.remove {
+  background: #f8e1e1;
+  color: #a44343;
+}
+
+.empty-inline {
+  margin: 6px 0;
+  color: #666;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.config-grid h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.slot-grid label {
+  display: grid;
+  gap: 4px;
+}
+
+.slot-grid span {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.slot-grid input {
+  height: 34px;
+  border: 1px solid #d2d2d2;
+  border-radius: 8px;
+  background: #f4f4f4;
+  padding: 4px 8px;
+}
+
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.toggle-chip {
+  border: 1px solid #c9ced8;
+  background: #f4f4f4;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.toggle-chip.on {
+  background: #2d2d2f;
+  color: #fff;
+  border-color: #2d2d2f;
+}
+
+.checkbox-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.checkbox-stack label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.rules-editor {
+  width: 100%;
+  min-height: 90px;
+  border: 1px solid #d2d2d2;
+  border-radius: 10px;
+  background: #f4f4f4;
+  padding: 10px;
+  margin-bottom: 10px;
+  resize: vertical;
+}
+
+.switch-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.switch-wrap input {
+  width: 18px;
+  height: 18px;
+}
+
+.inline-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.inline-btn-row .compact-btn {
+  width: auto;
+  min-width: 150px;
+}
+
+.hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #636370;
+}
+
+.audit-list {
+  margin-top: 10px;
+  border: 1px solid #d4d4d8;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.audit-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: #fbfbfb;
+}
+
+.audit-row + .audit-row {
+  border-top: 1px solid #e8e8ec;
+}
+
+.pill-select.native {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231f1f1f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 12px) center;
+  padding: 0 36px 0 12px;
+}
+
 .forgot-card {
   padding-top: 44px;
 }
@@ -666,10 +1109,12 @@ body {
 
 .action-link {
   border: 0;
-  background: #2f3e74;
+  background: #2d2d2f;
   color: #fff;
-  border-radius: 6px;
-  padding: 8px 12px;
+  border-radius: 10px;
+  min-width: 124px;
+  padding: 8px 16px;
+  font-size: 14px;
 }
 
 @media (max-width: 1024px) {
@@ -854,6 +1299,54 @@ body {
   .home-card h3,
   .home-leagues-title {
     font-size: 30px;
+  }
+
+  .commissioner-module > h3 {
+    font-size: 24px;
+  }
+
+  .league-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-field-row,
+  .inline-field-row.three-up {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-btn {
+    width: 100%;
+  }
+
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .slot-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .inline-btn-row .compact-btn {
+    width: 100%;
+  }
+
+  .input-with-icon,
+  .team-count-row {
+    width: 100%;
+  }
+
+  .league-select-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .league-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .league-card-header h3 {
+    font-size: 24px;
   }
 
   .home-dark-btn {
