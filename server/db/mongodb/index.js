@@ -1,6 +1,7 @@
 const DatabaseManager = require("../DatabaseManager");
 const mongoose = require("mongoose");
 const User = require("../../models/user-model.js");
+const League = require("../../models/league-model.js");
 
 class MongoDBManager extends DatabaseManager {
     async init() {
@@ -13,7 +14,7 @@ class MongoDBManager extends DatabaseManager {
 
         try {
             await mongoose.connect(mongoUri, {
-                useNewUrlParser: true,
+                //useNewUrlParser: true,
                 serverSelectionTimeoutMS: 5000
             });
             console.log("MongoDB Connected");
@@ -53,6 +54,37 @@ class MongoDBManager extends DatabaseManager {
         return await User.findByIdAndDelete(userId.toString());
     }
 
+    // league
+    async createLeague(commissionerId, data) {
+    const inviteCode = data.inviteCode || this._generateInviteCode();
+
+    const league = new League({
+        name: data.name,
+        inviteCode,
+        commissioner: commissionerId,
+        seasonYear: data.seasonYear ? Number(data.seasonYear) : null,
+        numberOfTeams: data.numberOfTeams ? Number(data.numberOfTeams) : 12,
+        draftType: data.draftType || "Auction Draft",
+        leagueMode: data.leagueMode || "Join Draft",
+        currentTeams: 0,
+        isActive: true
+    });
+
+    return await league.save();
+}
+
+    async getLeaguesForCommissioner(commissionerId) {
+        return await League.find({ commissioner: commissionerId }).sort({ createdAt: -1 });
+    }
+
+    _generateInviteCode() {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let code = "";
+        for (let i = 0; i < 8; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+    }
 }
 
 module.exports = MongoDBManager;

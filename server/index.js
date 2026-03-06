@@ -21,7 +21,9 @@ app.use(cookieParser())
 
 // setup routes as middleware
 const authRouter = require('./routes/auth-router')
+const leagueRouter = require('./routes/league-router')
 app.use('/auth', authRouter)
+app.use('/leagues', leagueRouter)
 
 // init database
 const db = require('./db');
