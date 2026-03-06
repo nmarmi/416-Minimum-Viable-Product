@@ -11,10 +11,12 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import ManageSearchRoundedIcon from '@mui/icons-material/ManageSearchRounded';
 import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
+import leaguesRequestSender from '../leagues/requests';
 
 const CommissionerHomeScreen = () => {
     const [showCreateLeagueModal, setShowCreateLeagueModal] = useState(false);
     const [leagueName, setLeagueName] = useState('');
+    const [inviteCode, setInviteCode] = useState('');
     const [seasonYear, setSeasonYear] = useState('2026');
     const [numTeams, setNumTeams] = useState(12);
     const [draftType, setDraftType] = useState('Auction');
@@ -33,6 +35,7 @@ const CommissionerHomeScreen = () => {
     const [keeperDeadline, setKeeperDeadline] = useState('');
     const [draftPaused, setDraftPaused] = useState(false);
     const [settingsLocked, setSettingsLocked] = useState(false);
+    const [creatingLeague, setCreatingLeague] = useState(false);
 
     const [pendingManagers, setPendingManagers] = useState([
         { id: 1, name: 'Manager A', status: 'Pending' },
@@ -82,8 +85,43 @@ const CommissionerHomeScreen = () => {
         addAudit('Manager removed');
     };
 
-    const createLeague = () => {
-        addAudit(`League "${leagueName || 'Untitled'}" created (${draftType}, ${leagueMode}, ${numTeams} teams)`);
+    const generateInviteCode = () => {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let code = "";
+        for (let i = 0; i < 8; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        setInviteCode(code);
+    };
+
+    const createLeague = async () => {
+        if (!leagueName.trim()) {
+            addAudit('Create league failed: League name is required');
+            return;
+        }
+
+        setCreatingLeague(true);
+        const payload = {
+            name: leagueName.trim(),
+            inviteCode: inviteCode.trim() || undefined,
+            seasonYear,
+            numberOfTeams: numTeams,
+            draftType,
+            leagueMode
+        };
+
+        const res = await leaguesRequestSender.createLeague(payload);
+        setCreatingLeague(false);
+
+        if (res.status !== 201 || !res.data?.success) {
+            addAudit(res.data?.errorMessage || 'Create league failed');
+            return;
+        }
+
+        const createdCode = res.data.league?.inviteCode || inviteCode || 'Auto-generated';
+        addAudit(`League "${leagueName || 'Untitled'}" created (${draftType}, ${leagueMode}, ${numTeams} teams) | Invite code: ${createdCode}`);
+        setLeagueName('');
+        setInviteCode('');
         setShowCreateLeagueModal(false);
     };
 
@@ -97,8 +135,8 @@ const CommissionerHomeScreen = () => {
         <main className="app-home commissioner-home">
             <section className="home-left-column">
                 <article className="home-card">
-                    <h2>My Leagues</h2>
-                    <p>You have not created or joined any leagues yet.</p>
+                    <h2>Create Leagues</h2>
+                   
                     <button className="home-dark-btn" type="button" onClick={() => setShowCreateLeagueModal(true)}>
                         Create League
                     </button>
@@ -325,6 +363,20 @@ const CommissionerHomeScreen = () => {
                                 <input type="text" value={leagueName} onChange={(e) => setLeagueName(e.target.value)} />
                             </label>
                             <label>
+                                <span>Invite Code</span>
+                                <div className="inline-field-row modal-invite-row">
+                                    <input
+                                        type="text"
+                                        value={inviteCode}
+                                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                                 
+                                    />
+                                    <button type="button" className="home-light-btn compact-btn" onClick={generateInviteCode}>
+                                        Generate
+                                    </button>
+                                </div>
+                            </label>
+                            <label>
                                 <span>Season Year</span>
                                 <div className="input-with-icon modal-field">
                                     <input type="text" value={seasonYear} onChange={(e) => setSeasonYear(e.target.value)} className="home-input compact" />
@@ -361,7 +413,9 @@ const CommissionerHomeScreen = () => {
                         </div>
                         <div className="role-modal-actions">
                             <button type="button" className="home-light-btn" onClick={() => setShowCreateLeagueModal(false)}>Cancel</button>
-                            <button type="button" className="home-dark-btn" onClick={createLeague}>Create League</button>
+                            <button type="button" className="home-dark-btn" onClick={createLeague} disabled={creatingLeague}>
+                                {creatingLeague ? 'Creating...' : 'Create League'}
+                            </button>
                         </div>
                     </div>
                 </div>

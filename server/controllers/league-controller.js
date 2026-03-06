@@ -13,6 +13,7 @@ const createLeague = async (req, res) => {
 
         const {
             name,
+            inviteCode,
             seasonYear,
             numberOfTeams,
             draftType,
@@ -42,6 +43,7 @@ const createLeague = async (req, res) => {
 
         const league = await db.createLeague(userId, {
             name: name.trim(),
+            inviteCode: inviteCode && String(inviteCode).trim() ? String(inviteCode).trim().toUpperCase() : undefined,
             seasonYear,
             numberOfTeams,
             draftType,
