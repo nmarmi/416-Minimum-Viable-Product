@@ -236,7 +236,7 @@ const DraftRoomScreen = () => {
                 </div>
                 <div className="draft-v2-auction-actions">
                     <button type="button" className="draft-v2-auction-btn" disabled>
-                        Save Pick 
+                        Record Purchase 
                     </button>
                 </div>
             </article>
