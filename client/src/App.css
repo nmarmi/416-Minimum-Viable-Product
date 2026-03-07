@@ -2357,3 +2357,151 @@ body {
     width: 130px;
   }
 }
+/* ----- In-app glossary: tooltips ----- */
+.glossary-term-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.glossary-term-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #5c7cfa;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: help;
+  flex-shrink: 0;
+}
+
+.glossary-term-icon:hover,
+.glossary-term-icon:focus {
+  background: #4c6ef5;
+  outline: 2px solid #748ffc;
+}
+
+.glossary-tooltip {
+  position: fixed;
+  z-index: 50;
+  max-width: 320px;
+  padding: 10px 12px;
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 13px;
+  line-height: 1.45;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.glossary-open-btn {
+  margin-top: 8px;
+}
+
+/* ----- Glossary modal ----- */
+.glossary-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.glossary-modal-card {
+  width: min(520px, 100%);
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #f8f9fb;
+  border: 1px solid #d5d8e1;
+  border-radius: 14px;
+  padding: 0;
+}
+
+.glossary-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e6ee;
+  background: #fff;
+}
+
+.glossary-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #222635;
+}
+
+.glossary-modal-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.glossary-modal-close:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.glossary-modal-intro {
+  margin: 0;
+  padding: 12px 20px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.glossary-modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 12px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.glossary-modal-item {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e2e6ee;
+}
+
+.glossary-modal-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.glossary-modal-item strong {
+  display: block;
+  font-size: 14px;
+  color: #222635;
+  margin-bottom: 4px;
+}
+
+.glossary-modal-item span {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.glossary-modal-actions {
+  padding: 12px 20px 20px;
+  border-top: 1px solid #e2e6ee;
+  background: #fff;
+}
