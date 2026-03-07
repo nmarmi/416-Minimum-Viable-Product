@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import leaguesRequestSender from '../leagues/requests';
 
 const PlayerHomeScreen = () => {
+    const history = useHistory();
     const [inviteCode, setInviteCode] = useState('');
     const [joiningDraft, setJoiningDraft] = useState(false);
     const [leagueError, setLeagueError] = useState('');
@@ -113,6 +115,13 @@ const PlayerHomeScreen = () => {
                                     {league.numberOfTeams || 12} teams • {league.draftType || 'Auction'} • {league.leagueMode || 'Redraft'}
                                 </p>
                                 <p className="hint">Invite Code: <strong>{league.inviteCode}</strong></p>
+                                <button
+                                    className="home-dark-btn"
+                                    type="button"
+                                    onClick={() => history.push(`/league/${league._id}/draft-room`)}
+                                >
+                                    Join Draft Room
+                                </button>
                             </article>
                         ))}
                     </div>

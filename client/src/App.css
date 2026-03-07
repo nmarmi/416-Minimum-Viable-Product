@@ -654,7 +654,7 @@ body {
 
 .commissioner-workspace-header {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
   align-items: center;
 }
@@ -819,6 +819,19 @@ body {
 
 .league-card .home-dark-btn {
   margin-top: 10px;
+}
+
+.league-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.league-card-actions .home-light-btn,
+.league-card-actions .home-dark-btn {
+  height: 38px;
+  font-size: 14px;
 }
 
 .commissioner-module {
@@ -1331,6 +1344,10 @@ body {
   }
 
   .commissioner-workspace-header {
+    grid-template-columns: 1fr;
+  }
+
+  .league-card-actions {
     grid-template-columns: 1fr;
   }
 

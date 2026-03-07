@@ -148,13 +148,22 @@ const CommissionerHomeScreen = () => {
                                     {league.numberOfTeams || 12} teams • {league.draftType || 'Auction'} • {league.leagueMode || 'Redraft'}
                                 </p>
                                 <p className="hint">Invite Code: <strong>{league.inviteCode}</strong></p>
-                                <button
-                                    className="home-dark-btn"
-                                    type="button"
-                                    onClick={() => history.push(`/commissioner-home/league/${league._id}`)}
-                                >
-                                    Open League Workspace
-                                </button>
+                                <div className="league-card-actions">
+                                    <button
+                                        className="home-light-btn"
+                                        type="button"
+                                        onClick={() => history.push(`/commissioner-home/league/${league._id}`)}
+                                    >
+                                        Open League Workspace
+                                    </button>
+                                    <button
+                                        className="home-dark-btn"
+                                        type="button"
+                                        onClick={() => history.push(`/league/${league._id}/draft-room`)}
+                                    >
+                                        Join Draft Room
+                                    </button>
+                                </div>
                             </article>
                         ))}
                     </div>

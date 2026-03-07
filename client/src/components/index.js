@@ -7,6 +7,7 @@ import ForgotPasswordScreen from './ForgotPasswordScreen'
 import PlayerHomeScreen from './PlayerHomeScreen'
 import CommissionerHomeScreen from './CommissionerHomeScreen'
 import CommissionerLeagueScreen from './CommissionerLeagueScreen'
+import DraftRoomScreen from './DraftRoomScreen'
 export { 
     AppBanner,  
     HomeWrapper,
@@ -16,5 +17,6 @@ export {
     ForgotPasswordScreen,
     PlayerHomeScreen,
     CommissionerHomeScreen,
-    CommissionerLeagueScreen
+    CommissionerLeagueScreen,
+    DraftRoomScreen
  }

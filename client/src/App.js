@@ -6,6 +6,7 @@ import {
     AppBanner,
     CommissionerHomeScreen,
     CommissionerLeagueScreen,
+    DraftRoomScreen,
     ForgotPasswordScreen,
     HomeWrapper,
     LoginScreen,
@@ -27,6 +28,7 @@ const App = () => {
                         <Route path="/player-home" exact component={PlayerHomeScreen} />
                         <Route path="/commissioner-home" exact component={CommissionerHomeScreen} />
                         <Route path="/commissioner-home/league/:leagueId" exact component={CommissionerLeagueScreen} />
+                        <Route path="/league/:leagueId/draft-room" exact component={DraftRoomScreen} />
                         <Redirect to="/" />
                     </Switch>
                 </div>
