@@ -11,11 +11,13 @@ const CommissionerHomeScreen = () => {
     const [showCreateLeagueModal, setShowCreateLeagueModal] = useState(false);
     const [leagueName, setLeagueName] = useState('');
     const [inviteCode, setInviteCode] = useState('');
+    const [joinInviteCode, setJoinInviteCode] = useState('');
     const [seasonYear, setSeasonYear] = useState('2026');
     const [numTeams, setNumTeams] = useState(12);
     const [draftType, setDraftType] = useState('Auction');
     const [leagueMode, setLeagueMode] = useState('Redraft');
     const [creatingLeague, setCreatingLeague] = useState(false);
+    const [joiningDraft, setJoiningDraft] = useState(false);
 
     const [leagues, setLeagues] = useState([]);
     const [loadingLeagues, setLoadingLeagues] = useState(true);
@@ -44,6 +46,26 @@ const CommissionerHomeScreen = () => {
         let code = '';
         for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
         setInviteCode(code);
+    };
+
+    const joinDraftByCode = async () => {
+        if (!joinInviteCode.trim()) {
+            setLeagueError('Invite code is required.');
+            return;
+        }
+
+        setJoiningDraft(true);
+        setLeagueError('');
+        const res = await leaguesRequestSender.joinLeague(joinInviteCode.trim().toUpperCase());
+        setJoiningDraft(false);
+
+        if (res.status !== 200 || !res.data?.success) {
+            setLeagueError(res.data?.errorMessage || 'Unable to join league.');
+            return;
+        }
+
+        setJoinInviteCode('');
+        await loadLeagues();
     };
 
     const createLeague = async () => {
@@ -82,31 +104,11 @@ const CommissionerHomeScreen = () => {
         <main className="app-home commissioner-home">
             <section className="home-left-column">
                 <article className="home-card">
-                    <h2>My Leagues</h2>
+                    <h2>Create Leagues</h2>
                     <p>Create your first league to begin commissioner management.</p>
                     <button className="home-dark-btn" type="button" onClick={() => setShowCreateLeagueModal(true)}>
                         Create League
                     </button>
-                </article>
-
-                <article className="home-card">
-                    <h2>Join Draft</h2>
-                    <p>Enter an invite code to join a draft room</p>
-                    <label htmlFor="commissionerInviteCode">Invite Code</label>
-                    <input id="commissionerInviteCode" name="commissionerInviteCode" type="text" className="home-input" />
-                    <button className="home-dark-btn" type="button">
-                        <PlayCircleOutlineOutlinedIcon sx={{ fontSize: 18 }} />
-                        <span>Join Draft Room</span>
-                    </button>
-                </article>
-
-                <article className="home-card">
-                    <h3 className="home-team-title">
-                        <EmojiEventsOutlinedIcon sx={{ fontSize: 24 }} />
-                        <span>My Team</span>
-                    </h3>
-                    <p className="home-team-copy">Create or customize your team</p>
-                    <button className="home-light-btn" type="button">Setup Team</button>
                 </article>
             </section>
 

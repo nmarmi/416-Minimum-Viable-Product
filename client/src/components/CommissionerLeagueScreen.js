@@ -127,7 +127,7 @@ const CommissionerLeagueScreen = () => {
         <main className="commissioner-workspace-page">
             <section className="home-card commissioner-workspace-header">
                 <button type="button" className="home-light-btn compact-btn" onClick={() => history.push('/commissioner-home')}>
-                    Back to Commissioner Home
+                 ←
                 </button>
                 <div>
                     <h2>{league.name}</h2>

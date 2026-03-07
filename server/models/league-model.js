@@ -18,6 +18,12 @@ const LeagueSchema = new Schema(
             ref: 'User',
             required: true
         },
+        members: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'User'
+            }
+        ],
         seasonYear: {
             type: Number,
             default: null

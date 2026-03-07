@@ -62,6 +62,7 @@ class MongoDBManager extends DatabaseManager {
         name: data.name,
         inviteCode,
         commissioner: commissionerId,
+        members: [],
         seasonYear: data.seasonYear ? Number(data.seasonYear) : null,
         numberOfTeams: data.numberOfTeams ? Number(data.numberOfTeams) : 12,
         draftType: data.draftType || "Auction Draft",
@@ -73,8 +74,47 @@ class MongoDBManager extends DatabaseManager {
     return await league.save();
 }
 
-    async getLeaguesForCommissioner(commissionerId) {
-        return await League.find({ commissioner: commissionerId }).sort({ createdAt: -1 });
+    async getLeaguesForUser(userId) {
+        return await League.find({
+            $or: [
+                { commissioner: userId },
+                { members: userId }
+            ]
+        }).sort({ createdAt: -1 });
+    }
+
+    async joinLeagueByInviteCode(userId, inviteCode) {
+        const code = String(inviteCode || "").trim().toUpperCase();
+        const league = await League.findOne({ inviteCode: code });
+
+        if (!league) {
+            return { ok: false, status: 404, errorMessage: "Invalid invite code." };
+        }
+
+        if (String(league.commissioner) === String(userId)) {
+            return { ok: true, league };
+        }
+
+        if (!Array.isArray(league.members)) {
+            league.members = [];
+        }
+
+        const alreadyMember = league.members.some((memberId) => String(memberId) === String(userId));
+        if (alreadyMember) {
+            return { ok: true, league };
+        }
+
+        const maxTeams = Number(league.numberOfTeams || 0);
+        const currentTeams = Number(league.currentTeams || 0);
+        if (maxTeams > 0 && currentTeams >= maxTeams) {
+            return { ok: false, status: 400, errorMessage: "League is full." };
+        }
+
+        league.members.push(userId);
+        league.currentTeams = currentTeams + 1;
+        await league.save();
+
+        return { ok: true, league };
     }
 
     _generateInviteCode() {

@@ -73,7 +73,7 @@ const getMyLeagues = async (req, res) => {
             });
         }
 
-        const leagues = await db.getLeaguesForCommissioner(userId);
+        const leagues = await db.getLeaguesForUser(userId);
 
         return res.status(200).json({
             success: true,
@@ -88,7 +88,47 @@ const getMyLeagues = async (req, res) => {
     }
 };
 
+const joinLeague = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                errorMessage: "Unauthorized"
+            });
+        }
+
+        const { inviteCode } = req.body;
+        if (!inviteCode || !String(inviteCode).trim()) {
+            return res.status(400).json({
+                success: false,
+                errorMessage: "Invite code is required."
+            });
+        }
+
+        const result = await db.joinLeagueByInviteCode(userId, inviteCode);
+        if (!result.ok) {
+            return res.status(result.status || 400).json({
+                success: false,
+                errorMessage: result.errorMessage || "Unable to join league."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            league: result.league
+        });
+    } catch (err) {
+        console.error("joinLeague error:", err);
+        return res.status(500).json({
+            success: false,
+            errorMessage: "Unable to join league right now."
+        });
+    }
+};
+
 module.exports = {
     createLeague,
-    getMyLeagues
+    getMyLeagues,
+    joinLeague
 };

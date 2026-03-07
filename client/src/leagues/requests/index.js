@@ -17,7 +17,23 @@ async function request(path, method = "GET", body = null) {
         }
 
         const res = await fetch(`${BASE_URL}${path}`, options);
-        const data = await res.json().catch(() => ({}));
+        const rawText = await res.text();
+
+        let data = {};
+        if (rawText) {
+            try {
+                data = JSON.parse(rawText);
+            } catch (parseErr) {
+                data = {
+                    success: false,
+                    errorMessage: rawText
+                };
+            }
+        }
+
+        if (!res.ok && !data.errorMessage) {
+            data.errorMessage = `Request failed with status ${res.status}.`;
+        }
 
         return { status: res.status, data };
     } catch (err) {
@@ -34,10 +50,12 @@ async function request(path, method = "GET", body = null) {
 
 export const createLeague = async (leagueData) => request("/", "POST", leagueData);
 export const getMyLeagues = async () => request("/", "GET");
+export const joinLeague = async (inviteCode) => request("/join", "POST", { inviteCode });
 
 const apis = {
     createLeague,
-    getMyLeagues
+    getMyLeagues,
+    joinLeague
 };
 
 export default apis;
