@@ -57,11 +57,6 @@ const DraftRoomScreen = () => {
 
             <section className="draft-v2-top-controls">
                 <div className="draft-v2-timer-row">
-                    <span className="draft-v2-timer-icon">◷</span>
-                    <div className="draft-v2-timer-bar">
-                        <div className="draft-v2-timer-progress" style={{ width: `${timerPercent}%` }} />
-                    </div>
-                    <span className="draft-v2-timer-pill">{timeLeft}s</span>
                     <button type="button" className="draft-v2-record-btn" onClick={() => setTimeLeft(TIMER_SECONDS)}>
                         + Record Purchase
                     </button>
