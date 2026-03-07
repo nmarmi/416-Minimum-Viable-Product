@@ -48,4 +48,12 @@ export async function getPlayers(params = {}) {
     return request(`/players${query}`);
 }
 
-export default { getPlayers };
+export async function postUsage(payload = {}) {
+    return request('/players/usage', 'POST', {
+        event: payload.event || 'draft_room_open',
+        timestamp: payload.timestamp || new Date().toISOString(),
+        metadata: payload.metadata || {}
+    });
+}
+
+export default { getPlayers, postUsage };

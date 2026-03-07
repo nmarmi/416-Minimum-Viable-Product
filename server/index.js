@@ -32,10 +32,13 @@ const db = require('./db');
 
 (async () => {
     try {
-        await db.init();  
+        await db.init();
         console.log("db initialized");
+        if (process.env.PLAYER_API_URL && process.env.PLAYER_API_KEY) {
+            console.log("Player Data API: using", process.env.PLAYER_API_URL, "(pull + push)");
+        }
 
-        app.listen(PORT, () => 
+        app.listen(PORT, () =>
             console.log(`DraftIQ Server running on port ${PORT}`)
         );
     } catch (err) {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import { getPlayers } from '../players/requests';
+import { getPlayers, postUsage } from '../players/requests';
 
 const ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
@@ -52,6 +52,10 @@ const DraftRoomScreen = () => {
         if (activeTab !== 'Players') return;
         loadPlayers();
     }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps -- load on tab switch; Search button triggers loadPlayers()
+
+    useEffect(() => {
+        postUsage({ event: 'draft_room_open' }).catch(() => {});
+    }, []);
 
     useEffect(() => {
         if (!isTimerRunning) return undefined;
@@ -130,12 +134,12 @@ const DraftRoomScreen = () => {
                             ) : players.length === 0 ? (
                                 <tr>
                                     <td colSpan={TABLE_HEADERS.length} className="draft-v2-empty-row">
-                                        No players found. Import projections CSV on the server, then refresh.
+                                        No players found. Start the Player Data API (port 4001) and ensure PLAYER_API_URL and PLAYER_API_KEY are set in server/.env.
                                     </td>
                                 </tr>
                             ) : (
                                 players.map((p) => (
-                                    <tr key={p._id || `${p.playerName}-${p.team}`}>
+                                    <tr key={p.id || p._id || `${p.playerName}-${p.team}`}>
                                         <td>{p.playerName}</td>
                                         <td>{p.team}</td>
                                         <td>{p.position}</td>
