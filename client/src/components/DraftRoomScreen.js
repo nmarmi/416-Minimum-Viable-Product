@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import { getPlayers } from '../players/requests';
 
 const ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
@@ -12,6 +13,8 @@ const EVENT_PLACEHOLDERS = [
     'Sold events will be listed here...'
 ];
 
+const formatStat = (val) => (val != null && Number.isFinite(val) ? (Number(val) === val && val < 1 && val > 0 ? val.toFixed(3) : String(Math.round(val))) : '--');
+
 const DraftRoomScreen = () => {
     const history = useHistory();
     const [activeTab, setActiveTab] = useState('Players');
@@ -23,10 +26,35 @@ const DraftRoomScreen = () => {
     const [bidAmount, setBidAmount] = useState('2');
     const [selectedBidder, setSelectedBidder] = useState('Your Team');
     const [auctionStatus, setAuctionStatus] = useState('Waiting for nomination');
+    const [players, setPlayers] = useState([]);
+    const [playersTotal, setPlayersTotal] = useState(0);
+    const [playersLoading, setPlayersLoading] = useState(false);
+    const [playersError, setPlayersError] = useState('');
+    const [playerSearch, setPlayerSearch] = useState('');
+
+    const loadPlayers = useCallback(async () => {
+        setPlayersLoading(true);
+        setPlayersError('');
+        const res = await getPlayers({ search: playerSearch.trim(), limit: 500 });
+        setPlayersLoading(false);
+        if (res.status === 200 && res.data?.success) {
+            setPlayers(res.data.players || []);
+            setPlayersTotal(res.data.total ?? 0);
+            setPlayersError('');
+        } else {
+            setPlayersError(res.data?.errorMessage || 'Failed to load players.');
+            setPlayers([]);
+            setPlayersTotal(0);
+        }
+    }, [playerSearch]);
+
+    useEffect(() => {
+        if (activeTab !== 'Players') return;
+        loadPlayers();
+    }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps -- load on tab switch; Search button triggers loadPlayers()
 
     useEffect(() => {
         if (!isTimerRunning) return undefined;
-
         const tick = window.setInterval(() => {
             setTimeLeft((previous) => {
                 if (previous <= 1) {
@@ -51,8 +79,15 @@ const DraftRoomScreen = () => {
                     <h3>Player Search & Filters</h3>
                     <label className="draft-v2-search-wrap">
                         <span className="draft-v2-search-icon">⌕</span>
-                        <input type="text" placeholder="Search players" />
+                        <input
+                            type="text"
+                            placeholder="Search players"
+                            value={playerSearch}
+                            onChange={(e) => setPlayerSearch(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && loadPlayers()}
+                        />
                     </label>
+                    <button type="button" className="draft-v2-filter-btn" onClick={loadPlayers}>Search</button>
                     <div className="draft-v2-filter-row">
                         <button type="button" className="draft-v2-filter-btn">All</button>
                         <button type="button" className="draft-v2-filter-btn">Watchlist (0)</button>
@@ -69,7 +104,7 @@ const DraftRoomScreen = () => {
                         <li>Position eligibility</li>
                         <li>In-app glossary tooltips</li>
                     </ul>
-                    <p className="draft-v2-auction-muted">UI placeholders only until player data API is connected.</p>
+                    <p className="draft-v2-auction-muted">Stats from projection data. Pitcher columns (W, SV, ERA, WHIP) show -- for batters.</p>
                 </article>
             </div>
 
@@ -84,11 +119,41 @@ const DraftRoomScreen = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td colSpan={TABLE_HEADERS.length} className="draft-v2-empty-row">
-                                    Player pool data will render here once API integration is ready.
-                                </td>
-                            </tr>
+                            {playersLoading ? (
+                                <tr>
+                                    <td colSpan={TABLE_HEADERS.length} className="draft-v2-empty-row">Loading players…</td>
+                                </tr>
+                            ) : playersError ? (
+                                <tr>
+                                    <td colSpan={TABLE_HEADERS.length} className="draft-v2-empty-row">{playersError}</td>
+                                </tr>
+                            ) : players.length === 0 ? (
+                                <tr>
+                                    <td colSpan={TABLE_HEADERS.length} className="draft-v2-empty-row">
+                                        No players found. Import projections CSV on the server, then refresh.
+                                    </td>
+                                </tr>
+                            ) : (
+                                players.map((p) => (
+                                    <tr key={p._id || `${p.playerName}-${p.team}`}>
+                                        <td>{p.playerName}</td>
+                                        <td>{p.team}</td>
+                                        <td>{p.position}</td>
+                                        <td>{formatStat(p.fpts)}</td>
+                                        <td>--</td>
+                                        <td>{formatStat(p.hr)}</td>
+                                        <td>{formatStat(p.rbi)}</td>
+                                        <td>{formatStat(p.r)}</td>
+                                        <td>{formatStat(p.sb)}</td>
+                                        <td>{p.avg != null ? Number(p.avg).toFixed(3) : '--'}</td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                        <td>{formatStat(p.k)}</td>
+                                        <td>--</td>
+                                        <td>--</td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -415,7 +480,7 @@ const DraftRoomScreen = () => {
                 <section className="draft-v2-main">
                     <div className="draft-v2-main-head">
                         <h2>{activeTab === 'Players' ? 'Player Pool' : activeTab}</h2>
-                        {activeTab === 'Players' ? <span className="draft-v2-count-pill">0 Players</span> : null}
+                        {activeTab === 'Players' ? <span className="draft-v2-count-pill">{playersTotal} Players</span> : null}
                     </div>
                     {renderTabContent()}
                 </section>

@@ -2,6 +2,7 @@ const DatabaseManager = require("../DatabaseManager");
 const mongoose = require("mongoose");
 const User = require("../../models/user-model.js");
 const League = require("../../models/league-model.js");
+const Player = require("../../models/player-model.js");
 
 class MongoDBManager extends DatabaseManager {
     async init() {
@@ -124,6 +125,24 @@ class MongoDBManager extends DatabaseManager {
             code += chars.charAt(Math.floor(Math.random() * chars.length));
         }
         return code;
+    }
+
+    // players (projections / stats)
+    async getPlayers(options = {}) {
+        const { search = '', team = '', position = '', source = 'projection', limit = 500, offset = 0 } = options;
+        const query = { source };
+        if (search && search.trim()) {
+            query.playerName = { $regex: search.trim(), $options: 'i' };
+        }
+        if (team && team.trim()) {
+            query.team = { $regex: team.trim(), $options: 'i' };
+        }
+        if (position && position.trim()) {
+            query.position = { $regex: position.trim(), $options: 'i' };
+        }
+        const list = await Player.find(query).sort({ fpts: -1 }).skip(offset).limit(limit).lean();
+        const total = await Player.countDocuments(query);
+        return { list, total };
     }
 }
 
