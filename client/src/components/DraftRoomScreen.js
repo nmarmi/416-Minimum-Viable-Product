@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
+import GlossaryTerm from './GlossaryTerm';
+import GlossaryModal from './GlossaryModal';
 
 const ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
@@ -31,6 +33,8 @@ const DraftRoomScreen = () => {
     const [playersLoading, setPlayersLoading] = useState(false);
     const [playersError, setPlayersError] = useState('');
     const [playerSearch, setPlayerSearch] = useState('');
+    const [showGlossary, setShowGlossary] = useState(false);
+    const [showCompareModal, setShowCompareModal] = useState(false);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -105,11 +109,14 @@ const DraftRoomScreen = () => {
                         <li>Projected stats</li>
                         <li>Role (starter / reliever / everyday)</li>
                         <li>Injury / news flags</li>
-                        <li>Position eligibility</li>
-                        <li>In-app glossary tooltips</li>
+                        <li><GlossaryTerm term="Position eligibility">Position eligibility</GlossaryTerm></li>
+                        <li>Hover over the ? next to column headers for definitions.</li>
                     </ul>
-                    <p className="draft-v2-auction-muted">Stats from projection data. Pitcher columns (W, SV, ERA, WHIP) show -- for batters.</p>
-                </article>
+<button type="button" className="draft-v2-filter-btn glossary-open-btn" onClick={() => setShowGlossary(true)}>
+                        View full glossary
+                    </button>
+                    <p className="draft-v2-auction-muted">Stats from projection data. Pitcher columns (W, SV, <GlossaryTerm term="ERA">ERA</GlossaryTerm>, <GlossaryTerm term="WHIP">WHIP</GlossaryTerm>) show -- for batters.</p>
+                                </article>
             </div>
 
             <div className="draft-v2-table-shell">
@@ -117,9 +124,21 @@ const DraftRoomScreen = () => {
                     <table>
                         <thead>
                             <tr>
-                                {TABLE_HEADERS.map((header) => (
-                                    <th key={header}>{header}</th>
-                                ))}
+                                <th>Player</th>
+                                <th>Team</th>
+                                <th><GlossaryTerm term="Position eligibility">Pos</GlossaryTerm></th>
+                                <th><GlossaryTerm term="Value">Value</GlossaryTerm></th>
+                                <th><GlossaryTerm term="ADP">ADP</GlossaryTerm></th>
+                                <th>HR</th>
+                                <th>RBI</th>
+                                <th>R</th>
+                                <th>SB</th>
+                                <th>AVG</th>
+                                <th>W</th>
+                                <th>SV</th>
+                                <th>K</th>
+                                <th><GlossaryTerm term="ERA">ERA</GlossaryTerm></th>
+                                <th><GlossaryTerm term="WHIP">WHIP</GlossaryTerm></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -489,6 +508,8 @@ const DraftRoomScreen = () => {
                     {renderTabContent()}
                 </section>
             </section>
+                        {showGlossary && <GlossaryModal onClose={() => setShowGlossary(false)} />}
+
         </main>
     );
 };
