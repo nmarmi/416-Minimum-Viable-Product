@@ -1,31 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
 
 const ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
 const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
-const TIMER_SECONDS = 40;
 const TEAM_PLACEHOLDERS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
-const EVENT_PLACEHOLDERS = [
-    'Nomination started...',
-    'Highest bid updates will appear here...',
-    'Sold events will be listed here...'
-];
 
 const formatStat = (val) => (val != null && Number.isFinite(val) ? (Number(val) === val && val < 1 && val > 0 ? val.toFixed(3) : String(Math.round(val))) : '--');
 
 const DraftRoomScreen = () => {
     const history = useHistory();
     const [activeTab, setActiveTab] = useState('Players');
-    const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
-    const [isTimerRunning, setIsTimerRunning] = useState(false);
-    const [nominatedPlayer, setNominatedPlayer] = useState('');
-    const [openingBid, setOpeningBid] = useState('1');
-    const [nominatingTeam, setNominatingTeam] = useState('Your Team');
-    const [bidAmount, setBidAmount] = useState('2');
-    const [selectedBidder, setSelectedBidder] = useState('Your Team');
-    const [auctionStatus, setAuctionStatus] = useState('Waiting for nomination');
+    const [entryPlayer, setEntryPlayer] = useState('');
+    const [entryNominatedBy, setEntryNominatedBy] = useState('Your Team');
+    const [entryWonBy, setEntryWonBy] = useState('Your Team');
+    const [entryPrice, setEntryPrice] = useState('');
+    const [entryNotes, setEntryNotes] = useState('');
     const [players, setPlayers] = useState([]);
     const [playersTotal, setPlayersTotal] = useState(0);
     const [playersLoading, setPlayersLoading] = useState(false);
@@ -56,25 +47,6 @@ const DraftRoomScreen = () => {
     useEffect(() => {
         postUsage({ event: 'draft_room_open' }).catch(() => {});
     }, []);
-
-    useEffect(() => {
-        if (!isTimerRunning) return undefined;
-        const tick = window.setInterval(() => {
-            setTimeLeft((previous) => {
-                if (previous <= 1) {
-                    window.clearInterval(tick);
-                    setIsTimerRunning(false);
-                    setAuctionStatus('Timer ended (mock). Mark sold or undo.');
-                    return 0;
-                }
-                return previous - 1;
-            });
-        }, 1000);
-
-        return () => window.clearInterval(tick);
-    }, [isTimerRunning]);
-
-    const timerPercent = useMemo(() => ((TIMER_SECONDS - timeLeft) / TIMER_SECONDS) * 100, [timeLeft]);
 
     const renderPlayersTab = () => (
         <>
@@ -192,146 +164,97 @@ const DraftRoomScreen = () => {
 
     const renderDraftBoardTab = () => (
         <section className="draft-v2-module-grid two-col">
-            <article className="draft-v2-auction-card full">
-               
-                <p className="draft-v2-auction-muted">Step 1: Nominate player. Step 2: Run live bidding. Step 3: Record purchase.</p>
-
-                <section className="draft-v2-workflow-step">
-                    <h4>1. Auction Nomination</h4>
+            <article className="draft-v2-module-card full">
+                <h3>Draft Entry</h3>
+                <p className="draft-v2-auction-muted">
+                    Enter each completed pick as the real draft happens.
+                </p>
+                <div className="draft-v2-module-grid two-col">
                     <label className="draft-v2-field">
-                        <span>Player Name</span>
+                        <span>Player Taken</span>
                         <input
                             type="text"
-                            placeholder="Enter player to nominate"
-                            value={nominatedPlayer}
-                            onChange={(e) => setNominatedPlayer(e.target.value)}
+                            placeholder="e.g., Aaron Judge"
+                            value={entryPlayer}
+                            onChange={(e) => setEntryPlayer(e.target.value)}
                         />
                     </label>
-                    <div className="draft-v2-auction-row">
-                        <label className="draft-v2-field">
-                            <span>Opening Bid</span>
-                            <input type="number" min="1" value={openingBid} onChange={(e) => setOpeningBid(e.target.value)} />
-                        </label>
-                        <label className="draft-v2-field">
-                            <span>Nominating Team</span>
-                            <select value={nominatingTeam} onChange={(e) => setNominatingTeam(e.target.value)}>
-                                {TEAM_PLACEHOLDERS.map((team) => (
-                                    <option key={team}>{team}</option>
-                                ))}
-                            </select>
-                        </label>
-                    </div>
-                    <button
-                        type="button"
-                        className="draft-v2-auction-btn"
-                        onClick={() => {
-                            setTimeLeft(TIMER_SECONDS);
-                            setIsTimerRunning(true);
-                            setAuctionStatus('Nomination started (mock)');
-                        }}
-                    >
-                        Start Auction
+                    <label className="draft-v2-field">
+                        <span>Auctioned By</span>
+                        <select value={entryNominatedBy} onChange={(e) => setEntryNominatedBy(e.target.value)}>
+                            {TEAM_PLACEHOLDERS.map((team) => (
+                                <option key={team}>{team}</option>
+                            ))}
+                        </select>
+                    </label>
+                    <label className="draft-v2-field">
+                        <span>Won By</span>
+                        <select value={entryWonBy} onChange={(e) => setEntryWonBy(e.target.value)}>
+                            {TEAM_PLACEHOLDERS.map((team) => (
+                                <option key={team}>{team}</option>
+                            ))}
+                        </select>
+                    </label>
+                    <label className="draft-v2-field">
+                        <span>Winning Price ($)</span>
+                        <input
+                            type="number"
+                            min="1"
+                            placeholder="e.g., 37"
+                            value={entryPrice}
+                            onChange={(e) => setEntryPrice(e.target.value)}
+                        />
+                    </label>
+                    <label className="draft-v2-field full">
+                        <span>Notes (Optional)</span>
+                        <input
+                            type="text"
+                            placeholder="Keeper, tie-break, injury note, etc."
+                            value={entryNotes}
+                            onChange={(e) => setEntryNotes(e.target.value)}
+                        />
+                    </label>
+                </div>
+                <div className="draft-v2-auction-actions">
+                    <button type="button" className="draft-v2-auction-btn" disabled>
+                        Save Pick 
                     </button>
-                </section>
-
-                <section className="draft-v2-workflow-step">
-                    <h4>2. Live Bidding</h4>
-                    <div className="draft-v2-timer-row draft-v2-timer-row-inline">
-                        <span className="draft-v2-timer-icon">◷</span>
-                        <div className="draft-v2-timer-bar">
-                            <div className="draft-v2-timer-progress" style={{ width: `${timerPercent}%` }} />
-                        </div>
-                        <span className="draft-v2-timer-pill">{timeLeft}s</span>
-            
-                    </div>
-                    <div className="draft-v2-live-top">
-                        <div>
-                            <p className="draft-v2-label">Current Player</p>
-                            <strong>{nominatedPlayer || '--'}</strong>
-                        </div>
-                        <div>
-                            <p className="draft-v2-label">Current Bid</p>
-                            <strong>${bidAmount || '--'}</strong>
-                        </div>
-                        <div>
-                            <p className="draft-v2-label">Leader</p>
-                            <strong>{selectedBidder}</strong>
-                        </div>
-                    </div>
-                    <div className="draft-v2-quick-bids">
-                        <button type="button" onClick={() => setBidAmount('1')}>+1</button>
-                        <button type="button" onClick={() => setBidAmount('2')}>+2</button>
-                        <button type="button" onClick={() => setBidAmount('5')}>+5</button>
-                        <button type="button" onClick={() => setBidAmount('10')}>+10</button>
-                    </div>
-                    <div className="draft-v2-auction-row">
-                        <label className="draft-v2-field">
-                            <span>Bidder</span>
-                            <select value={selectedBidder} onChange={(e) => setSelectedBidder(e.target.value)}>
-                                {TEAM_PLACEHOLDERS.map((team) => (
-                                    <option key={team}>{team}</option>
-                                ))}
-                            </select>
-                        </label>
-                        <label className="draft-v2-field">
-                            <span>Custom Bid</span>
-                            <input type="number" min="1" value={bidAmount} onChange={(e) => setBidAmount(e.target.value)} />
-                        </label>
-                    </div>
-                    <div className="draft-v2-auction-actions">
-                        <button type="button" className="draft-v2-auction-btn" onClick={() => setAuctionStatus('Bid placed (mock)')}>
-                            Place Bid
-                        </button>
-                        <button
-                            type="button"
-                            className="draft-v2-auction-btn light"
-                            onClick={() => {
-                                setIsTimerRunning(false);
-                                setAuctionStatus('Player marked sold (mock)');
-                            }}
-                        >
-                            Mark Sold
-                        </button>
-                    </div>
-                </section>
-
-                <section className="draft-v2-workflow-step">
-                    <h4>3. Record Purchase</h4>
-                    <p className="draft-v2-auction-status">{auctionStatus}</p>
-                    <div className="draft-v2-auction-actions">
-                        <button
-                            type="button"
-                            className="draft-v2-auction-btn"
-                            onClick={() => {
-                                setIsTimerRunning(false);
-                                setTimeLeft(TIMER_SECONDS);
-                                setAuctionStatus('Purchase recorded (mock)');
-                            }}
-                        >
-                            Record Purchase
-                        </button>
-                        <button
-                            type="button"
-                            className="draft-v2-auction-btn light"
-                            onClick={() => {
-                                setIsTimerRunning(false);
-                                setTimeLeft(TIMER_SECONDS);
-                                setAuctionStatus('Last purchase undone (mock)');
-                            }}
-                        >
-                            Undo
-                        </button>
-                    </div>
-                </section>
+                </div>
             </article>
 
-            <article className="draft-v2-auction-card">
-                <h3>Auction Activity Log</h3>
-                <ul className="draft-v2-activity-list">
-                    {EVENT_PLACEHOLDERS.map((item) => (
-                        <li key={item}>{item}</li>
-                    ))}
+            <article className="draft-v2-module-card">
+                <h3>Draft Results Log</h3>
+                <div className="draft-v2-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Player</th>
+                                <th>Auctioned By</th>
+                                <th>Won By</th>
+                                <th>Price</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colSpan={6} className="draft-v2-empty-row">
+                                    No picks logged yet. Enter each completed draft result here during the live draft.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article className="draft-v2-module-card">
+                <h3>Live Draft Snapshot</h3>
+                <ul className="draft-v2-checklist">
+                    <li>Available players remaining: <strong>{playersTotal || '--'}</strong></li>
+                    <li>Team budgets after each saved pick</li>
+                    <li>Value shifts after each saved pick</li>
                 </ul>
+                <p className="draft-v2-auction-muted">These values update after each manual entry once actions are connected.</p>
             </article>
         </section>
     );
@@ -377,8 +300,8 @@ const DraftRoomScreen = () => {
             <article className="draft-v2-module-card">
                 <h3>Draft Configuration</h3>
                 <ul className="draft-v2-checklist">
-                    <li>Draft start / pause controls</li>
-                    <li>Auction timer settings</li>
+                    <li>Manual entry workflow preferences</li>
+                    <li>Log fields shown during draft</li>
                     <li>Lock settings when draft starts</li>
                 </ul>
             </article>
