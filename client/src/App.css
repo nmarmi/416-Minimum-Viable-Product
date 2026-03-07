@@ -1755,6 +1755,10 @@ body {
   gap: 8px;
 }
 
+.draft-v2-timer-row-inline {
+  margin-bottom: 10px;
+}
+
 .draft-v2-timer-icon {
   font-size: 13px;
   color: #333;
@@ -1782,14 +1786,9 @@ body {
   background: #fbfbfc;
 }
 
-.draft-v2-record-btn {
+.draft-v2-timer-toggle {
+  margin-top: 0;
   height: 28px;
-  border: none;
-  border-radius: 10px;
-  background: #2d2f32;
-  color: #fff;
-  font-size: 14px;
-  padding: 0 12px;
 }
 
 .draft-v2-tabs {
@@ -1977,6 +1976,208 @@ body {
   font-size: 32px;
 }
 
+.draft-v2-module-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.draft-v2-module-grid.two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.draft-v2-module-grid.one-col {
+  grid-template-columns: 1fr;
+}
+
+.draft-v2-module-card {
+  background: #ffffff;
+  border: 1px solid #d5d8e1;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.draft-v2-module-card.full {
+  grid-column: 1 / -1;
+}
+
+.draft-v2-module-card h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.draft-v2-checklist {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  color: #4c556f;
+}
+
+.draft-v2-auction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.draft-v2-auction-card {
+  background: #ffffff;
+  border: 1px solid #d5d8e1;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.draft-v2-auction-card.full {
+  grid-column: 1 / -1;
+}
+
+.draft-v2-auction-card h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.draft-v2-workflow-step + .draft-v2-workflow-step {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e7ebf4;
+}
+
+.draft-v2-workflow-step h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #2c334a;
+}
+
+.draft-v2-auction-muted {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #69708a;
+}
+
+.draft-v2-auction-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.draft-v2-field {
+  display: grid;
+  gap: 5px;
+}
+
+.draft-v2-field span {
+  font-size: 12px;
+  color: #535a72;
+}
+
+.draft-v2-field input,
+.draft-v2-field select {
+  height: 34px;
+  border: 1px solid #d0d5e2;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.draft-v2-auction-btn {
+  margin-top: 10px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #23252a;
+  color: #fff;
+  padding: 0 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.draft-v2-auction-btn.light {
+  background: #eceff5;
+  color: #1f2536;
+  border: 1px solid #ccd3e0;
+}
+
+.draft-v2-live-top {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.draft-v2-label {
+  margin: 0;
+  font-size: 11px;
+  color: #67708a;
+}
+
+.draft-v2-live-top strong {
+  font-size: 14px;
+}
+
+.draft-v2-quick-bids {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.draft-v2-quick-bids button {
+  height: 30px;
+  border: 1px solid #d0d5e2;
+  border-radius: 8px;
+  background: #f6f8fc;
+  color: #23283a;
+  padding: 0 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.draft-v2-auction-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.draft-v2-auction-actions .draft-v2-auction-btn {
+  flex: 1;
+}
+
+.draft-v2-team-board {
+  display: grid;
+  gap: 8px;
+}
+
+.draft-v2-team-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 0.8fr;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid #dbe0ea;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fafbfe;
+  font-size: 12px;
+}
+
+.draft-v2-auction-status {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid #dbe0ea;
+  border-radius: 8px;
+  background: #f7f9fe;
+  font-size: 13px;
+  color: #2c334a;
+}
+
+.draft-v2-activity-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  color: #4c556f;
+}
+
 .draft-v2-count-pill {
   border: 1px solid #d6d8de;
   border-radius: 999px;
@@ -2088,6 +2289,14 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .draft-v2-module-grid.two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .draft-v2-auction-grid {
+    grid-template-columns: 1fr;
+  }
+
   .draft-v2-sidebar {
     order: 2;
   }
@@ -2121,6 +2330,18 @@ body {
   .draft-v2-tabs {
     grid-template-columns: 1fr;
     border-radius: 12px;
+  }
+
+  .draft-v2-auction-row {
+    grid-template-columns: 1fr;
+  }
+
+  .draft-v2-live-top {
+    grid-template-columns: 1fr;
+  }
+
+  .draft-v2-team-row {
+    grid-template-columns: 1fr 1fr;
   }
 
   .draft-v2-timer-bar {
