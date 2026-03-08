@@ -3,6 +3,8 @@ import { useHistory } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
+import PlayerCompareModal from './PlayerCompareModal';
+
 
 const ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
@@ -26,6 +28,8 @@ const DraftRoomScreen = () => {
     const [playerSearch, setPlayerSearch] = useState('');
     const [showGlossary, setShowGlossary] = useState(false);
     const [showCompareModal, setShowCompareModal] = useState(false);
+        const [comparePlayers, setComparePlayers] = useState([]);
+
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -52,6 +56,21 @@ const DraftRoomScreen = () => {
         postUsage({ event: 'draft_room_open' }).catch(() => {});
     }, []);
 
+const toggleCompare = (player) => {
+        const id = player.id || player._id || `${player.playerName}-${player.team}`;
+        setComparePlayers((prev) => {
+            const inList = prev.some((p) => (p.id || p._id || `${p.playerName}-${p.team}`) === id);
+            if (inList) return prev.filter((p) => (p.id || p._id || `${p.playerName}-${p.team}`) !== id);
+            if (prev.length >= 4) return prev;
+            return [...prev, player];
+        });
+    };
+
+    const isInCompare = (player) => {
+        const id = player.id || player._id || `${player.playerName}-${player.team}`;
+        return comparePlayers.some((p) => (p.id || p._id || `${p.playerName}-${p.team}`) === id);
+    };
+
     const renderPlayersTab = () => (
         <>
             <div className="draft-v2-module-grid two-col">
@@ -72,6 +91,15 @@ const DraftRoomScreen = () => {
                         <button type="button" className="draft-v2-filter-btn">All</button>
                         <button type="button" className="draft-v2-filter-btn">Watchlist (0)</button>
                         <button type="button" className="draft-v2-filter-btn">All Tags</button>
+                        {comparePlayers.length > 0 && (
+                            <button
+                                type="button"
+                                className="draft-v2-filter-btn draft-v2-compare-bar-btn"
+                                onClick={() => setShowCompareModal(true)}
+                            >
+                                Compare ({comparePlayers.length})
+                            </button>
+                        )}
                     </div>
                 </article>
 
@@ -111,26 +139,28 @@ const DraftRoomScreen = () => {
                                 <th>K</th>
                                 <th><GlossaryTerm term="ERA">ERA</GlossaryTerm></th>
                                 <th><GlossaryTerm term="WHIP">WHIP</GlossaryTerm></th>
+                                                                <th className="draft-v2-th-compare">Compare</th>
+
                             </tr>
                         </thead>
                         <tbody>
                             {playersLoading ? (
                                 <tr>
-                                    <td colSpan={TABLE_HEADERS.length} className="draft-v2-empty-row">Loading players…</td>
+                                    <td colSpan={TABLE_HEADERS.length + 1} className="draft-v2-empty-row">Loading players…</td>
                                 </tr>
                             ) : playersError ? (
                                 <tr>
-                                    <td colSpan={TABLE_HEADERS.length} className="draft-v2-empty-row">{playersError}</td>
+                                    <td colSpan={TABLE_HEADERS.length + 1} className="draft-v2-empty-row">{playersError}</td>
                                 </tr>
                             ) : players.length === 0 ? (
                                 <tr>
-                                    <td colSpan={TABLE_HEADERS.length} className="draft-v2-empty-row">
+                                    <td colSpan={TABLE_HEADERS.length + 1} className="draft-v2-empty-row">
                                         No players found. Start the Player Data API (port 4001) and ensure PLAYER_API_URL and PLAYER_API_KEY are set in server/.env.
                                     </td>
                                 </tr>
                             ) : (
                                 players.map((p) => (
-                                    <tr key={p.id || p._id || `${p.playerName}-${p.team}`}>
+                                    <tr key={p.id || p._id || `${p.playerName}-${p.team}`} className={isInCompare(p) ? 'draft-v2-tr-compare-selected' : ''}>
                                         <td>{p.playerName}</td>
                                         <td>{p.team}</td>
                                         <td>{p.position}</td>
@@ -146,6 +176,17 @@ const DraftRoomScreen = () => {
                                         <td>{formatStat(p.k)}</td>
                                         <td>--</td>
                                         <td>--</td>
+                                        <td className="draft-v2-td-compare">
+                                            <button
+                                                type="button"
+                                                className="draft-v2-compare-add-btn"
+                                                title={isInCompare(p) ? 'Remove from comparison' : 'Add to comparison'}
+                                                onClick={() => toggleCompare(p)}
+                                                disabled={!isInCompare(p) && comparePlayers.length >= 4}
+                                            >
+                                                {isInCompare(p) ? '✓ In compare' : 'Compare'}
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -432,6 +473,12 @@ const DraftRoomScreen = () => {
                 </section>
             </section>
                         {showGlossary && <GlossaryModal onClose={() => setShowGlossary(false)} />}
+                            {showCompareModal && (
+                <PlayerCompareModal
+                    players={comparePlayers}
+                    onClose={() => setShowCompareModal(false)}
+                />
+            )}
 
         </main>
     );
