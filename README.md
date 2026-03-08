@@ -18,6 +18,34 @@ DraftIQ is a fantasy baseball draft application (commissioners, players, live au
    - Terminal 2: `cd client && npm start`
    - Open http://localhost:3000, sign in, join a league, open Draft Room → **Players** tab to see the pool.
 
+### Deploy frontend to Vercel (single-domain setup)
+
+1. Create a Vercel project with **Root Directory** set to `client`.
+2. In `client/vercel.json`, replace `https://<your-draftiq-backend-domain>` with your deployed DraftIQ backend URL.
+3. Deploy and attach your custom domain to this frontend project.
+
+In this setup, the frontend calls same-origin paths (`/auth`, `/leagues`, `/players`), and Vercel proxies those paths to your backend.
+
+### Full-stack deployment (what users need)
+
+To give users full functionality from one web domain:
+
+1. Deploy **DraftIQ backend** (`server`) to a Node host (Render/Railway/Fly/another Vercel project).
+2. Configure backend env vars:
+   - `MONGODB_CONNECT` (Atlas URI)
+   - `JWT_SECRET`
+   - `CORS_ORIGINS` (include your frontend domain and `http://localhost:3000` for local dev)
+   - `PLAYER_API_URL=https://player-data-api.vercel.app` (licensed player API URL)
+   - `PLAYER_API_KEY=...` (if required by licensed API)
+3. Deploy **frontend** (`client`) to Vercel with rewrites from `client/vercel.json`.
+
+Flow at runtime:
+- User browser -> frontend domain (Vercel static app)
+- Frontend same-origin requests -> Vercel rewrites -> DraftIQ backend (`/auth`, `/leagues`, `/players`)
+- DraftIQ backend -> MongoDB Atlas + licensed Player Data API (`PLAYER_API_URL`)
+
+`https://player-data-api.vercel.app` is only for licensed player data integration, not for `/auth` or `/leagues`.
+
 ### Licensed Player Data API (optional)
 
 To use the external **licensed Player Data API** (pull + push) instead of local MongoDB player data:

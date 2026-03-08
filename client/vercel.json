@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/auth/:path*",
+      "destination": "https://<your-draftiq-backend-domain>/auth/:path*"
+    },
+    {
+      "source": "/leagues/:path*",
+      "destination": "https://<your-draftiq-backend-domain>/leagues/:path*"
+    },
+    {
+      "source": "/players/:path*",
+      "destination": "https://<your-draftiq-backend-domain>/players/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

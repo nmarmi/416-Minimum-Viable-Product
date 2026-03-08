@@ -1,4 +1,6 @@
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:4000/auth";
+import { AUTH_API_BASE_URL } from "../../config/api";
+
+const BASE_URL = AUTH_API_BASE_URL;
 
 async function request(path, method = "GET", body = null) {
     try {

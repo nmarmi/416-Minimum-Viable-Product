@@ -1,4 +1,6 @@
-const BASE_URL = process.env.REACT_APP_PLAYERS_API_URL || '';
+import { PLAYERS_API_BASE_URL } from "../config/api";
+
+const BASE_URL = PLAYERS_API_BASE_URL;
 
 async function request(path, method = 'GET', body = null) {
     try {

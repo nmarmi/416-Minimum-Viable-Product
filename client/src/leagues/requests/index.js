@@ -1,4 +1,6 @@
-const BASE_URL = process.env.REACT_APP_LEAGUES_API_URL || "http://localhost:4000/leagues";
+import { LEAGUES_API_BASE_URL } from "../../config/api";
+
+const BASE_URL = LEAGUES_API_BASE_URL;
 
 async function request(path, method = "GET", body = null) {
     try {
