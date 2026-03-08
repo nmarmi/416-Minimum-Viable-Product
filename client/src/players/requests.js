@@ -58,4 +58,6 @@ export async function postUsage(payload = {}) {
     });
 }
 
-export default { getPlayers, postUsage };
+const playersApi = { getPlayers, postUsage };
+
+export default playersApi;

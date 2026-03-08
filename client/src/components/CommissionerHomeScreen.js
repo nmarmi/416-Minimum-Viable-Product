@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
-import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import leaguesRequestSender from '../leagues/requests';
 
@@ -11,13 +9,11 @@ const CommissionerHomeScreen = () => {
     const [showCreateLeagueModal, setShowCreateLeagueModal] = useState(false);
     const [leagueName, setLeagueName] = useState('');
     const [inviteCode, setInviteCode] = useState('');
-    const [joinInviteCode, setJoinInviteCode] = useState('');
     const [seasonYear, setSeasonYear] = useState('2026');
     const [numTeams, setNumTeams] = useState(12);
     const [draftType, setDraftType] = useState('Auction');
     const [leagueMode, setLeagueMode] = useState('Redraft');
     const [creatingLeague, setCreatingLeague] = useState(false);
-    const [joiningDraft, setJoiningDraft] = useState(false);
 
     const [leagues, setLeagues] = useState([]);
     const [loadingLeagues, setLoadingLeagues] = useState(true);
@@ -46,26 +42,6 @@ const CommissionerHomeScreen = () => {
         let code = '';
         for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
         setInviteCode(code);
-    };
-
-    const joinDraftByCode = async () => {
-        if (!joinInviteCode.trim()) {
-            setLeagueError('Invite code is required.');
-            return;
-        }
-
-        setJoiningDraft(true);
-        setLeagueError('');
-        const res = await leaguesRequestSender.joinLeague(joinInviteCode.trim().toUpperCase());
-        setJoiningDraft(false);
-
-        if (res.status !== 200 || !res.data?.success) {
-            setLeagueError(res.data?.errorMessage || 'Unable to join league.');
-            return;
-        }
-
-        setJoinInviteCode('');
-        await loadLeagues();
     };
 
     const createLeague = async () => {
