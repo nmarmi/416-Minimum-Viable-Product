@@ -25,10 +25,237 @@ const DraftRoomScreen = () => {
     const [playersTotal, setPlayersTotal] = useState(0);
     const [playersLoading, setPlayersLoading] = useState(false);
     const [playersError, setPlayersError] = useState('');
-    const [playerSearch, setPlayerSearch] = useState('');
-    const [showGlossary, setShowGlossary] = useState(false);
+const [playerSearch, setPlayerSearch] = useState('');
+const [playerSuggestions, setPlayerSuggestions] = useState([]);
+const [showPlayerSuggestions, setShowPlayerSuggestions] = useState(false);
+const [highlightedPlayerIndex, setHighlightedPlayerIndex] = useState(-1);
+const [showGlossary, setShowGlossary] = useState(false);
     const [showCompareModal, setShowCompareModal] = useState(false);
-        const [comparePlayers, setComparePlayers] = useState([]);
+    const [comparePlayers, setComparePlayers] = useState([]);
+    const [entryPlayerSearch, setEntryPlayerSearch] = useState('');
+const [entryPlayerSuggestions, setEntryPlayerSuggestions] = useState([]);
+const [showEntrySuggestions, setShowEntrySuggestions] = useState(false);
+const [entryHighlightedIndex, setEntryHighlightedIndex] = useState(-1);
+
+
+const playerNameStartsWithSearch = (playerName, searchTerm) => {
+    const normalizedName = String(playerName || '').trim().toLowerCase();
+    const normalizedSearch = String(searchTerm || '').trim().toLowerCase();
+
+    if (!normalizedSearch) return true;
+
+    return normalizedName
+        .split(/\s+/)
+        .some((part) => part.startsWith(normalizedSearch));
+};
+
+const searchDraftBoardPlayers = useCallback(async (searchTerm) => {
+    const trimmed = String(searchTerm || '').trim();
+
+    if (!trimmed) {
+        setEntryPlayerSuggestions([]);
+        setShowEntrySuggestions(false);
+        setEntryHighlightedIndex(-1);
+        return;
+    }
+
+    const localMatches = (players || [])
+    .filter((p) => playerNameStartsWithSearch(p.playerName, trimmed))
+    .sort((a, b) => String(a.playerName || '').localeCompare(String(b.playerName || '')))
+    .slice(0, 8);
+
+    if (localMatches.length > 0) {
+        setEntryPlayerSuggestions(localMatches);
+        setShowEntrySuggestions(true);
+        setEntryHighlightedIndex(-1);
+        return;
+    }
+
+    const res = await getPlayers({ search: trimmed, limit: 8 });
+    if (res.status === 200 && res.data?.success) {
+    const matched = (res.data.players || [])
+        .filter((p) => playerNameStartsWithSearch(p.playerName, trimmed))
+        .sort((a, b) => String(a.playerName || '').localeCompare(String(b.playerName || '')));
+
+    setEntryPlayerSuggestions(matched);
+    setShowEntrySuggestions(matched.length > 0);
+    setEntryHighlightedIndex(-1);
+} else {
+        setEntryPlayerSuggestions([]);
+        setShowEntrySuggestions(false);
+        setEntryHighlightedIndex(-1);
+    }
+}, [players]);
+
+const handleEntryPlayerChange = async (e) => {
+    const value = e.target.value;
+    setEntryPlayer(value);
+    setEntryPlayerSearch(value);
+    await searchDraftBoardPlayers(value);
+};
+
+const handleSelectEntryPlayer = (player) => {
+    setEntryPlayer(player.playerName || '');
+    setEntryPlayerSearch(player.playerName || '');
+    setEntryPlayerSuggestions([]);
+    setShowEntrySuggestions(false);
+    setEntryHighlightedIndex(-1);
+};
+
+const handleEntryPlayerKeyDown = (e) => {
+    if (!showEntrySuggestions || entryPlayerSuggestions.length === 0) {
+        return;
+    }
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setEntryHighlightedIndex((prev) =>
+            prev < entryPlayerSuggestions.length - 1 ? prev + 1 : 0
+        );
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setEntryHighlightedIndex((prev) =>
+            prev > 0 ? prev - 1 : entryPlayerSuggestions.length - 1
+        );
+    } else if (e.key === 'Enter') {
+        if (entryHighlightedIndex >= 0 && entryHighlightedIndex < entryPlayerSuggestions.length) {
+            e.preventDefault();
+            handleSelectEntryPlayer(entryPlayerSuggestions[entryHighlightedIndex]);
+        }
+    } else if (e.key === 'Escape') {
+        setShowEntrySuggestions(false);
+        setEntryHighlightedIndex(-1);
+    }
+};
+
+const searchPlayerSuggestions = useCallback(async (searchTerm) => {
+    const trimmed = String(searchTerm || '').trim();
+
+    if (!trimmed) {
+        setPlayerSuggestions([]);
+        setShowPlayerSuggestions(false);
+        setHighlightedPlayerIndex(-1);
+        return;
+    }
+
+    const localMatches = (players || [])
+    .filter((p) => playerNameStartsWithSearch(p.playerName, trimmed))
+    .sort((a, b) => String(a.playerName || '').localeCompare(String(b.playerName || '')))
+    .slice(0, 8);
+
+    if (localMatches.length > 0) {
+        setPlayerSuggestions(localMatches);
+        setShowPlayerSuggestions(true);
+        setHighlightedPlayerIndex(-1);
+        return;
+    }
+
+    const res = await getPlayers({ search: trimmed, limit: 8 });
+    if (res.status === 200 && res.data?.success) {
+        const matched = (res.data.players || [])
+            .filter((p) =>
+                String(p.playerName || '').toLowerCase().includes(trimmed.toLowerCase())
+            )
+            .sort((a, b) => String(a.playerName || '').localeCompare(String(b.playerName || '')));
+
+        setPlayerSuggestions(matched);
+        setShowPlayerSuggestions(matched.length > 0);
+        setHighlightedPlayerIndex(-1);
+    } else {
+        setPlayerSuggestions([]);
+        setShowPlayerSuggestions(false);
+        setHighlightedPlayerIndex(-1);
+    }
+}, [players]);
+
+const handlePlayerSearchChange = async (e) => {
+    const value = e.target.value;
+    const trimmed = value.trim();
+
+    setPlayerSearch(value);
+
+    if (!trimmed) {
+        setPlayerSuggestions([]);
+        setShowPlayerSuggestions(false);
+        setHighlightedPlayerIndex(-1);
+        await loadPlayers();
+        return;
+    }
+
+    await searchPlayerSuggestions(value);
+
+    const res = await getPlayers({ search: trimmed, limit: 500 });
+    if (res.status === 200 && res.data?.success) {
+
+        const filteredPlayers = (res.data.players || [])
+    .filter((p) => playerNameStartsWithSearch(p.playerName, trimmed))
+    .sort((a, b) => String(a.playerName || '').localeCompare(String(b.playerName || '')));
+
+        setPlayers(filteredPlayers);
+        setPlayersTotal(filteredPlayers.length);
+        setPlayersError('');
+    } else {
+        setPlayers([]);
+        setPlayersTotal(0);
+        setPlayersError(res.data?.errorMessage || 'Failed to load players.');
+    }
+};
+
+const handleSelectPlayerSuggestion = async (player) => {
+    const selectedName = player.playerName || '';
+
+    setPlayerSearch(selectedName);
+    setPlayerSuggestions([]);
+    setShowPlayerSuggestions(false);
+    setHighlightedPlayerIndex(-1);
+
+    const res = await getPlayers({ search: selectedName, limit: 500 });
+    if (res.status === 200 && res.data?.success) {
+
+        const matched = (res.data.players || [])
+    .filter((p) => playerNameStartsWithSearch(p.playerName, selectedName))
+    .sort((a, b) => String(a.playerName || '').localeCompare(String(b.playerName || '')));
+
+        setPlayers(matched);
+        setPlayersTotal(matched.length);
+        setPlayersError('');
+    } else {
+        setPlayers([]);
+        setPlayersTotal(0);
+        setPlayersError(res.data?.errorMessage || 'Failed to load players.');
+    }
+};
+
+const handlePlayerSearchKeyDown = (e) => {
+    if (!showPlayerSuggestions || playerSuggestions.length === 0) {
+        if (e.key === 'Enter') {
+            loadPlayers();
+        }
+        return;
+    }
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedPlayerIndex((prev) =>
+            prev < playerSuggestions.length - 1 ? prev + 1 : 0
+        );
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedPlayerIndex((prev) =>
+            prev > 0 ? prev - 1 : playerSuggestions.length - 1
+        );
+    } else if (e.key === 'Enter') {
+        if (highlightedPlayerIndex >= 0 && highlightedPlayerIndex < playerSuggestions.length) {
+            e.preventDefault();
+            handleSelectPlayerSuggestion(playerSuggestions[highlightedPlayerIndex]);
+        } else {
+            loadPlayers();
+        }
+    } else if (e.key === 'Escape') {
+        setShowPlayerSuggestions(false);
+        setHighlightedPlayerIndex(-1);
+    }
+};
 
 
     const loadPlayers = useCallback(async () => {
@@ -76,16 +303,50 @@ const toggleCompare = (player) => {
             <div className="draft-v2-module-grid two-col">
                 <article className="draft-v2-module-card">
                     <h3>Player Search & Filters</h3>
-                    <label className="draft-v2-search-wrap">
-                        <span className="draft-v2-search-icon">⌕</span>
-                        <input
-                            type="text"
-                            placeholder="Search players"
-                            value={playerSearch}
-                            onChange={(e) => setPlayerSearch(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && loadPlayers()}
-                        />
-                    </label>
+                    <label className="draft-v2-search-wrap draft-v2-live-search-wrap">
+    <span className="draft-v2-search-icon">⌕</span>
+    <input
+        type="text"
+        placeholder="Search players by name"
+        value={playerSearch}
+        onChange={handlePlayerSearchChange}
+        onKeyDown={handlePlayerSearchKeyDown}
+        onFocus={() => {
+            if (playerSuggestions.length > 0) {
+                setShowPlayerSuggestions(true);
+            }
+        }}
+        onBlur={() => {
+            setTimeout(() => {
+                setShowPlayerSuggestions(false);
+            }, 150);
+        }}
+        autoComplete="off"
+    />
+
+    {showPlayerSuggestions && playerSuggestions.length > 0 && (
+        <div className="draft-v2-live-search-menu">
+            {playerSuggestions.map((player, index) => {
+                const playerId = player.id || player._id || `${player.playerName}-${player.team}`;
+                const isActive = index === highlightedPlayerIndex;
+
+                return (
+                    <button
+                        key={playerId}
+                        type="button"
+                        className={`draft-v2-live-search-item ${isActive ? 'active' : ''}`}
+                        onMouseDown={() => handleSelectPlayerSuggestion(player)}
+                    >
+                        <div className="draft-v2-live-search-item-main">
+                            <strong>{player.playerName}</strong>
+                            <span>{player.team} • {player.position}</span>
+                        </div>
+                    </button>
+                );
+            })}
+        </div>
+    )}
+</label>
                     <button type="button" className="draft-v2-filter-btn" onClick={loadPlayers}>Search</button>
                     <div className="draft-v2-filter-row">
                         <button type="button" className="draft-v2-filter-btn">All</button>
@@ -197,6 +458,7 @@ const toggleCompare = (player) => {
         </>
     );
 
+
     const renderRosterTab = () => (
         <section className="draft-v2-module-grid two-col">
             <article className="draft-v2-module-card">
@@ -230,15 +492,53 @@ const toggleCompare = (player) => {
                     Enter each completed pick as the real draft happens.
                 </p>
                 <div className="draft-v2-module-grid two-col">
-                    <label className="draft-v2-field">
-                        <span>Player Taken</span>
-                        <input
-                            type="text"
-                            placeholder="e.g., Aaron Judge"
-                            value={entryPlayer}
-                            onChange={(e) => setEntryPlayer(e.target.value)}
-                        />
-                    </label>
+                    <label className="draft-v2-field draft-v2-player-search-field">
+    <span>Player Taken</span>
+    <input
+        type="text"
+        placeholder="e.g., Aaron Judge"
+        value={entryPlayer}
+        onChange={handleEntryPlayerChange}
+        onFocus={() => {
+            if (entryPlayerSuggestions.length > 0) {
+                setShowEntrySuggestions(true);
+            }
+        }}
+        onKeyDown={handleEntryPlayerKeyDown}
+        onBlur={() => {
+            setTimeout(() => {
+                setShowEntrySuggestions(false);
+            }, 150);
+        }}
+        autoComplete="off"
+    />
+
+    {showEntrySuggestions && entryPlayerSuggestions.length > 0 && (
+        <div className="draft-v2-player-suggestions">
+            {entryPlayerSuggestions.map((player, index) => {
+                const playerId = player.id || player._id || `${player.playerName}-${player.team}`;
+                const isActive = index === entryHighlightedIndex;
+
+                return (
+                    <button
+                        key={playerId}
+                        type="button"
+                        className={`draft-v2-player-suggestion ${isActive ? 'active' : ''}`}
+                        onMouseDown={() => handleSelectEntryPlayer(player)}
+                    >
+                        <div className="draft-v2-player-suggestion-main">
+                            <strong>{player.playerName}</strong>
+                            <span>{player.team} • {player.position}</span>
+                        </div>
+                        <div className="draft-v2-player-suggestion-value">
+                            ${Math.round(player.fpts || 0)}
+                        </div>
+                    </button>
+                );
+            })}
+        </div>
+    )}
+</label>
                     <label className="draft-v2-field">
                         <span>Auctioned By</span>
                         <select value={entryNominatedBy} onChange={(e) => setEntryNominatedBy(e.target.value)}>
