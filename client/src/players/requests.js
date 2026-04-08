@@ -46,11 +46,11 @@ function buildQuery(params) {
 
 export async function getPlayers(params = {}) {
     const query = buildQuery(params);
-    return request(`/players${query}`);
+    return request(query);
 }
 
 export async function postUsage(payload = {}) {
-    return request('/players/usage', 'POST', {
+    return request('/usage', 'POST', {
         event: payload.event || 'draft_room_open',
         timestamp: payload.timestamp || new Date().toISOString(),
         metadata: payload.metadata || {}
