@@ -93,6 +93,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - `AuthContext` no longer stores or checks `role`
 - The `AppBanner` no longer shows a role pill
 
+** COMPLETED**
+
 ### US-0.2: Remove commissioner league workspace
 **As a** drafter, **I want** the commissioner league management screen removed, **so that** the app does not present features irrelevant to draft assistance.
 
