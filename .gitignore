@@ -3,3 +3,6 @@ server/node_modules
 server/.env
 .DS_Store
 client/build
+
+.vscode/
+server/test/

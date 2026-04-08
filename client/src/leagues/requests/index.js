@@ -52,12 +52,10 @@ async function request(path, method = "GET", body = null) {
 
 export const createLeague = async (leagueData) => request("/", "POST", leagueData);
 export const getMyLeagues = async () => request("/", "GET");
-export const joinLeague = async (inviteCode) => request("/join", "POST", { inviteCode });
 
 const apis = {
     createLeague,
-    getMyLeagues,
-    joinLeague
+    getMyLeagues
 };
 
 export default apis;

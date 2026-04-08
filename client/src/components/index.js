@@ -5,7 +5,6 @@ import RegisterScreen from './RegisterScreen'
 import SplashScreen from './SplashScreen'
 import ForgotPasswordScreen from './ForgotPasswordScreen'
 import PlayerHomeScreen from './PlayerHomeScreen'
-import CommissionerLeagueScreen from './CommissionerLeagueScreen'
 import DraftRoomScreen from './DraftRoomScreen'
 export {
     AppBanner,
@@ -15,6 +14,5 @@ export {
     SplashScreen,
     ForgotPasswordScreen,
     PlayerHomeScreen,
-    CommissionerLeagueScreen,
     DraftRoomScreen
 }
