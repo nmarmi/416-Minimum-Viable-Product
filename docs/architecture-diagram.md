@@ -42,7 +42,7 @@ flowchart TB
       LC[league-controller]
       PC[players-controller]
 
-      AU[auth module\nJWT cookie verify/sign]
+      AU[auth module<br>JWT cookie verify/sign]
       DBI[db/index.js]
       MDB[MongoDBManager]
       LAPI[licensed-player-api client]

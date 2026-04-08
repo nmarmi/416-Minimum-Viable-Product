@@ -18,13 +18,14 @@ DraftIQ is a fantasy baseball draft application (commissioners, players, live au
    - Terminal 2: `cd client && npm start`
    - Open http://localhost:3000, sign in, join a league, open Draft Room → **Players** tab to see the pool.
 
-### Deploy frontend to Vercel (single-domain setup)
+### Deploy frontend to Vercel
 
 1. Create a Vercel project with **Root Directory** set to `client`.
-2. In `client/vercel.json`, replace `https://<your-draftiq-backend-domain>` with your deployed DraftIQ backend URL.
+2. Add environment variable `REACT_APP_API_BASE_URL` set to your deployed DraftIQ backend URL (example: `https://four16-minimum-viable-product-backend.onrender.com`).
 3. Deploy and attach your custom domain to this frontend project.
+4. After frontend deploy, set backend `CORS_ORIGINS` to include your frontend URL (plus `http://localhost:3000` for local dev) and redeploy backend.
 
-In this setup, the frontend calls same-origin paths (`/auth`, `/leagues`, `/players`), and Vercel proxies those paths to your backend.
+In this setup, the frontend calls your backend directly using `REACT_APP_API_BASE_URL`.
 
 ### Full-stack deployment (what users need)
 
@@ -37,11 +38,11 @@ To give users full functionality from one web domain:
    - `CORS_ORIGINS` (include your frontend domain and `http://localhost:3000` for local dev)
    - `PLAYER_API_URL=https://player-data-api.vercel.app` (licensed player API URL)
    - `PLAYER_API_KEY=...` (if required by licensed API)
-3. Deploy **frontend** (`client`) to Vercel with rewrites from `client/vercel.json`.
+3. Deploy **frontend** (`client`) to Vercel and set `REACT_APP_API_BASE_URL` to your backend URL.
 
 Flow at runtime:
 - User browser -> frontend domain (Vercel static app)
-- Frontend same-origin requests -> Vercel rewrites -> DraftIQ backend (`/auth`, `/leagues`, `/players`)
+- Frontend direct requests -> DraftIQ backend (`/auth`, `/leagues`, `/players`)
 - DraftIQ backend -> MongoDB Atlas + licensed Player Data API (`PLAYER_API_URL`)
 
 `https://player-data-api.vercel.app` is only for licensed player data integration, not for `/auth` or `/leagues`.
