@@ -4,7 +4,6 @@ import { BrowserRouter, Redirect, Route, Switch } from 'react-router-dom'
 import { AuthContextProvider } from './auth';
 import {
     AppBanner,
-    CommissionerHomeScreen,
     CommissionerLeagueScreen,
     DraftRoomScreen,
     ForgotPasswordScreen,
@@ -14,7 +13,7 @@ import {
     RegisterScreen
 } from './components'
 
-const App = () => {   
+const App = () => {
     return (
         <BrowserRouter>
             <AuthContextProvider>
@@ -22,12 +21,11 @@ const App = () => {
                     <AppBanner />
                     <Switch>
                         <Route path="/" exact component={HomeWrapper} />
+                        <Route path="/home" exact component={PlayerHomeScreen} />
                         <Route path="/login" exact component={LoginScreen} />
                         <Route path="/register" exact component={RegisterScreen} />
                         <Route path="/forgot-password" exact component={ForgotPasswordScreen} />
-                        <Route path="/player-home" exact component={PlayerHomeScreen} />
-                        <Route path="/commissioner-home" exact component={CommissionerHomeScreen} />
-                        <Route path="/commissioner-home/league/:leagueId" exact component={CommissionerLeagueScreen} />
+                        <Route path="/league/:leagueId" exact component={CommissionerLeagueScreen} />
                         <Route path="/league/:leagueId/draft-room" exact component={DraftRoomScreen} />
                         <Redirect to="/" />
                     </Switch>

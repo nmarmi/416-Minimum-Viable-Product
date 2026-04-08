@@ -118,7 +118,7 @@ const CommissionerLeagueScreen = () => {
         return (
             <main className="page-shell">
                 <p>{loadError || 'League not found.'}</p>
-                <button className="home-light-btn" type="button" onClick={() => history.push('/commissioner-home')}>Back to Commissioner Home</button>
+                <button className="home-light-btn" type="button" onClick={() => history.push('/home')}>Back to Home</button>
             </main>
         );
     }
@@ -126,7 +126,7 @@ const CommissionerLeagueScreen = () => {
     return (
         <main className="commissioner-workspace-page">
             <section className="home-card commissioner-workspace-header">
-                <button type="button" className="home-light-btn compact-btn" onClick={() => history.push('/commissioner-home')}>
+                <button type="button" className="home-light-btn compact-btn" onClick={() => history.push('/home')}>
                  ←
                 </button>
                 <div>
