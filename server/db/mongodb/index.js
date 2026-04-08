@@ -57,23 +57,16 @@ class MongoDBManager extends DatabaseManager {
 
     // league
     async createLeague(commissionerId, data) {
-    const inviteCode = data.inviteCode || this._generateInviteCode();
+        const league = new League({
+            name: data.name,
+            commissioner: commissionerId,
+            numberOfTeams: data.numberOfTeams ? Number(data.numberOfTeams) : 12,
+            draftType: data.draftType || "Auction",
+            leagueMode: data.leagueMode || "Redraft",
+        });
 
-    const league = new League({
-        name: data.name,
-        inviteCode,
-        commissioner: commissionerId,
-        members: [],
-        seasonYear: data.seasonYear ? Number(data.seasonYear) : null,
-        numberOfTeams: data.numberOfTeams ? Number(data.numberOfTeams) : 12,
-        draftType: data.draftType || "Auction Draft",
-        leagueMode: data.leagueMode || "Join Draft",
-        currentTeams: 0,
-        isActive: true
-    });
-
-    return await league.save();
-}
+        return await league.save();
+    }
 
     async getLeaguesForUser(userId) {
         return await League.find({
@@ -82,15 +75,6 @@ class MongoDBManager extends DatabaseManager {
                 { members: userId }
             ]
         }).sort({ createdAt: -1 });
-    }
-
-    _generateInviteCode() {
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        let code = "";
-        for (let i = 0; i < 8; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return code;
     }
 
     // players (projections / stats)

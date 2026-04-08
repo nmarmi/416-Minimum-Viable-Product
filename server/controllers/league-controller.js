@@ -11,26 +11,12 @@ const createLeague = async (req, res) => {
             });
         }
 
-        const {
-            name,
-            inviteCode,
-            seasonYear,
-            numberOfTeams,
-            draftType,
-            leagueMode
-        } = req.body;
+        const { name, numberOfTeams, draftType, leagueMode } = req.body;
 
         if (!name || typeof name !== "string" || !name.trim()) {
             return res.status(400).json({
                 success: false,
                 errorMessage: "League name is required."
-            });
-        }
-
-        if (!seasonYear) {
-            return res.status(400).json({
-                success: false,
-                errorMessage: "Season year is required."
             });
         }
 
@@ -43,8 +29,6 @@ const createLeague = async (req, res) => {
 
         const league = await db.createLeague(userId, {
             name: name.trim(),
-            inviteCode: inviteCode && String(inviteCode).trim() ? String(inviteCode).trim().toUpperCase() : undefined,
-            seasonYear,
             numberOfTeams,
             draftType,
             leagueMode

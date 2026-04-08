@@ -889,6 +889,12 @@ body {
   text-align: left;
 }
 
+.league-error-msg {
+  color: #c0392b;
+  font-size: 0.85rem;
+  margin: 4px 0 0;
+}
+
 .league-modal-card p {
   margin-bottom: 14px;
 }
