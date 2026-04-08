@@ -10,8 +10,7 @@ async function request(path, method = 'GET', body = null) {
             headers: { 'Content-Type': 'application/json' }
         };
         if (body) options.body = JSON.stringify(body);
-        const url = BASE_URL ? `${BASE_URL}${path}` : path;
-        const res = await fetch(url, options);
+        const res = await fetch(`${BASE_URL}${path}`, options);
         const rawText = await res.text();
         let data = {};
         if (rawText) {

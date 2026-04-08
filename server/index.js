@@ -8,14 +8,14 @@ const cookieParser = require('cookie-parser')
 dotenv.config()
 const PORT = process.env.PORT || 4000;
 const app = express()
-
-// setup middleware
-// there shouldnt be uploads >10mb
-app.use(express.urlencoded({ extended: true, limit: '10mb' })) 
-const corsOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000")
+const corsOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ALLOWED_ORIGINS || "http://localhost:3000")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+// setup middleware
+// there shouldnt be uploads >10mb
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 app.use(cors({
     origin: corsOrigins,
@@ -28,9 +28,11 @@ app.use(cookieParser())
 const authRouter = require('./routes/auth-router')
 const leagueRouter = require('./routes/league-router')
 const playersRouter = require('./routes/players-router')
+const draftSessionRouter = require('./routes/draft-session-router')
 app.use('/auth', authRouter)
 app.use('/leagues', leagueRouter)
 app.use('/players', playersRouter)
+app.use('/draft-sessions', draftSessionRouter)
 
 // init database
 const db = require('./db');

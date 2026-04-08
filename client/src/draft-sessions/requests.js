@@ -1,6 +1,6 @@
-import { LEAGUES_API_BASE_URL } from "../../config/api";
+import { DRAFT_SESSIONS_API_BASE_URL } from "../config/api";
 
-const BASE_URL = LEAGUES_API_BASE_URL;
+const BASE_URL = DRAFT_SESSIONS_API_BASE_URL;
 
 async function request(path, method = "GET", body = null) {
     try {
@@ -37,7 +37,7 @@ async function request(path, method = "GET", body = null) {
 
         return { status: res.status, data };
     } catch (err) {
-        console.error("LEAGUES REQUEST ERROR:", err);
+        console.error("DRAFT SESSION REQUEST ERROR:", err);
         return {
             status: 500,
             data: {
@@ -48,12 +48,18 @@ async function request(path, method = "GET", body = null) {
     }
 }
 
-export const createLeague = async (leagueData) => request("/", "POST", leagueData);
-export const getMyLeagues = async () => request("/", "GET");
+export const createDraftSession = async (payload) => request("/", "POST", payload);
+export const getDraftSession = async (draftSessionId) => request(`/${draftSessionId}`, "GET");
+export const getLatestDraftSessionForLeague = async (leagueId) => request(`?leagueId=${encodeURIComponent(leagueId)}`, "GET");
+export const updateDraftSession = async (draftSessionId, payload) => request(`/${draftSessionId}`, "PUT", payload);
+export const startDraftSession = async (draftSessionId) => request(`/${draftSessionId}/start`, "POST");
 
-const apis = {
-    createLeague,
-    getMyLeagues
+const draftSessionsApi = {
+    createDraftSession,
+    getDraftSession,
+    getLatestDraftSessionForLeague,
+    updateDraftSession,
+    startDraftSession
 };
 
-export default apis;
+export default draftSessionsApi;

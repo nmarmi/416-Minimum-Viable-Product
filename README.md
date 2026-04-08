@@ -2,6 +2,10 @@
 
 DraftIQ is a fantasy baseball draft application (commissioners, players, live auction draft room). See **PLAN.md** for features, remaining work, and how player data (CSV projections) is used.
 
+### AWS deployment
+
+Use the step-by-step AWS guide in `docs/AWS_DEPLOYMENT.md`.
+
 ### Run the app
 
 1. **Install and env**

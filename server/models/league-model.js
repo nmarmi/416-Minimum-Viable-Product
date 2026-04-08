@@ -8,11 +8,6 @@ const LeagueSchema = new Schema(
             required: true,
             trim: true
         },
-        inviteCode: {
-            type: String,
-            required: false,
-            unique: false
-        },
         commissioner: {
             type: Schema.Types.ObjectId,
             ref: 'User',

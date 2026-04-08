@@ -131,7 +131,7 @@ const CommissionerLeagueScreen = () => {
                 </button>
                 <div>
                     <h2>{league.name}</h2>
-                    <p>{league.numberOfTeams || 12} teams • {league.draftType || 'Auction'} • {league.leagueMode || 'Redraft'} • Invite: {league.inviteCode}</p>
+                    <p>{league.numberOfTeams || 12} teams • {league.draftType || 'Auction'} • {league.leagueMode || 'Redraft'}</p>
                 </div>
                 
             </section>

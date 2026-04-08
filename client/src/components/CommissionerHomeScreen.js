@@ -8,7 +8,6 @@ const CommissionerHomeScreen = () => {
 
     const [showCreateLeagueModal, setShowCreateLeagueModal] = useState(false);
     const [leagueName, setLeagueName] = useState('');
-    const [inviteCode, setInviteCode] = useState('');
     const [seasonYear, setSeasonYear] = useState('2026');
     const [numTeams, setNumTeams] = useState(12);
     const [draftType, setDraftType] = useState('Auction');
@@ -37,13 +36,6 @@ const CommissionerHomeScreen = () => {
         loadLeagues();
     }, []);
 
-    const generateInviteCode = () => {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = '';
-        for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
-        setInviteCode(code);
-    };
-
     const createLeague = async () => {
         if (!leagueName.trim()) {
             setLeagueError('League name is required.');
@@ -55,7 +47,6 @@ const CommissionerHomeScreen = () => {
 
         const payload = {
             name: leagueName.trim(),
-            inviteCode: inviteCode.trim() || undefined,
             seasonYear,
             numberOfTeams: numTeams,
             draftType,
@@ -71,7 +62,6 @@ const CommissionerHomeScreen = () => {
         }
 
         setLeagueName('');
-        setInviteCode('');
         setShowCreateLeagueModal(false);
         await loadLeagues();
     };
@@ -123,7 +113,6 @@ const CommissionerHomeScreen = () => {
                                 <p className="league-subtitle">
                                     {league.numberOfTeams || 12} teams • {league.draftType || 'Auction'} • {league.leagueMode || 'Redraft'}
                                 </p>
-                                <p className="hint">Invite Code: <strong>{league.inviteCode}</strong></p>
                                 <div className="league-card-actions">
                                     <button
                                         className="home-light-btn"
@@ -155,20 +144,6 @@ const CommissionerHomeScreen = () => {
                             <label>
                                 <span>League Name</span>
                                 <input type="text" value={leagueName} onChange={(e) => setLeagueName(e.target.value)} />
-                            </label>
-                            <label>
-                                <span>Invite Code</span>
-                                <div className="inline-field-row modal-invite-row">
-                                    <input
-                                        type="text"
-                                        value={inviteCode}
-                                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                                        placeholder="Optional (auto-generated if blank)"
-                                    />
-                                    <button type="button" className="home-light-btn compact-btn" onClick={generateInviteCode}>
-                                        Generate
-                                    </button>
-                                </div>
                             </label>
                             <label>
                                 <span>Season Year</span>
