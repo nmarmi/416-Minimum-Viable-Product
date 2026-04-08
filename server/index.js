@@ -28,9 +28,11 @@ app.use(cookieParser())
 const authRouter = require('./routes/auth-router')
 const leagueRouter = require('./routes/league-router')
 const playersRouter = require('./routes/players-router')
+const draftSessionRouter = require('./routes/draft-session-router')
 app.use('/auth', authRouter)
 app.use('/leagues', leagueRouter)
 app.use('/players', playersRouter)
+app.use('/draft-sessions', draftSessionRouter)
 
 // init database
 const db = require('./db');

@@ -4,8 +4,8 @@
 
 **DraftIQ** is a full-stack **fantasy baseball draft** application. It supports:
 
-- **Commissioners**: Create leagues, set invite codes, configure draft type (e.g. Auction), number of teams, and manage a league.
-- **Players**: Join leagues via invite code, see “My Leagues,” and enter a **Draft Room** for live auction drafting.
+- **Commissioners**: Create leagues, configure draft type (e.g. Auction), number of teams, and manage a league.
+- **Players**: Create and manage leagues, see “My Leagues,” and enter a **Draft Room** for live auction drafting.
 - **Draft Room**: Player pool (search/filter), roster building, live auction (nominate → bid → mark sold), team budgets, and settings — all currently using placeholder/filler content until the player data API is connected.
 
 ---
@@ -15,7 +15,7 @@
 | Feature | Status |
 |--------|--------|
 | Auth (register, login, forgot password) | ✅ |
-| Commissioner:  invite code | ✅ |
+| Commissioner: create league workspace | ✅ |
 | Player: create league, view league, list “My Leagues” | ✅ |
 | Draft Room UI: tabs (Players, My Roster, Draft Board, Teams, Settings) | ✅ |
 | Auction workflow UI (nominate, timer, bid, mark sold) | ✅ |

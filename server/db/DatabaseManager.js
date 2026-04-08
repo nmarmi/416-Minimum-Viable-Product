@@ -10,7 +10,17 @@ class DatabaseManager {
     // league
     async createLeague(commissionerId, leagueData){}
     async getLeaguesForUser(userId){}
-    async joinLeagueByInviteCode(userId, inviteCode){}
+    async getLeagueById(leagueId){}
+
+    // draft session
+    async createDraftSession(sessionData){}
+    async getDraftSessionById(draftSessionId){}
+    async getLatestDraftSessionForLeague(leagueId){}
+    async saveDraftSession(draftSession){}
+
+    // players
+    async getPlayers(options = {}){}
+    async getAvailablePlayerIds(options = {}){}
 }
 
 module.exports = DatabaseManager;
