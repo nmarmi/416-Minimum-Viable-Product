@@ -15,8 +15,8 @@
 | Feature | Status |
 |--------|--------|
 | Auth (register, login, forgot password) | ✅ |
-| Commissioner: create league, view league, invite code | ✅ |
-| Player: join league by code, list “My Leagues” | ✅ |
+| Commissioner:  invite code | ✅ |
+| Player: create league, view league, list “My Leagues” | ✅ |
 | Draft Room UI: tabs (Players, My Roster, Draft Board, Teams, Settings) | ✅ |
 | Auction workflow UI (nominate, timer, bid, mark sold) | ✅ |
 | Backend: MongoDB, auth, leagues CRUD | ✅ |
