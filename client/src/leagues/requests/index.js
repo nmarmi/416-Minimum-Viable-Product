@@ -4,8 +4,6 @@ const BASE_URL = LEAGUES_API_BASE_URL;
 
 async function request(path, method = "GET", body = null) {
     try {
-        console.log("LEAGUES REQUEST:", `${BASE_URL}${path}`, method, body);
-
         const options = {
             method,
             credentials: "include",
@@ -52,12 +50,10 @@ async function request(path, method = "GET", body = null) {
 
 export const createLeague = async (leagueData) => request("/", "POST", leagueData);
 export const getMyLeagues = async () => request("/", "GET");
-export const joinLeague = async (inviteCode) => request("/join", "POST", { inviteCode });
 
 const apis = {
     createLeague,
-    getMyLeagues,
-    joinLeague
+    getMyLeagues
 };
 
 export default apis;

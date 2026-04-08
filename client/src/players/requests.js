@@ -10,8 +10,7 @@ async function request(path, method = 'GET', body = null) {
             headers: { 'Content-Type': 'application/json' }
         };
         if (body) options.body = JSON.stringify(body);
-        const url = BASE_URL ? `${BASE_URL}${path}` : path;
-        const res = await fetch(url, options);
+        const res = await fetch(`${BASE_URL}${path}`, options);
         const rawText = await res.text();
         let data = {};
         if (rawText) {
@@ -47,11 +46,11 @@ function buildQuery(params) {
 
 export async function getPlayers(params = {}) {
     const query = buildQuery(params);
-    return request(`/players${query}`);
+    return request(query);
 }
 
 export async function postUsage(payload = {}) {
-    return request('/players/usage', 'POST', {
+    return request('/usage', 'POST', {
         event: payload.event || 'draft_room_open',
         timestamp: payload.timestamp || new Date().toISOString(),
         metadata: payload.metadata || {}

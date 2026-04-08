@@ -8,14 +8,14 @@ const cookieParser = require('cookie-parser')
 dotenv.config()
 const PORT = process.env.PORT || 4000;
 const app = express()
-
-// setup middleware
-// there shouldnt be uploads >10mb
-app.use(express.urlencoded({ extended: true, limit: '10mb' })) 
-const corsOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000")
+const corsOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ALLOWED_ORIGINS || "http://localhost:3000")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+// setup middleware
+// there shouldnt be uploads >10mb
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 app.use(cors({
     origin: corsOrigins,
