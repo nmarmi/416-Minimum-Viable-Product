@@ -26,7 +26,9 @@ const playerNameStartsWithSearch = (playerName, searchTerm) => {
 
 const getTeamName = (team) => team?.teamName || team?.teamId || 'Fantasy Team';
 
-const getPlayerId = (player) => player.id || player._id || player.playerId || `${player.playerName}-${player.team}`;
+const getPlayerTeamLabel = (player) => player?.mlbTeam || player?.team || '';
+
+const getPlayerId = (player) => player.id || player._id || player.playerId || `${player.playerName}-${getPlayerTeamLabel(player)}`;
 
 const buildRosterPlanner = (draftSession) => {
     const slots = draftSession?.leagueSettings?.rosterSlots || {};
@@ -364,7 +366,7 @@ const DraftRoomScreen = () => {
                                     >
                                         <div className="draft-v2-live-search-item-main">
                                             <strong>{player.playerName}</strong>
-                                            <span>{player.team} • {player.position}</span>
+                                            <span>{getPlayerTeamLabel(player)} • {player.position}</span>
                                         </div>
                                     </button>
                                 ))}
@@ -448,7 +450,7 @@ const DraftRoomScreen = () => {
                                 players.map((player) => (
                                     <tr key={getPlayerId(player)} className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}>
                                         <td>{player.playerName}</td>
-                                        <td>{player.team}</td>
+                                        <td>{getPlayerTeamLabel(player)}</td>
                                         <td>{player.position}</td>
                                         <td>{formatStat(player.fpts)}</td>
                                         <td>--</td>
@@ -538,7 +540,7 @@ const DraftRoomScreen = () => {
                                     >
                                         <div className="draft-v2-player-suggestion-main">
                                             <strong>{player.playerName}</strong>
-                                            <span>{player.team} • {player.position}</span>
+                                            <span>{getPlayerTeamLabel(player)} • {player.position}</span>
                                         </div>
                                         <div className="draft-v2-player-suggestion-value">
                                             ${Math.round(player.fpts || 0)}

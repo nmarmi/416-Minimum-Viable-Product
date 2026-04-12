@@ -8,6 +8,7 @@ const formatStat = (val) =>
     : '--';
 
 const formatAvg = (val) => (val != null ? Number(val).toFixed(3) : '--');
+const getTeamLabel = (player) => player?.mlbTeam || player?.team || '--';
 
 const STAT_ROWS = [
   { key: 'playerName', label: 'Player' },
@@ -65,7 +66,7 @@ const PlayerCompareModal = ({ players = [], onClose }) => {
                 {players.map((p, i) => (
                   <th key={p.id || p._id || `${p.playerName}-${i}`}>
                     {p.playerName}
-                    <span className="compare-modal-sub">{p.team} · {p.position}</span>
+                    <span className="compare-modal-sub">{getTeamLabel(p)} · {p.position}</span>
                   </th>
                 ))}
               </tr>
@@ -76,7 +77,7 @@ const PlayerCompareModal = ({ players = [], onClose }) => {
                   <td className="compare-modal-label-col">{label}</td>
                   {players.map((p, i) => (
                     <td key={p.id || p._id || `${p.playerName}-${i}`}>
-                      {format ? format(p[key]) : (p[key] ?? '--')}
+                      {format ? format(p[key]) : (key === 'team' ? getTeamLabel(p) : (p[key] ?? '--'))}
                     </td>
                   ))}
                 </tr>
