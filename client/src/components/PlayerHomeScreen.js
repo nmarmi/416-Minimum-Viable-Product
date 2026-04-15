@@ -65,12 +65,17 @@ const PlayerHomeScreen = () => {
             setCreateError('League name is required.');
             return;
         }
+
+        const defaultSeasonYear = String(new Date().getFullYear());
+
         setCreating(true);
         setCreateError('');
         const res = await leaguesRequestSender.createLeague({
             name: leagueName.trim(),
+            seasonYear: defaultSeasonYear,
             numberOfTeams: 12,
-            draftType: 'Auction'
+            draftType: 'Auction',
+            leagueMode: 'Redraft'
         });
         setCreating(false);
         if (res.status !== 201 || !res.data?.success) {

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import leaguesRequestSender from '../leagues/requests';
 
 const CommissionerHomeScreen = () => {
@@ -8,7 +7,6 @@ const CommissionerHomeScreen = () => {
 
     const [showCreateLeagueModal, setShowCreateLeagueModal] = useState(false);
     const [leagueName, setLeagueName] = useState('');
-    const [seasonYear, setSeasonYear] = useState('2026');
     const [numTeams, setNumTeams] = useState(12);
     const [draftType, setDraftType] = useState('Auction');
     const [leagueMode, setLeagueMode] = useState('Redraft');
@@ -47,7 +45,6 @@ const CommissionerHomeScreen = () => {
 
         const payload = {
             name: leagueName.trim(),
-            seasonYear,
             numberOfTeams: numTeams,
             draftType,
             leagueMode
@@ -144,13 +141,6 @@ const CommissionerHomeScreen = () => {
                             <label>
                                 <span>League Name</span>
                                 <input type="text" value={leagueName} onChange={(e) => setLeagueName(e.target.value)} />
-                            </label>
-                            <label>
-                                <span>Season Year</span>
-                                <div className="input-with-icon modal-field">
-                                    <input type="text" value={seasonYear} onChange={(e) => setSeasonYear(e.target.value)} className="home-input compact" />
-                                    <CalendarMonthOutlinedIcon sx={{ fontSize: 18 }} />
-                                </div>
                             </label>
                             <label>
                                 <span>Number of Teams</span>
