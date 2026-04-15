@@ -68,7 +68,9 @@ const PlayerHomeScreen = () => {
         setCreating(true);
         setCreateError('');
         const res = await leaguesRequestSender.createLeague({
-            name: leagueName.trim()
+            name: leagueName.trim(),
+            numberOfTeams: 12,
+            draftType: 'Auction'
         });
         setCreating(false);
         if (res.status !== 201 || !res.data?.success) {
@@ -119,7 +121,7 @@ const PlayerHomeScreen = () => {
             <section className="home-left-column">
                 <article className="home-card">
                     <h2>Create League</h2>
-                    <p>Create the league first, then set teams, salary cap, and roster slots when you create the draft.</p>
+                    <p>Create the league here. After that, create a draft setup for that league and adjust teams, budget, and roster slots there.</p>
                     <button className="home-dark-btn" type="button" onClick={openCreateModal}>
                         Create League
                     </button>
@@ -196,7 +198,7 @@ const PlayerHomeScreen = () => {
                                                 type="button"
                                                 onClick={() => openCreateDraftModal(league)}
                                             >
-                                                New Draft Session
+                                                Create Another Draft
                                             </button>
                                         ) : null}
                                     </div>
@@ -211,7 +213,7 @@ const PlayerHomeScreen = () => {
                 <div className="role-modal-overlay">
                     <div className="role-modal-card league-modal-card">
                         <h3>Create League</h3>
-                        <p>Create the league shell first. Draft settings are configured in the draft setup step.</p>
+                        <p>Create the league shell here. We will start with 12 teams by default, and you can change league settings in the draft setup step.</p>
                         <div className="league-modal-grid">
                             <label>
                                 <span>League Name</span>
