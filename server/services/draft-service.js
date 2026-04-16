@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
 const DraftSession = require('../models/draft-session-model');
 const Player = require('../models/player-model');
+const licensedApi = require('../lib/licensed-player-api');
 
 const PITCHER_POSITIONS = new Set(['SP', 'RP', 'P']);
 
@@ -77,12 +77,25 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
     }
 
     let position = null;
-    const dbPlayer = await Player.findOne({ playerId: playerIdStr }).lean()
-        || (mongoose.Types.ObjectId.isValid(playerId) ? await Player.findById(playerId).lean() : null)
-        || (playerName ? await Player.findOne({ playerName: playerName.trim() }).lean() : null);
+    const dbPlayer = await Player.findOne({ playerId: playerIdStr }).lean();
     if (dbPlayer) {
         playerName = playerName || dbPlayer.playerName;
-        position = dbPlayer.position;
+        position = dbPlayer.position || null;
+    } else if (licensedApi.hasConfig()) {
+        const apiPlayer = await licensedApi.getPlayer(playerIdStr);
+        if (apiPlayer) {
+            playerName = playerName || apiPlayer.playerName || apiPlayer.name;
+            const positions = Array.isArray(apiPlayer.positions) && apiPlayer.positions.length > 0
+                ? apiPlayer.positions
+                : (apiPlayer.position ? [apiPlayer.position] : []);
+            position = positions.join(',') || null;
+        }
+    } else if (playerName) {
+        console.error(`[draft-service] Player not found by playerId "${playerIdStr}" and licensed API is not configured — falling back to playerName lookup. This should not happen in production.`);
+        const namePlayer = await Player.findOne({ playerName: playerName.trim() }).lean();
+        if (namePlayer) {
+            position = namePlayer.position || null;
+        }
     }
     playerName = playerName || playerIdStr;
 
