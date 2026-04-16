@@ -28,7 +28,9 @@ const PlayerSchema = new Schema(
         avg: { type: Number, default: null },
         obp: { type: Number, default: null },
         slg: { type: Number, default: null },
-        fpts: { type: Number, default: null }
+        fpts: { type: Number, default: null },
+        status: { type: String, default: 'active', enum: ['active', 'injured', 'minors'] },
+        isAvailable: { type: Boolean, default: true }
     },
     { timestamps: true }
 );
