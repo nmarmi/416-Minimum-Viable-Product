@@ -22,10 +22,10 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - US-2.1, US-2.2, US-2.3, US-2.4
 - Depends on: Phase 1 (clean codebase)
 
-### Phase 3: Seed Data (consume from Player Data API)
+### Phase 3: Player Pool via Player Data API
 - US-3.2, US-3.3
-- Depends on: Phase 2 (PlayerStub schema exists)
-- Note: The seed dataset itself is created in the Player Data API repo. This repo imports it.
+- Depends on: Phase 2 (session model complete per the US-2.7–2.9 alignment note)
+- Note: No local seed import. On draft start the Draft Kit calls `GET /api/v1/players/pool` on the Player Data API and persists `availablePlayerIds`.
 
 ### Phase 4: Session CRUD Endpoints
 - US-8.1, US-8.2, US-8.3, US-8.4, US-8.8
@@ -68,16 +68,16 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Depends on: Phases 9–11 (UI exists to polish)
 
 ### Phase 14: API Integration Readiness (Milestone 3)
-- US-11.1, US-11.2, US-11.3
-- Depends on: Player Data API placeholder endpoints (US-2.4, 2.5 in that repo)
+- US-11.1, US-11.2, US-11.3, US-11.4, US-11.5, US-11.6, US-11.7, US-11.8
+- Depends on: Player Data API placeholder endpoints (US-2.4, 2.5 in that repo), versioned routes (US-2.6), legacy-route deprecation headers (US-2.8), and the recommendations bugfix (US-2.9)
 
-### Phase 15: External Data Integration (Milestone 4)
+### Phase 15: External Data Consumption (Milestone 4)
 - US-12.1, US-12.2, US-12.3
-- Depends on: Player Data API ingestion jobs (Epic 4 in that repo)
+- Depends on: Phase 14 (licensed-API client can reach `/pool`, `/valuations`, etc.) and Player Data API ingestion jobs (Epic 4 in that repo)
 
 ### Phase 16: Valuation & Recommendations (Milestone 5)
 - US-13.1, US-13.2, US-13.3, US-13.4
-- Depends on: Player Data API valuation engine (Epics 5–6 in that repo)
+- Depends on: Phase 14 (client methods exist), Phase 15 (data is flowing), and Player Data API valuation engine (Epics 5–6 in that repo)
 
 ---
 
@@ -261,6 +261,13 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
   - Increments `filledRosterSlots` for the player's position
 - Returns updated draft snapshot
 
+> **Model alignment note (applies to US-2.7, 2.8, 2.9):** The current `server/models/draft-session-model.js` still predates stories US-2.1–2.3. Before implementing the service methods below, extend the schema to match what US-2.1–2.3 already promised:
+> - add `draftHistory: [DraftPurchaseSchema]`
+> - add `purchasedPlayerIds: [String]`
+> - extend `status` enum to `['setup', 'active', 'paused', 'completed']`
+> - add `nominationOrder` (auto-increment counter on the session)
+> - add `myTeamId: String` (used by US-6.5)
+
 ### US-2.7: Implement draft state service — undo purchase
 **As a** developer, **I want** the draft state service to undo a purchase, **so that** mistakes can be corrected.
 
@@ -298,26 +305,30 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ---
 
-## Epic 3: Player Pool — Seed Data Integration
+## Epic 3: Player Pool — Sourced from the Player Data API
 
-> Note: US-3.1 (create seed dataset) has been removed. The seed dataset is owned by the Player Data API repo (their US-1.4). This repo consumes it.
+> Note: US-3.1 (create seed dataset) has been removed. The Player Data API owns the pool. With the Player Data API live and serving `GET /api/v1/players/pool`, the Draft Kit **does not** import or store a local JSON seed. Stories below describe pulling the pool on demand.
 
-### US-3.2: Import seed data into PlayerStub collection
-**As a** developer, **I want** a script to load seed player data into the database, **so that** draft sessions have a player pool.
-
-**Acceptance criteria:**
-- Script reads the seed file (sourced from Player Data API repo's seed dataset) and upserts into `PlayerStub` collection
-- Running the script is idempotent (re-run doesn't create duplicates)
-- Script logs count of imported players
-
-### US-3.3: API endpoint to list available players
-**As a** drafter, **I want** an API endpoint that returns the player pool for a draft session, **so that** the UI can display available players.
+### US-3.2: Populate `availablePlayerIds` from the Player Data API pool
+**As a** drafter, **I want** a new draft session's available player pool to come from the Player Data API, **so that** the pool is always in sync with the upstream source of truth and the Draft Kit doesn't carry a stale seed.
 
 **Acceptance criteria:**
-- `GET /api/draft-sessions/:sessionId/players?status=available` returns available players
-- Supports optional `search`, `position`, `team` query filters
-- Returns `playerId`, `name`, `positions`, `mlbTeam`, `status`, `isAvailable`
+- When a draft session transitions from `setup` to `active` (US-1.8 / US-8.4), the server calls `GET /api/v1/players/pool` on the Player Data API
+- `availablePlayerIds` is populated from the response's `players[].playerId` (format `mlb-{id}`)
+- A `pooledAt` timestamp is stored on the session so the client can warn if the pool is older than N hours
+- If the Player Data API is unreachable and `PLAYER_API_URL` is unset, fall back to the legacy MongoDB `Player` collection's IDs (documented as a dev-only fallback)
+- If the Player Data API is unreachable and `PLAYER_API_URL` **is** set, the endpoint returns `503` with a clear "Player Data API unavailable" message — the session is **not** transitioned to `active`
+
+### US-3.3: Expose player details to the draft room via a proxied endpoint
+**As a** drafter, **I want** the draft room's Players tab to render rich player details (name, team, positions, status), **so that** I can search and bid without a separate API dance.
+
+**Acceptance criteria:**
+- `GET /api/draft-sessions/:sessionId/players?status=available` returns available players for the session
+- Implementation proxies `GET /api/v1/players/pool` (or `GET /api/v1/players` with filters) and intersects with `session.availablePlayerIds`
+- Supports optional `search`, `position`, `team` query filters (passed through to the Player Data API where supported)
+- Returns `PlayerStub` shape: `playerId`, `name`, `positions[]`, `mlbTeam`, `status`, `isAvailable` (derived from session availability, not from the upstream field)
 - Pagination via `limit` and `offset`
+- No local `PlayerStub` collection is required — if caching is added later, it is added as a separate story under Epic 12
 
 ---
 
@@ -544,6 +555,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Initializes team budgets and player pool
 - Sets `status` to `"active"`
 - Returns initialized draft snapshot
+- **Replaces** the current paginated `GET /players?limit=1000&offset=…` loop in `getAvailablePlayerIds()` with a single `GET /api/v1/players/pool` call (per US-3.2)
+- On Player Data API failure with `PLAYER_API_URL` set, returns `503` with a clear error and does **not** transition the session to `active`
 
 ### US-8.5: Record purchase endpoint
 **As a** developer, **I want** `POST /api/draft-sessions/:id/purchases` to record a purchase.
@@ -646,73 +659,154 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 11: API Integration Readiness (Milestone 3)
 
-### US-11.1: Define player valuation request contract
+> This epic wires the Draft Kit to the Player Data API's valuation, recommendation, and player-pool endpoints. The canonical request/response contracts are owned by the Player Data API (see US-5.3, US-5.4, US-5.5 and US-6.1–6.4 in `PLAYER_DATA_API_USER_STORIES.md`). This epic is mostly client plumbing plus one serializer.
+
+### US-11.1: Document the cross-repo `{leagueSettings, draftState}` contract
+**As a** developer maintaining both repos, **I want** a single authoritative description of the payload the Draft Kit sends to the Player Data API, **so that** breaking changes are caught at code-review time.
+
 **Acceptance criteria:**
-- Documented request shape: `{draftState: {availablePlayers, purchasedPlayers, teamBudgets, rosterSlots}, playerId?}`
-- Documented response shape: `{playerId, estimatedValue, recommendationTier}`
-- Contract lives in `README` or a shared types file
+- A shared contract doc (in this repo's `docs/` or `README`) reproduces the shapes from Player Data API US-5.3 and US-5.4
+- Documents the explicit mapping from the Draft Kit's `DraftSession.leagueSettings` (`numberOfTeams`, `salaryCap`, `rosterSlots` map, `scoringType`, `draftType`) to the engine fields
+- Documents that `draftState.purchasedPlayers` is built from `DraftSession.draftHistory[]` + `teams[].purchasedPlayers[]`, and that `teamBudgets` and `filledRosterSlots` come from `teams[]`
+- Lists the exact endpoints the Draft Kit will call: `/api/v1/players/pool`, `/api/v1/players/:playerId`, `/api/v1/players/valuations`, `/api/v1/players/recommendations`, `/api/v1/players/recommendations/nominations`, `/api/v1/usage`
 
 ### US-11.2: Add value column placeholder to player table
 **Acceptance criteria:**
 - "$ Value" column exists in available players table showing "--"
-- Column header has a tooltip explaining it will show model-derived values
+- Column header has a tooltip explaining it will show model-derived values once US-13.1 is wired
+- Column renders the API's `projectedValue` when present, falls back to `--` otherwise
 
 ### US-11.3: Draft state export for API consumption
 **Acceptance criteria:**
-- `exportDraftState(sessionId)` returns a clean JSON payload with: available player IDs, purchased player IDs with prices and teams, all team budgets, roster slot configuration
+- `exportDraftState(sessionId)` returns a clean JSON payload matching the Player Data API contract from US-11.1:
+  - `availablePlayerIds: string[]`
+  - `purchasedPlayers: [{ playerId, teamId, price, positionFilled }]`
+  - `teamBudgets: { [teamId]: number }`
+  - `filledRosterSlots: { [teamId]: { [position]: number } }`
 - No Mongoose internals or `_id` fields leak into the payload
-- Player IDs use the `mlb-{id}` format
+- Player IDs use the `mlb-{id}` format; team IDs use `fantasy-team-{n}`
+- Accompanied by `exportLeagueSettings(sessionId)` that returns the raw `leagueSettings` shape (the Player Data API handles normalization per US-5.3)
+
+### US-11.4: Expand the licensed API client
+**As a** developer, **I want** `server/lib/licensed-player-api.js` to expose every endpoint this repo needs, **so that** the Draft Kit controllers don't hand-roll fetches.
+
+**Acceptance criteria:**
+- Adds `getPlayerPool({ positions? })` → `GET /api/v1/players/pool`
+- Adds `getPlayerById(playerId)` → `GET /api/v1/players/:playerId`
+- Adds `postValuations({ leagueSettings, draftState })` → `POST /api/v1/players/valuations`
+- Adds `postRecommendations({ leagueSettings, draftState, teamId })` → `POST /api/v1/players/recommendations`
+- Adds `postNominations({ leagueSettings, draftState, teamId })` → `POST /api/v1/players/recommendations/nominations`
+- Existing `getPlayers` and `postUsage` remain but point at `/api/v1/*` (see US-11.5)
+- Each method propagates the Player Data API error shape through the translation in US-11.8
+- Unit tests mock `fetch` and assert each method builds the correct URL, headers (`X-API-Key`, `Authorization: Bearer`), and body
+
+### US-11.5: Migrate licensed API client to `/api/v1/*`
+**As a** developer, **I want** the Draft Kit to hit the versioned Player Data API surface, **so that** legacy-route deprecation in the Player Data API (US-2.8 there) doesn't break us.
+
+**Acceptance criteria:**
+- All calls from `server/lib/licensed-player-api.js` go to `/api/v1/*`
+- Optional `PLAYER_API_LEGACY=1` env flag falls back to unversioned routes for local testing against older API builds
+- Health of the configured base URL is logged once on server startup (versioned path reachable, yes/no)
+- README (`416-Minimum-Viable-Product/README.md`) updates its "Licensed Player Data API" examples to the versioned paths
+
+### US-11.6: League-settings serializer for Player Data API calls
+**As a** developer, **I want** a single helper that turns `DraftSession.leagueSettings` into whatever shape the Player Data API currently expects, **so that** future contract tweaks happen in one place.
+
+**Acceptance criteria:**
+- `server/lib/player-api-adapter.js` exports `toPlayerApiLeagueSettings(session.leagueSettings)` and `toPlayerApiDraftState(session)`
+- Output matches the contract documented in US-11.1 / US-5.3 / US-5.4
+- `toPlayerApiDraftState` handles edge cases: no purchases yet, `teams` with missing `filledRosterSlots`, paused/completed sessions
+- Unit tested with a representative session fixture
+
+### US-11.7: Surface Player Data API data-freshness in the draft room
+**As a** drafter, **I want** to see when the upstream player data was last refreshed, **so that** I know whether injury flags are current.
+
+**Acceptance criteria:**
+- When the draft kit calls `/api/v1/players/pool` or `/api/v1/players/valuations`, it forwards the response's `dataAsOf` and `staleWarnings` to the client
+- Draft room header renders a small "Player data as of X ago" line
+- If `staleWarnings` is non-empty, render a yellow badge and list the stale sources on hover
+
+### US-11.8: Translate Player Data API errors to the Draft Kit error shape
+**As a** client developer, **I want** error shapes from the Player Data API to be translated into the Draft Kit's `{ success, errorMessage }` shape on the server side, **so that** the client only has to handle one error convention.
+
+**Acceptance criteria:**
+- `server/lib/licensed-player-api.js` detects the Player Data API's `{ success: false, error, code, fields? }` shape and throws a typed error including `code` and field-level `fields[]`
+- The Draft Kit controllers calling these methods translate that into `{ success: false, errorMessage, errorCode, fieldErrors }` in their JSON responses (extending the existing shape, not breaking it)
+- `400` responses from the Player Data API surface as `400` from the Draft Kit (not swallowed as `500`)
+- The client can read `fieldErrors` to show inline validation messages on the purchase / valuation forms
 
 ---
 
 ## Epic 12: External Data Integration (Milestone 4)
 
-### US-12.1: Sync player metadata from external source
-**Acceptance criteria:**
-- Script fetches normalized player data from the Player Data API
-- Upserts into `PlayerStub` collection
-- Logs new/updated/unchanged counts
-- Can be run manually or on schedule
+> **Rewrite note (was ingestion, now consumption):** The Player Data API owns MLB Stats API ingestion (its Epic 4). This epic used to describe the Draft Kit doing its own sync; that duplicated work. These stories now describe the Draft Kit **consuming** what the Player Data API already produces. If/when a local cache is ever desired, it is additive — the pull-through flow is the baseline.
 
-### US-12.2: Sync injury status
-**Acceptance criteria:**
-- Injury status field on `PlayerStub` (e.g. "10-day IL", "60-day IL", "DTD", "healthy")
-- Injury badge displayed next to player name in the table
-- Refresh interval: every 6-12 hours, with manual refresh button
+### US-12.1: Hydrate player details from the Player Data API pool
+**As a** drafter, **I want** the draft room's player list to carry full metadata (name, positions, team, status, depth-chart info), **so that** I can judge playing time before bidding.
 
-### US-12.3: Sync depth chart / roster status
 **Acceptance criteria:**
-- `PlayerStub.status` updated from external data (starter, bench, minors, DFA)
-- Displayed as a badge or column in the player table
-- Filterable (e.g. "Show only starters")
+- On draft start (US-3.2) and on each `GET /api/draft-sessions/:id/players` call, the Draft Kit server retrieves player records from `GET /api/v1/players/pool` via the US-11.4 client
+- Records are passed through to the client in `PlayerStub` shape plus `depthChartRank`, `depthChartPosition`, and `dataAsOf`
+- A manual "Refresh player data" button in the draft room re-fetches the pool and updates displayed rows in place
+- No local `PlayerStub` collection is required; if caching is added later, it is behind a feature flag
+
+### US-12.2: Display injury status from Player Data API
+**As a** drafter, **I want** to see each player's injury status (e.g. `IL-10`, `IL-60`, `DTD`, `active`), **so that** I can avoid bidding on unavailable players.
+
+**Acceptance criteria:**
+- `status` field from the Player Data API's `PlayerStub` is displayed as a badge next to the player name
+- Status colors: red for `IL-*`, yellow for `DTD`, gray for `minors`/`DFA`, none for `active`
+- No polling from the Draft Kit — the Player Data API's refresh cadence (every 15–60 min per its US-4.2) is the source of truth
+- Sort by `status` available on the Players tab
+
+### US-12.3: Display depth-chart / roster status from Player Data API
+**As a** drafter, **I want** to see whether a player is a starter, backup, or in the minors, **so that** I can assess playing time quickly.
+
+**Acceptance criteria:**
+- `depthChartRank` and `depthChartPosition` from the Player Data API response are rendered as a badge or column in the player table (e.g. "SP1", "OF-bench", "AAA")
+- Filter "Show only starters" toggles `depthChartRank === 1`
+- When a player is sent down or recalled between refreshes, the next pool refresh picks up the change with no Draft Kit code change
 
 ---
 
 ## Epic 13: Valuation & Recommendation Engine (Milestone 5)
 
-### US-13.1: Request live valuations from Player Data API
+> Depends on Player Data API Epics 5 and 6, and Draft Kit Epic 11 (specifically US-11.4 for the client methods and US-11.6 for the serializers).
+
+### US-13.1: Request live valuations from the Player Data API
 **Acceptance criteria:**
-- After each purchase, the app can (optionally) request updated values
-- Response populates the "$ Value" column for available players
-- Values change as the draft progresses
+- After each recorded purchase (and on draft-room load), the Draft Kit server calls `postValuations({ leagueSettings, draftState })` via US-11.4
+- `leagueSettings` is the session's raw leagueSettings (the Player Data API handles normalization per its US-5.3)
+- `draftState` is built by `toPlayerApiDraftState(session)` from US-11.6 (includes `availablePlayerIds`, `purchasedPlayers`, `teamBudgets`, `filledRosterSlots`)
+- Response populates the "$ Value" column for available players via `DraftContext`
+- Values change as the draft progresses (verified by eyeballing the column mid-draft)
+- If the Player Data API returns `valuations: []` with a "no stats" meta, the UI shows the placeholder `--` (no crash)
 
 ### US-13.2: Display recommendation tier for available players
 **Acceptance criteria:**
-- Recommendation column in player table
-- Values come from the Player Data API based on current draft state
-- Color-coded: green (buy), yellow (fair), red (avoid)
+- Recommendation column in the player table renders the `tier` value returned by the Player Data API (per its US-6.1)
+- **Color mapping is rendered from the API `tier` field only** — the Draft Kit does not compute thresholds locally:
+  - `"buy"` → green
+  - `"fair"` → yellow
+  - `"avoid"` → red
+- Hovering the badge shows the API's `reason` string
+- Column is hidden while `recommendations` is empty / loading
 
-### US-13.3: Show value-over-replacement for remaining players
+### US-13.3: Show value-over-replacement ("Surplus") for remaining players
 **Acceptance criteria:**
-- "Surplus" column shows `estimatedValue - projectedCost`
-- Positive surplus highlighted in green
+- "Surplus" column renders the `valueGap` field from the Player Data API (per its US-5.5)
+- For available players (no `purchasePrice`), `valueGap` is `null` → column shows `--`
+- For purchased players, `valueGap = projectedValue − purchasePrice`
+- Positive surplus highlighted in green, negative in red
 - Sortable, so best values float to top
+- Draft Kit does **not** recompute surplus locally
 
 ### US-13.4: Position scarcity alerts
 **Acceptance criteria:**
-- System tracks remaining available players per position
-- Alert shown when a position drops below a threshold
-- Alert appears in sidebar and optionally as a toast
+- The Draft Kit pulls position-scarcity metadata from the Player Data API's `/players/recommendations` response (threshold + position list)
+- Thresholds and triggering logic live in the API response metadata — not hardcoded in the Draft Kit client
+- Alert appears in the sidebar and optionally as a toast when a position moves into the scarce state
+- Alert includes the API-supplied `reason` string so the copy stays consistent with the recommendation engine
 
 ---
 
@@ -739,10 +833,12 @@ teamId, teamName, budgetRemaining, purchasedPlayers[], filledRosterSlots
 purchaseId, playerId, teamId, price, timestamp, nominationOrder
 ```
 
-### PlayerStub (local cache)
+### PlayerStub (pass-through shape from Player Data API)
 ```
-playerId (mlb-{id}), name, positions[], mlbTeam, status, isAvailable
+playerId (mlb-{id}), name, positions[], mlbTeam, status, isAvailable,
+depthChartRank?, depthChartPosition?, dataAsOf?
 ```
+> No local `PlayerStub` collection is required. The Draft Kit treats this as the shape in flight from the Player Data API's `/api/v1/players/pool` response.
 
 ### ID Conventions
 - Player ID: `mlb-{mlbPersonId}` (e.g. `mlb-592450`)
@@ -751,13 +847,39 @@ playerId (mlb-{id}), name, positions[], mlbTeam, status, isAvailable
 
 ---
 
+## Cross-Repo Contract (for Epics 11 and 13)
+
+Authoritative definitions live in the Player Data API's US-5.3 / US-5.4 / US-5.5. Reproduced here for quick reference.
+
+```ts
+// Outgoing request body for valuations, recommendations, nominations
+{
+  leagueSettings: {
+    numberOfTeams: number,
+    salaryCap: number,
+    rosterSlots: { [position: string]: number },  // full map, Draft Kit shape
+    scoringType: "5x5 Roto" | "H2H Categories" | "Points",
+    draftType: "AUCTION"
+  },
+  draftState: {
+    availablePlayerIds: string[],                  // "mlb-..."
+    purchasedPlayers: Array<{ playerId, teamId, price, positionFilled? }>,
+    teamBudgets:       Record<string, number>,     // teamId -> $ remaining
+    filledRosterSlots: Record<string, Record<string, number>>
+  },
+  teamId?: string                                  // "fantasy-team-3"
+}
+```
+
+---
+
 ## Story Count Summary
 
 | Milestone | Epics | Stories |
 |-----------|-------|---------|
-| M1: Realign & Build | 0, 1, 2, 3, 4, 5, 6, 8, 9 | 37 |
+| M1: Realign & Build | 0, 1, 2, 3, 4, 5, 6, 8, 9 | 49 |
 | M2: Validate & Polish | 7, 10 | 10 |
-| M3: API Integration Readiness | 11 | 3 |
-| M4: External Data | 12 | 3 |
+| M3: API Integration Readiness | 11 | 8 |
+| M4: External Data (consumer) | 12 | 3 |
 | M5: Valuation Engine | 13 | 4 |
-| **Total** | | **57** |
+| **Total** | | **74** |
