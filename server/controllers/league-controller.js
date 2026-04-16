@@ -11,7 +11,7 @@ const createLeague = async (req, res) => {
             });
         }
 
-        const { name, numberOfTeams, draftType, leagueMode } = req.body;
+        const { name } = req.body;
 
         if (!name || typeof name !== "string" || !name.trim()) {
             return res.status(400).json({
@@ -20,19 +20,7 @@ const createLeague = async (req, res) => {
             });
         }
 
-        if (!numberOfTeams || Number(numberOfTeams) < 2) {
-            return res.status(400).json({
-                success: false,
-                errorMessage: "Number of teams must be at least 2."
-            });
-        }
-
-        const league = await db.createLeague(userId, {
-            name: name.trim(),
-            numberOfTeams,
-            draftType,
-            leagueMode
-        });
+        const league = await db.createLeague(userId, { name: name.trim() });
 
         return res.status(201).json({
             success: true,
@@ -72,7 +60,35 @@ const getMyLeagues = async (req, res) => {
     }
 };
 
+const deleteLeague = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const league = await db.getLeagueById(req.params.leagueId);
+        if (!league) {
+            return res.status(404).json({ success: false, errorMessage: 'League not found.' });
+        }
+        if (String(league.owner) !== String(userId)) {
+            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can delete this league.' });
+        }
+
+        if (league.draftSessionId) {
+            await db.deleteDraftSessionBySessionId(league.draftSessionId);
+        }
+        await db.deleteLeagueById(league._id);
+
+        return res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('deleteLeague error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to delete league right now.' });
+    }
+};
+
 module.exports = {
     createLeague,
-    getMyLeagues
+    getMyLeagues,
+    deleteLeague
 };

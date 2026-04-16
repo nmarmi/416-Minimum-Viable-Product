@@ -2,6 +2,7 @@ import './App.css';
 import { React } from 'react'
 import { BrowserRouter, Redirect, Route, Switch } from 'react-router-dom'
 import { AuthContextProvider } from './auth';
+import GlobalStoreContextProvider from './store';
 import {
     AppBanner,
     DraftSessionSetupScreen,
@@ -17,6 +18,7 @@ const App = () => {
     return (
         <BrowserRouter>
             <AuthContextProvider>
+                <GlobalStoreContextProvider>
                 <div className="app-shell">
                     <AppBanner />
                     <Switch>
@@ -31,6 +33,7 @@ const App = () => {
                         <Redirect to="/" />
                     </Switch>
                 </div>
+                </GlobalStoreContextProvider>
             </AuthContextProvider>
         </BrowserRouter>
     )

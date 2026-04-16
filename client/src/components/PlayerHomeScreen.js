@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import leaguesRequestSender from '../leagues/requests';
-import draftSessionsRequestSender from '../draft-sessions/requests';
+import { GlobalStoreContext } from '../store';
 
 const PlayerHomeScreen = () => {
     const history = useHistory();
+    const { store } = useContext(GlobalStoreContext);
 
-    const [leagues, setLeagues] = useState([]);
-    const [draftSessionsByLeague, setDraftSessionsByLeague] = useState({});
     const [loadingLeagues, setLoadingLeagues] = useState(true);
     const [leagueError, setLeagueError] = useState('');
 
@@ -16,43 +14,20 @@ const PlayerHomeScreen = () => {
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState('');
 
-    const [showDraftModal, setShowDraftModal] = useState(false);
-    const [selectedLeague, setSelectedLeague] = useState(null);
-    const [draftSessionName, setDraftSessionName] = useState('');
-    const [creatingDraft, setCreatingDraft] = useState(false);
-    const [draftCreateError, setDraftCreateError] = useState('');
-
-    const loadDraftSessions = useCallback(async (leagueList) => {
-        const entries = await Promise.all(
-            leagueList.map(async (league) => {
-                const res = await draftSessionsRequestSender.getLatestDraftSessionForLeague(league._id);
-                if (res.status === 200 && res.data?.success) {
-                    return [league._id, res.data.draftSession];
-                }
-                return [league._id, null];
-            })
-        );
-
-        setDraftSessionsByLeague(Object.fromEntries(entries));
-    }, []);
-
-    const loadLeagues = useCallback(async () => {
+    const loadLeagues = async () => {
         setLoadingLeagues(true);
-        const res = await leaguesRequestSender.getMyLeagues();
+        const res = await store.loadLeagues();
         if (res.status === 200 && res.data?.success) {
-            const leagueList = res.data.leagues || [];
-            setLeagues(leagueList);
             setLeagueError('');
-            await loadDraftSessions(leagueList);
         } else {
             setLeagueError(res.data?.errorMessage || 'Unable to load leagues right now.');
         }
         setLoadingLeagues(false);
-    }, [loadDraftSessions]);
+    };
 
     useEffect(() => {
         loadLeagues();
-    }, [loadLeagues]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openCreateModal = () => {
         setLeagueName('');
@@ -66,59 +41,27 @@ const PlayerHomeScreen = () => {
             return;
         }
 
-        const defaultSeasonYear = String(new Date().getFullYear());
-
         setCreating(true);
         setCreateError('');
-        const res = await leaguesRequestSender.createLeague({
-            name: leagueName.trim(),
-            seasonYear: defaultSeasonYear,
-            numberOfTeams: 12,
-            draftType: 'Auction',
-            leagueMode: 'Redraft'
-        });
+
+        const result = await store.createLeague(leagueName.trim());
         setCreating(false);
-        if (res.status !== 201 || !res.data?.success) {
-            setCreateError(res.data?.errorMessage || 'Failed to create league.');
+
+        if (!result?.data?.success) {
+            setCreateError(result?.data?.errorMessage || 'Failed to create league.');
             return;
         }
-        setShowCreateModal(false);
+
+        const { league, draftSession } = result.data;
+
+        if (draftSession?.draftSessionId) {
+            setShowCreateModal(false);
+            history.push(`/league/${league._id}/draft/${draftSession.draftSessionId}/setup`);
+            return;
+        }
+
+        setCreateError('League created but failed to initialize draft settings.');
         await loadLeagues();
-    };
-
-    const openCreateDraftModal = (league) => {
-        setSelectedLeague(league);
-        setDraftSessionName(`${league.name} Auction`);
-        setDraftCreateError('');
-        setShowDraftModal(true);
-    };
-
-    const handleCreateDraftSession = async () => {
-        if (!selectedLeague) {
-            setDraftCreateError('Select a league first.');
-            return;
-        }
-        if (!draftSessionName.trim()) {
-            setDraftCreateError('Draft session name is required.');
-            return;
-        }
-
-        setCreatingDraft(true);
-        setDraftCreateError('');
-        const res = await draftSessionsRequestSender.createDraftSession({
-            leagueId: selectedLeague._id,
-            name: draftSessionName.trim()
-        });
-        setCreatingDraft(false);
-
-        if (res.status !== 201 || !res.data?.success) {
-            setDraftCreateError(res.data?.errorMessage || 'Unable to create draft session.');
-            return;
-        }
-
-        setShowDraftModal(false);
-        await loadLeagues();
-        history.push(`/league/${selectedLeague._id}/draft/${res.data.draftSession.draftSessionId}/setup`);
     };
 
     return (
@@ -126,7 +69,7 @@ const PlayerHomeScreen = () => {
             <section className="home-left-column">
                 <article className="home-card">
                     <h2>Create League</h2>
-                    <p>Create the league here. After that, create a draft setup for that league and adjust teams, budget, and roster slots there.</p>
+                    <p>Create a new league. You will be taken to the draft settings screen to configure teams, budget, and roster slots.</p>
                     <button className="home-dark-btn" type="button" onClick={openCreateModal}>
                         Create League
                     </button>
@@ -148,68 +91,38 @@ const PlayerHomeScreen = () => {
                     </article>
                 ) : null}
 
-                {!loadingLeagues && !leagueError && leagues.length === 0 ? (
+                {!loadingLeagues && !leagueError && store.leagues.length === 0 ? (
                     <article className="home-card home-empty-leagues">
                         <h3>No leagues yet</h3>
                         <p>Create a league to get started.</p>
                     </article>
                 ) : null}
 
-                {!loadingLeagues && !leagueError && leagues.length > 0 ? (
+                {!loadingLeagues && !leagueError && store.leagues.length > 0 ? (
                     <div className="league-stack">
-                        {leagues.map((league) => {
-                            const draftSession = draftSessionsByLeague[league._id];
-
-                            return (
-                                <article className="home-card league-list-card" key={league._id}>
-                                    <div className="league-card-header">
-                                        <h3>{league.name}</h3>
-                                    </div>
-                                    <p className="league-subtitle">
-                                        League workspace
-                                    </p>
-                                    {draftSession ? (
-                                        <p className="hint">
-                                            Latest draft: <strong>{draftSession.name}</strong> ({draftSession.status})
-                                        </p>
-                                    ) : (
-                                        <p className="hint">No draft session yet. Create one to configure teams, budget, and roster slots.</p>
-                                    )}
-                                    <div className="league-card-actions">
-                                        {draftSession ? (
-                                            <button
-                                                className="home-dark-btn"
-                                                type="button"
-                                                onClick={() => history.push(
-                                                    draftSession.status === 'active'
-                                                        ? `/league/${league._id}/draft-room/${draftSession.draftSessionId}`
-                                                        : `/league/${league._id}/draft/${draftSession.draftSessionId}/setup`
-                                                )}
-                                            >
-                                                {draftSession.status === 'active' ? 'Open Draft' : 'Continue Draft Setup'}
-                                            </button>
-                                        ) : (
-                                            <button
-                                                className="home-dark-btn"
-                                                type="button"
-                                                onClick={() => openCreateDraftModal(league)}
-                                            >
-                                                Create Draft Setup
-                                            </button>
-                                        )}
-                                        {draftSession ? (
-                                            <button
-                                                className="home-light-btn"
-                                                type="button"
-                                                onClick={() => openCreateDraftModal(league)}
-                                            >
-                                                Create Another Draft
-                                            </button>
-                                        ) : null}
-                                    </div>
-                                </article>
-                            );
-                        })}
+                        {store.leagues.map((league) => (
+                            <article className="home-card league-list-card" key={league._id}>
+                                <div className="league-card-header">
+                                    <h3>{league.name}</h3>
+                                </div>
+                                <div className="league-card-actions">
+                                    <button
+                                        className="home-dark-btn"
+                                        type="button"
+                                        onClick={() => history.push(`/league/${league._id}/draft-room/${league.draftSessionId}`)}
+                                    >
+                                        Enter Draft Room
+                                    </button>
+                                    <button
+                                        className="home-light-btn"
+                                        type="button"
+                                        onClick={() => history.push(`/league/${league._id}/draft/${league.draftSessionId}/setup`)}
+                                    >
+                                        Draft Settings
+                                    </button>
+                                </div>
+                            </article>
+                        ))}
                     </div>
                 ) : null}
             </section>
@@ -218,7 +131,7 @@ const PlayerHomeScreen = () => {
                 <div className="role-modal-overlay">
                     <div className="role-modal-card league-modal-card">
                         <h3>Create League</h3>
-                        <p>Create the league shell here. We will start with 12 teams by default, and you can change league settings in the draft setup step.</p>
+                        <p>Give your league a name. You will be taken to draft settings next.</p>
                         <div className="league-modal-grid">
                             <label>
                                 <span>League Name</span>
@@ -228,42 +141,15 @@ const PlayerHomeScreen = () => {
                                     onChange={(e) => setLeagueName(e.target.value)}
                                     placeholder="e.g. Friday Night Roto"
                                     autoFocus
+                                    onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                                 />
                             </label>
                         </div>
                         {createError ? <p className="league-error-msg">{createError}</p> : null}
                         <div className="role-modal-actions">
-                            <button type="button" className="home-light-btn" onClick={() => setShowCreateModal(false)}>Cancel</button>
+                            <button type="button" className="home-light-btn" onClick={() => setShowCreateModal(false)} disabled={creating}>Cancel</button>
                             <button type="button" className="home-dark-btn" onClick={handleCreate} disabled={creating}>
                                 {creating ? 'Creating...' : 'Create League'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            ) : null}
-
-            {showDraftModal ? (
-                <div className="role-modal-overlay">
-                    <div className="role-modal-card league-modal-card">
-                        <h3>Create Draft Setup</h3>
-                        <p>{selectedLeague ? `Create the draft configuration for ${selectedLeague.name}.` : 'Choose a draft name.'}</p>
-                        <div className="league-modal-grid">
-                            <label>
-                                <span>Draft Session Name</span>
-                                <input
-                                    type="text"
-                                    value={draftSessionName}
-                                    onChange={(e) => setDraftSessionName(e.target.value)}
-                                    placeholder="e.g. Friday Night Auction"
-                                    autoFocus
-                                />
-                            </label>
-                        </div>
-                        {draftCreateError ? <p className="league-error-msg">{draftCreateError}</p> : null}
-                        <div className="role-modal-actions">
-                            <button type="button" className="home-light-btn" onClick={() => setShowDraftModal(false)}>Cancel</button>
-                            <button type="button" className="home-dark-btn" onClick={handleCreateDraftSession} disabled={creatingDraft}>
-                                {creatingDraft ? 'Creating...' : 'Create Draft'}
                             </button>
                         </div>
                     </div>

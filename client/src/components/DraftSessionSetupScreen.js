@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
-import draftSessionsRequestSender from '../draft-sessions/requests';
+import { GlobalStoreContext } from '../store';
 
 const DEFAULT_ROSTER_SLOTS = {
     C: 2,
@@ -53,7 +53,6 @@ const normalizeSession = (draftSession) => {
     const salaryCap = clampInt(leagueSettings.salaryCap || 260, 1);
 
     return {
-        name: draftSession?.name || '',
         numberOfTeams,
         salaryCap,
         rosterSlots,
@@ -66,24 +65,22 @@ const normalizeSession = (draftSession) => {
 export default function DraftSessionSetupScreen() {
     const history = useHistory();
     const { leagueId, draftSessionId } = useParams();
+    const { store } = useContext(GlobalStoreContext);
 
     const [formState, setFormState] = useState(() => normalizeSession(null));
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [starting, setStarting] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
     const [loadError, setLoadError] = useState('');
     const [formError, setFormError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
-    const [sessionStatus, setSessionStatus] = useState('setup');
 
     useEffect(() => {
         const loadSession = async () => {
             setLoading(true);
             setLoadError('');
-            const res = await draftSessionsRequestSender.getDraftSession(draftSessionId);
+            const res = await store.loadDraftSession(draftSessionId);
             if (res.status === 200 && res.data?.success) {
                 setFormState(normalizeSession(res.data.draftSession));
-                setSessionStatus(res.data.draftSession.status || 'setup');
             } else {
                 setLoadError(res.data?.errorMessage || 'Unable to load draft session.');
             }
@@ -91,7 +88,7 @@ export default function DraftSessionSetupScreen() {
         };
 
         loadSession();
-    }, [draftSessionId]);
+    }, [draftSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const totalRosterSize = useMemo(
         () => Object.values(formState.rosterSlots).reduce((sum, value) => sum + Number(value || 0), 0),
@@ -99,7 +96,6 @@ export default function DraftSessionSetupScreen() {
     );
 
     const validate = () => {
-        if (!formState.name.trim()) return 'Draft session name is required.';
         if (formState.numberOfTeams < 2 || formState.numberOfTeams > 30) return 'Number of teams must be between 2 and 30.';
         if (formState.salaryCap < 1) return 'Salary cap must be at least 1.';
         if (totalRosterSize <= 0) return 'At least one roster slot is required.';
@@ -107,7 +103,6 @@ export default function DraftSessionSetupScreen() {
     };
 
     const buildPayload = () => ({
-        name: formState.name.trim(),
         leagueSettings: {
             numberOfTeams: formState.numberOfTeams,
             salaryCap: formState.salaryCap,
@@ -121,47 +116,30 @@ export default function DraftSessionSetupScreen() {
         }))
     });
 
-    const saveSetup = async ({ showMessage = true } = {}) => {
+    const saveSetup = async () => {
         const nextError = validate();
         if (nextError) {
             setFormError(nextError);
-            return null;
+            return;
         }
 
         setSaving(true);
         setFormError('');
-        setSuccessMessage('');
-        const res = await draftSessionsRequestSender.updateDraftSession(draftSessionId, buildPayload());
+        const res = await store.updateDraftSession(draftSessionId, buildPayload());
         setSaving(false);
-
-        if (res.status === 200 && res.data?.success) {
-            setFormState(normalizeSession(res.data.draftSession));
-            setSessionStatus(res.data.draftSession.status || 'setup');
-            if (showMessage) {
-                setSuccessMessage('Draft setup saved.');
-            }
-            return res.data.draftSession;
-        }
-
-        setFormError(res.data?.errorMessage || 'Unable to save draft setup.');
-        return null;
-    };
-
-    const handleStartDraft = async () => {
-        const savedSession = await saveSetup({ showMessage: false });
-        if (!savedSession) return;
-
-        setStarting(true);
-        setFormError('');
-        const res = await draftSessionsRequestSender.startDraftSession(draftSessionId);
-        setStarting(false);
 
         if (res.status === 200 && res.data?.success) {
             history.push(`/league/${leagueId}/draft-room/${draftSessionId}`);
             return;
         }
 
-        setFormError(res.data?.errorMessage || 'Unable to start draft session.');
+        setFormError(res.data?.errorMessage || 'Unable to save draft settings.');
+    };
+
+    const handleCancel = async () => {
+        setCancelling(true);
+        await store.deleteLeague(leagueId);
+        history.push('/home');
     };
 
     const handleNumberOfTeamsChange = (value) => {
@@ -171,7 +149,6 @@ export default function DraftSessionSetupScreen() {
             numberOfTeams,
             teams: buildTeams(numberOfTeams, prev.salaryCap, prev.rosterSlots, prev.teams)
         }));
-        setSuccessMessage('');
     };
 
     const handleSalaryCapChange = (value) => {
@@ -184,7 +161,6 @@ export default function DraftSessionSetupScreen() {
                 budgetRemaining: salaryCap
             }))
         }));
-        setSuccessMessage('');
     };
 
     const handleRosterSlotChange = (slot, value) => {
@@ -201,7 +177,6 @@ export default function DraftSessionSetupScreen() {
                 teams: buildTeams(prev.numberOfTeams, prev.salaryCap, rosterSlots, prev.teams)
             };
         });
-        setSuccessMessage('');
     };
 
     const handleTeamNameChange = (teamId, value) => {
@@ -213,7 +188,6 @@ export default function DraftSessionSetupScreen() {
                     : team
             ))
         }));
-        setSuccessMessage('');
     };
 
     if (loading) {
@@ -224,7 +198,7 @@ export default function DraftSessionSetupScreen() {
         return (
             <main className="page-shell">
                 <p>{loadError}</p>
-                <button className="home-light-btn" type="button" onClick={() => history.push('/home')}>
+                <button className="home-light-btn" type="button" onClick={() => 1('/home')}>
                     Back to Home
                 </button>
             </main>
@@ -232,29 +206,15 @@ export default function DraftSessionSetupScreen() {
     }
 
     return (
-        <main className="app-home draft-setup-page">
-            <section className="draft-setup-shell">
+        <main className="app-home">
+            <section className="home-left-column">
                 <article className="home-card draft-setup-card">
-                    <div className="draft-setup-header">
-                        <div>
-                            <h2>Draft Session Setup</h2>
-                            <p>Configure teams, salary cap, roster slots, and scoring before opening the live auction room.</p>
-                        </div>
-                        <span className={`league-status ${sessionStatus === 'active' ? 'active' : 'inactive'}`}>
-                            {sessionStatus === 'active' ? 'Active' : 'Setup'}
-                        </span>
+                    <div>
+                        <h2>Draft Settings</h2>
+                        <p>Configure before opening the draft room.</p>
                     </div>
 
                     <div className="draft-setup-grid">
-                        <label>
-                            <span>Draft Session Name</span>
-                            <input
-                                type="text"
-                                value={formState.name}
-                                onChange={(e) => setFormState((prev) => ({ ...prev, name: e.target.value }))}
-                                placeholder="e.g. Friday Night Auction"
-                            />
-                        </label>
                         <label>
                             <span>Number of Teams</span>
                             <input
@@ -262,7 +222,8 @@ export default function DraftSessionSetupScreen() {
                                 min="2"
                                 max="30"
                                 value={formState.numberOfTeams}
-                                onChange={(e) => handleNumberOfTeamsChange(e.target.value)}
+                                onChange={(e) => setFormState((prev) => ({ ...prev, numberOfTeams: e.target.value }))}
+                                onBlur={(e) => handleNumberOfTeamsChange(e.target.value)}
                             />
                         </label>
                         <label>
@@ -299,7 +260,6 @@ export default function DraftSessionSetupScreen() {
                     <section className="draft-setup-section">
                         <div className="draft-setup-section-head">
                             <h3>Roster Slots</h3>
-                            <p>Standard 23-slot defaults are prefilled and fully editable.</p>
                         </div>
                         <div className="draft-setup-slot-grid">
                             {Object.keys(DEFAULT_ROSTER_SLOTS).map((slot) => (
@@ -315,39 +275,35 @@ export default function DraftSessionSetupScreen() {
                             ))}
                         </div>
                     </section>
+                </article>
+            </section>
 
-                    <section className="draft-setup-section">
-                        <div className="draft-setup-section-head">
-                            <h3>Fantasy Teams</h3>
-                            <p>Team IDs stay stable while names can be customized.</p>
-                        </div>
-                        <div className="draft-setup-team-list">
-                            {formState.teams.map((team) => (
-                                <label key={team.teamId} className="draft-setup-team-row">
-                                    <span>{team.teamId}</span>
-                                    <input
-                                        type="text"
-                                        value={team.teamName}
-                                        onChange={(e) => handleTeamNameChange(team.teamId, e.target.value)}
-                                    />
-                                    <small>Budget remaining: ${formState.salaryCap}</small>
-                                </label>
-                            ))}
-                        </div>
-                    </section>
-
+            <section className="home-right-column draft-setup-right">
+                <article className="home-card draft-setup-card">
+                    <div className="draft-setup-section-head">
+                        <h3>Fantasy Teams</h3>
+                        <p>Customize team names.</p>
+                    </div>
+                    <div className="draft-setup-team-list">
+                        {formState.teams.map((team) => (
+                            <label key={team.teamId} className="draft-setup-team-row">
+                                <span>{team.teamId}</span>
+                                <input
+                                    type="text"
+                                    value={team.teamName}
+                                    onChange={(e) => handleTeamNameChange(team.teamId, e.target.value)}
+                                />
+                                <small>Budget: ${formState.salaryCap}</small>
+                            </label>
+                        ))}
+                    </div>
                     {formError ? <p className="league-error-msg">{formError}</p> : null}
-                    {successMessage ? <p className="draft-setup-success">{successMessage}</p> : null}
-
                     <div className="role-modal-actions draft-setup-actions">
-                        <button type="button" className="home-light-btn" onClick={() => history.push('/home')}>
-                            Back to Home
+                        <button type="button" className="home-light-btn" onClick={handleCancel} disabled={saving || cancelling}>
+                            {cancelling ? 'Cancelling...' : 'Cancel'}
                         </button>
-                        <button type="button" className="home-light-btn" onClick={() => saveSetup()} disabled={saving || starting}>
-                            {saving ? 'Saving...' : 'Save Setup'}
-                        </button>
-                        <button type="button" className="home-dark-btn" onClick={handleStartDraft} disabled={saving || starting}>
-                            {starting ? 'Starting...' : 'Start Draft'}
+                        <button type="button" className="home-dark-btn" onClick={saveSetup} disabled={saving || cancelling}>
+                            {saving ? 'Saving...' : 'Save'}
                         </button>
                     </div>
                 </article>

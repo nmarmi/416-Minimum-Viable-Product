@@ -50,6 +50,28 @@ async function getPlayers(params = {}) {
 }
 
 /**
+ * Fetch a single player by ID: GET /players/:playerId from the licensed API.
+ * @param {string} playerId
+ * @returns {Promise<Object|null>} player object or null if not found / API not configured
+ */
+async function getPlayer(playerId) {
+    if (!hasConfig()) return null;
+    const url = `${baseUrl.replace(/\/$/, '')}/players/${encodeURIComponent(playerId)}`;
+    try {
+        const res = await fetch(url, { method: 'GET', headers: getHeaders() });
+        if (res.status === 404) return null;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data.error || data.errorMessage || `API ${res.status}`);
+        }
+        return data?.player ?? data ?? null;
+    } catch (err) {
+        console.error('Licensed API getPlayer error:', err.message);
+        return null;
+    }
+}
+
+/**
  * Push: POST /usage to the licensed API.
  * @param {Object} payload - { event, timestamp, metadata }
  * @returns {Promise<{ success: boolean } | null>}
@@ -82,5 +104,6 @@ async function postUsage(payload) {
 module.exports = {
     hasConfig,
     getPlayers,
+    getPlayer,
     postUsage
 };

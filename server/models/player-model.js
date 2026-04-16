@@ -8,6 +8,7 @@ const Schema = mongoose.Schema;
  */
 const PlayerSchema = new Schema(
     {
+        playerId: { type: String, trim: true },
         playerName: { type: String, required: true, trim: true },
         team: { type: String, required: true, trim: true },
         position: { type: String, required: true, trim: true },
@@ -28,11 +29,13 @@ const PlayerSchema = new Schema(
         avg: { type: Number, default: null },
         obp: { type: Number, default: null },
         slg: { type: Number, default: null },
-        fpts: { type: Number, default: null }
+        fpts: { type: Number, default: null },
+        status: { type: String, default: 'active', enum: ['active', 'injured', 'minors'] }
     },
     { timestamps: true }
 );
 
+PlayerSchema.index({ playerId: 1 }, { unique: true, sparse: true });
 PlayerSchema.index({ source: 1 });
 PlayerSchema.index({ playerName: 1, team: 1, source: 1 }, { unique: true });
 

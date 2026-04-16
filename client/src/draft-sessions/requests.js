@@ -50,16 +50,14 @@ async function request(path, method = "GET", body = null) {
 
 export const createDraftSession = async (payload) => request("/", "POST", payload);
 export const getDraftSession = async (draftSessionId) => request(`/${draftSessionId}`, "GET");
-export const getLatestDraftSessionForLeague = async (leagueId) => request(`?leagueId=${encodeURIComponent(leagueId)}`, "GET");
 export const updateDraftSession = async (draftSessionId, payload) => request(`/${draftSessionId}`, "PUT", payload);
-export const startDraftSession = async (draftSessionId) => request(`/${draftSessionId}/start`, "POST");
+export const recordPurchase = async (draftSessionId, payload) => request(`/${draftSessionId}/purchases`, "POST", payload);
 
 const draftSessionsApi = {
     createDraftSession,
     getDraftSession,
-    getLatestDraftSessionForLeague,
     updateDraftSession,
-    startDraftSession
+    recordPurchase,
 };
 
 export default draftSessionsApi;

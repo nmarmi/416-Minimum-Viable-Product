@@ -1,6 +1,39 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+const DraftPurchaseSchema = new Schema(
+    {
+        playerId: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        playerName: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        teamId: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        price: {
+            type: Number,
+            required: true,
+            min: 1
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now
+        },
+        nominationOrder: {
+            type: Number,
+            required: true
+        }
+    },
+);
+
 const TeamSchema = new Schema(
     {
         teamId: {
@@ -49,16 +82,6 @@ const DraftSessionSchema = new Schema(
             ref: 'User',
             required: true
         },
-        name: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        status: {
-            type: String,
-            enum: ['setup', 'active'],
-            default: 'setup'
-        },
         leagueSettings: {
             numberOfTeams: {
                 type: Number,
@@ -90,9 +113,9 @@ const DraftSessionSchema = new Schema(
             type: [String],
             default: []
         },
-        startedAt: {
-            type: Date,
-            default: null
+        draftHistory: {
+            type: [DraftPurchaseSchema],
+            default: []
         }
     },
     { timestamps: true }

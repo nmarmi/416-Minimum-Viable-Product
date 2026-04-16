@@ -2680,13 +2680,14 @@ body {
   color: #6b7280;
 }
 
-.draft-setup-page {
-  max-width: 1180px;
-  margin: 0 auto;
+.draft-setup-right {
+  display: flex;
+  flex-direction: column;
 }
 
-.draft-setup-shell {
-  width: 100%;
+.draft-setup-right .draft-setup-card {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .draft-setup-card {
