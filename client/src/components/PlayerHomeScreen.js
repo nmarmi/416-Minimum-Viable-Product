@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import leaguesRequestSender from '../leagues/requests';
-import draftSessionsRequestSender from '../draft-sessions/requests';
+import { GlobalStoreContext } from '../store';
 
 const PlayerHomeScreen = () => {
     const history = useHistory();
+    const { store } = useContext(GlobalStoreContext);
 
-    const [leagues, setLeagues] = useState([]);
     const [loadingLeagues, setLoadingLeagues] = useState(true);
     const [leagueError, setLeagueError] = useState('');
 
@@ -15,21 +14,20 @@ const PlayerHomeScreen = () => {
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState('');
 
-    const loadLeagues = useCallback(async () => {
+    const loadLeagues = async () => {
         setLoadingLeagues(true);
-        const res = await leaguesRequestSender.getMyLeagues();
+        const res = await store.loadLeagues();
         if (res.status === 200 && res.data?.success) {
-            setLeagues(res.data.leagues || []);
             setLeagueError('');
         } else {
             setLeagueError(res.data?.errorMessage || 'Unable to load leagues right now.');
         }
         setLoadingLeagues(false);
-    }, []);
+    };
 
     useEffect(() => {
         loadLeagues();
-    }, [loadLeagues]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openCreateModal = () => {
         setLeagueName('');
@@ -46,25 +44,23 @@ const PlayerHomeScreen = () => {
         setCreating(true);
         setCreateError('');
 
-        const leagueRes = await leaguesRequestSender.createLeague({ name: leagueName.trim() });
-        if (leagueRes.status !== 201 || !leagueRes.data?.success) {
-            setCreateError(leagueRes.data?.errorMessage || 'Failed to create league.');
-            setCreating(false);
-            return;
-        }
-
-        const league = leagueRes.data.league;
-        const sessionRes = await draftSessionsRequestSender.createDraftSession({ leagueId: league._id });
+        const result = await store.createLeague(leagueName.trim());
         setCreating(false);
 
-        if ((sessionRes.status === 201 || sessionRes.status === 200) && sessionRes.data?.success) {
-            setShowCreateModal(false);
-            const draftSessionId = sessionRes.data.draftSession.draftSessionId;
-            history.push(`/league/${league._id}/draft/${draftSessionId}/setup`);
+        if (!result?.data?.success) {
+            setCreateError(result?.data?.errorMessage || 'Failed to create league.');
             return;
         }
 
-        setCreateError(sessionRes.data?.errorMessage || 'League created but failed to initialize draft settings.');
+        const { league, draftSession } = result.data;
+
+        if (draftSession?.draftSessionId) {
+            setShowCreateModal(false);
+            history.push(`/league/${league._id}/draft/${draftSession.draftSessionId}/setup`);
+            return;
+        }
+
+        setCreateError('League created but failed to initialize draft settings.');
         await loadLeagues();
     };
 
@@ -95,16 +91,16 @@ const PlayerHomeScreen = () => {
                     </article>
                 ) : null}
 
-                {!loadingLeagues && !leagueError && leagues.length === 0 ? (
+                {!loadingLeagues && !leagueError && store.leagues.length === 0 ? (
                     <article className="home-card home-empty-leagues">
                         <h3>No leagues yet</h3>
                         <p>Create a league to get started.</p>
                     </article>
                 ) : null}
 
-                {!loadingLeagues && !leagueError && leagues.length > 0 ? (
+                {!loadingLeagues && !leagueError && store.leagues.length > 0 ? (
                     <div className="league-stack">
-                        {leagues.map((league) => (
+                        {store.leagues.map((league) => (
                             <article className="home-card league-list-card" key={league._id}>
                                 <div className="league-card-header">
                                     <h3>{league.name}</h3>

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
-import draftSessionsRequestSender from '../draft-sessions/requests';
+import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
 import PlayerCompareModal from './PlayerCompareModal';
@@ -42,6 +42,7 @@ const buildRosterPlanner = (draftSession) => {
 const DraftRoomScreen = () => {
     const history = useHistory();
     const { leagueId, draftSessionId } = useParams();
+    const { store } = useContext(GlobalStoreContext);
 
     const [activeTab, setActiveTab] = useState('Players');
     const [entryPlayer, setEntryPlayer] = useState('');
@@ -64,9 +65,10 @@ const DraftRoomScreen = () => {
     const [entryPlayerSuggestions, setEntryPlayerSuggestions] = useState([]);
     const [showEntrySuggestions, setShowEntrySuggestions] = useState(false);
     const [entryHighlightedIndex, setEntryHighlightedIndex] = useState(-1);
-    const [draftSession, setDraftSession] = useState(null);
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
+
+    const draftSession = store.currentDraftSession;
 
     const teamOptions = useMemo(() => {
         if (!draftSession?.teams?.length) return FALLBACK_TEAMS;
@@ -94,25 +96,21 @@ const DraftRoomScreen = () => {
     useEffect(() => {
         if (!draftSessionId) {
             setSessionLoading(false);
-            setDraftSession(null);
             return;
         }
 
         const loadDraftSession = async () => {
             setSessionLoading(true);
             setSessionError('');
-            const res = await draftSessionsRequestSender.getDraftSession(draftSessionId);
-            if (res.status === 200 && res.data?.success) {
-                setDraftSession(res.data.draftSession);
-                setSessionError('');
-            } else {
+            const res = await store.loadDraftSession(draftSessionId);
+            if (!res.data?.success) {
                 setSessionError(res.data?.errorMessage || 'Unable to load draft session.');
             }
             setSessionLoading(false);
         };
 
         loadDraftSession();
-    }, [draftSessionId]);
+    }, [draftSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         const defaultTeam = teamOptions[0] || FALLBACK_TEAMS[0];

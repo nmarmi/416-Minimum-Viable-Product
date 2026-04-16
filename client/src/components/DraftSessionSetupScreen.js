@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
-import draftSessionsRequestSender from '../draft-sessions/requests';
-import leaguesRequestSender from '../leagues/requests';
+import { GlobalStoreContext } from '../store';
 
 const DEFAULT_ROSTER_SLOTS = {
     C: 2,
@@ -66,6 +65,7 @@ const normalizeSession = (draftSession) => {
 export default function DraftSessionSetupScreen() {
     const history = useHistory();
     const { leagueId, draftSessionId } = useParams();
+    const { store } = useContext(GlobalStoreContext);
 
     const [formState, setFormState] = useState(() => normalizeSession(null));
     const [loading, setLoading] = useState(true);
@@ -78,7 +78,7 @@ export default function DraftSessionSetupScreen() {
         const loadSession = async () => {
             setLoading(true);
             setLoadError('');
-            const res = await draftSessionsRequestSender.getDraftSession(draftSessionId);
+            const res = await store.loadDraftSession(draftSessionId);
             if (res.status === 200 && res.data?.success) {
                 setFormState(normalizeSession(res.data.draftSession));
             } else {
@@ -88,7 +88,7 @@ export default function DraftSessionSetupScreen() {
         };
 
         loadSession();
-    }, [draftSessionId]);
+    }, [draftSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const totalRosterSize = useMemo(
         () => Object.values(formState.rosterSlots).reduce((sum, value) => sum + Number(value || 0), 0),
@@ -125,7 +125,7 @@ export default function DraftSessionSetupScreen() {
 
         setSaving(true);
         setFormError('');
-        const res = await draftSessionsRequestSender.updateDraftSession(draftSessionId, buildPayload());
+        const res = await store.updateDraftSession(draftSessionId, buildPayload());
         setSaving(false);
 
         if (res.status === 200 && res.data?.success) {
@@ -138,7 +138,7 @@ export default function DraftSessionSetupScreen() {
 
     const handleCancel = async () => {
         setCancelling(true);
-        await leaguesRequestSender.deleteLeague(leagueId);
+        await store.deleteLeague(leagueId);
         history.push('/home');
     };
 
@@ -198,7 +198,7 @@ export default function DraftSessionSetupScreen() {
         return (
             <main className="page-shell">
                 <p>{loadError}</p>
-                <button className="home-light-btn" type="button" onClick={() => history.push('/home')}>
+                <button className="home-light-btn" type="button" onClick={() => 1('/home')}>
                     Back to Home
                 </button>
             </main>
