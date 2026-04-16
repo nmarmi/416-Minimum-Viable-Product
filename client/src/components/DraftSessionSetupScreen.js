@@ -206,14 +206,12 @@ export default function DraftSessionSetupScreen() {
     }
 
     return (
-        <main className="app-home draft-setup-page">
-            <section className="draft-setup-shell">
+        <main className="app-home">
+            <section className="home-left-column">
                 <article className="home-card draft-setup-card">
-                    <div className="draft-setup-header">
-                        <div>
-                            <h2>Draft Settings</h2>
-                            <p>Configure teams, salary cap, roster slots, and scoring before opening the draft room.</p>
-                        </div>
+                    <div>
+                        <h2>Draft Settings</h2>
+                        <p>Configure before opening the draft room.</p>
                     </div>
 
                     <div className="draft-setup-grid">
@@ -261,7 +259,6 @@ export default function DraftSessionSetupScreen() {
                     <section className="draft-setup-section">
                         <div className="draft-setup-section-head">
                             <h3>Roster Slots</h3>
-                            <p>Standard 23-slot defaults are prefilled and fully editable.</p>
                         </div>
                         <div className="draft-setup-slot-grid">
                             {Object.keys(DEFAULT_ROSTER_SLOTS).map((slot) => (
@@ -277,27 +274,28 @@ export default function DraftSessionSetupScreen() {
                             ))}
                         </div>
                     </section>
+                </article>
+            </section>
 
-                    <section className="draft-setup-section">
-                        <div className="draft-setup-section-head">
-                            <h3>Fantasy Teams</h3>
-                            <p>Team IDs stay stable while names can be customized.</p>
-                        </div>
-                        <div className="draft-setup-team-list">
-                            {formState.teams.map((team) => (
-                                <label key={team.teamId} className="draft-setup-team-row">
-                                    <span>{team.teamId}</span>
-                                    <input
-                                        type="text"
-                                        value={team.teamName}
-                                        onChange={(e) => handleTeamNameChange(team.teamId, e.target.value)}
-                                    />
-                                    <small>Budget remaining: ${formState.salaryCap}</small>
-                                </label>
-                            ))}
-                        </div>
-                    </section>
-
+            <section className="home-right-column draft-setup-right">
+                <article className="home-card draft-setup-card">
+                    <div className="draft-setup-section-head">
+                        <h3>Fantasy Teams</h3>
+                        <p>Customize team names.</p>
+                    </div>
+                    <div className="draft-setup-team-list">
+                        {formState.teams.map((team) => (
+                            <label key={team.teamId} className="draft-setup-team-row">
+                                <span>{team.teamId}</span>
+                                <input
+                                    type="text"
+                                    value={team.teamName}
+                                    onChange={(e) => handleTeamNameChange(team.teamId, e.target.value)}
+                                />
+                                <small>Budget: ${formState.salaryCap}</small>
+                            </label>
+                        ))}
+                    </div>
                     {formError ? <p className="league-error-msg">{formError}</p> : null}
                     <div className="role-modal-actions draft-setup-actions">
                         <button type="button" className="home-light-btn" onClick={handleCancel} disabled={saving || cancelling}>
