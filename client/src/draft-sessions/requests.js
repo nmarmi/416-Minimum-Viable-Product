@@ -51,11 +51,13 @@ async function request(path, method = "GET", body = null) {
 export const createDraftSession = async (payload) => request("/", "POST", payload);
 export const getDraftSession = async (draftSessionId) => request(`/${draftSessionId}`, "GET");
 export const updateDraftSession = async (draftSessionId, payload) => request(`/${draftSessionId}`, "PUT", payload);
+export const recordPurchase = async (draftSessionId, payload) => request(`/${draftSessionId}/purchases`, "POST", payload);
 
 const draftSessionsApi = {
     createDraftSession,
     getDraftSession,
-    updateDraftSession
+    updateDraftSession,
+    recordPurchase,
 };
 
 export default draftSessionsApi;

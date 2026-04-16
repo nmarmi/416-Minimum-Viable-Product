@@ -1,7 +1,7 @@
 import { createContext, useContext, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import leaguesRequestSender from '../leagues/requests';
-import draftSessionsRequestSender from '../draft-sessions/requests';
+import draftSessionsRequestSender, { recordPurchase as recordPurchaseRequest } from '../draft-sessions/requests';
 import AuthContext from '../auth';
 
 /*
@@ -24,6 +24,7 @@ export const GlobalStoreActionType = {
     SET_CURRENT_LEAGUE: "SET_CURRENT_LEAGUE",
     LOAD_DRAFT_SESSION: "LOAD_DRAFT_SESSION",
     UPDATE_DRAFT_SESSION: "UPDATE_DRAFT_SESSION",
+    RECORD_PURCHASE: "RECORD_PURCHASE",
 };
 
 // WITH THIS WE'RE MAKING OUR GLOBAL DATA STORE
@@ -88,6 +89,14 @@ function GlobalStoreContextProvider(props) {
             }
             // REPLACE THE CURRENT DRAFT SESSION WITH UPDATED DATA
             case GlobalStoreActionType.UPDATE_DRAFT_SESSION: {
+                return setStore({
+                    leagues: store.leagues,
+                    currentLeague: store.currentLeague,
+                    currentDraftSession: payload,
+                });
+            }
+            // UPDATE SESSION AFTER A PURCHASE IS RECORDED
+            case GlobalStoreActionType.RECORD_PURCHASE: {
                 return setStore({
                     leagues: store.leagues,
                     currentLeague: store.currentLeague,
@@ -162,6 +171,17 @@ function GlobalStoreContextProvider(props) {
         if (res.status === 200 && res.data?.success) {
             storeReducer({
                 type: GlobalStoreActionType.UPDATE_DRAFT_SESSION,
+                payload: res.data.draftSession,
+            });
+        }
+        return res;
+    };
+
+    store.recordPurchase = async function (draftSessionId, { playerId, playerName, teamId, price }) {
+        const res = await recordPurchaseRequest(draftSessionId, { playerId, playerName, teamId, price });
+        if (res.status === 200 && res.data?.success) {
+            storeReducer({
+                type: GlobalStoreActionType.RECORD_PURCHASE,
                 payload: res.data.draftSession,
             });
         }

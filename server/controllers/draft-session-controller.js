@@ -3,6 +3,7 @@ const auth = require('../auth');
 const db = require('../db');
 const licensedApi = require('../lib/licensed-player-api');
 const DraftSession = require('../models/draft-session-model');
+const draftService = require('../services/draft-service');
 
 const DEFAULT_NUM_TEAMS = 12;
 const DEFAULT_SCORING_TYPE = '5x5 Roto';
@@ -171,7 +172,16 @@ function serializeSession(session) {
             ...team,
             filledRosterSlots: toPlainObject(team.filledRosterSlots)
         })),
-        availablePlayerIds: plainSession.availablePlayerIds || []
+        availablePlayerIds: plainSession.availablePlayerIds || [],
+        draftHistory: (plainSession.draftHistory || []).map((entry) => ({
+            _id: String(entry._id),
+            playerId: entry.playerId,
+            playerName: entry.playerName,
+            teamId: entry.teamId,
+            price: entry.price,
+            timestamp: entry.timestamp,
+            nominationOrder: entry.nominationOrder,
+        })),
     };
 }
 
@@ -298,8 +308,50 @@ const updateDraftSession = async (req, res) => {
     }
 };
 
+const recordPurchase = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const { draftSessionId } = req.params;
+        const { playerId, playerName, teamId, price } = req.body || {};
+
+        if (!playerId || !teamId || price == null) {
+            return res.status(400).json({ success: false, errorMessage: 'playerId, teamId, and price are required.' });
+        }
+
+        const parsedPrice = Number(price);
+        if (!Number.isFinite(parsedPrice) || parsedPrice < 1) {
+            return res.status(400).json({ success: false, errorMessage: 'price must be a positive number.' });
+        }
+
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const result = await draftService.recordPurchase(draftSessionId, { playerId, playerName, teamId, price: parsedPrice });
+        if (!result.success) {
+            return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        }
+
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('recordPurchase error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to record purchase.' });
+    }
+};
+
 module.exports = {
     createDraftSession,
     getDraftSession,
-    updateDraftSession
+    updateDraftSession,
+    recordPurchase,
 };

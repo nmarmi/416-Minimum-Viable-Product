@@ -3,7 +3,7 @@
  * Usage:
  *   node server/scripts/import-projections.js [path-to-projections-NL.csv]
  *   PROJECTIONS_CSV=/path/to/projections-NL.csv node server/scripts/import-projections.js
- * If no path is given, uses server/data/projections-NL.csv (copy your CSV there first).
+ * If no path is given, uses server/data/projections-NL.csv 
  */
 const fs = require('fs');
 const path = require('path');
@@ -12,6 +12,14 @@ const mongoose = require('mongoose');
 const Player = require('../models/player-model');
 
 const CSV_PATH = process.env.PROJECTIONS_CSV || process.argv[2] || path.join(__dirname, '..', 'data', 'projections-NL.csv');
+
+function slugify(str) {
+    return (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function generateLocalPlayerId(playerName, team) {
+    return `local-${slugify(playerName)}-${slugify(team)}`;
+}
 
 function parsePlayerCell(str) {
     const s = (str || '').trim();
@@ -80,6 +88,7 @@ async function run() {
 
         const [ab, r, h, single, double, triple, hr, rbi, bb, k, sb, cs, avg, obp, slg, fpts] = nums;
         toInsert.push({
+            playerId: generateLocalPlayerId(playerName, team),
             playerName,
             team,
             position,

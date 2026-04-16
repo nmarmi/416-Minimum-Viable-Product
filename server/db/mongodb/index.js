@@ -124,8 +124,8 @@ class MongoDBManager extends DatabaseManager {
 
     async getAvailablePlayerIds(options = {}) {
         const { source = 'projection' } = options;
-        const players = await Player.find({ source }).select('_id').lean();
-        return players.map((player) => String(player._id));
+        const players = await Player.find({ source }).select('playerId _id').lean();
+        return players.map((player) => player.playerId || String(player._id));
     }
 }
 

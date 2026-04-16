@@ -28,7 +28,7 @@ const getTeamName = (team) => team?.teamName || team?.teamId || 'Fantasy Team';
 
 const getPlayerTeamLabel = (player) => player?.mlbTeam || player?.team || '';
 
-const getPlayerId = (player) => player.id || player._id || player.playerId || `${player.playerName}-${getPlayerTeamLabel(player)}`;
+const getPlayerId = (player) => player.playerId || player.id || player._id || `${player.playerName}-${getPlayerTeamLabel(player)}`;
 
 const buildRosterPlanner = (draftSession) => {
     const slots = draftSession?.leagueSettings?.rosterSlots || {};
@@ -61,18 +61,21 @@ const DraftRoomScreen = () => {
     const [showGlossary, setShowGlossary] = useState(false);
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [comparePlayers, setComparePlayers] = useState([]);
+    const [entryPlayerId, setEntryPlayerId] = useState('');
     const [, setEntryPlayerSearch] = useState('');
     const [entryPlayerSuggestions, setEntryPlayerSuggestions] = useState([]);
     const [showEntrySuggestions, setShowEntrySuggestions] = useState(false);
     const [entryHighlightedIndex, setEntryHighlightedIndex] = useState(-1);
+    const [entrySubmitting, setEntrySubmitting] = useState(false);
+    const [entryError, setEntryError] = useState('');
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
 
     const draftSession = store.currentDraftSession;
 
     const teamOptions = useMemo(() => {
-        if (!draftSession?.teams?.length) return FALLBACK_TEAMS;
-        return draftSession.teams.map(getTeamName);
+        if (!draftSession?.teams?.length) return FALLBACK_TEAMS.map((name) => ({ teamId: name, label: name }));
+        return draftSession.teams.map((t) => ({ teamId: t.teamId, label: getTeamName(t) }));
     }, [draftSession]);
 
     const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession), [draftSession]);
@@ -113,9 +116,9 @@ const DraftRoomScreen = () => {
     }, [draftSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-        const defaultTeam = teamOptions[0] || FALLBACK_TEAMS[0];
-        setEntryNominatedBy(defaultTeam);
-        setEntryWonBy(defaultTeam);
+        const defaultTeamId = teamOptions[0]?.teamId || FALLBACK_TEAMS[0];
+        setEntryNominatedBy(defaultTeamId);
+        setEntryWonBy(defaultTeamId);
     }, [teamOptions]);
 
     useEffect(() => {
@@ -206,12 +209,14 @@ const DraftRoomScreen = () => {
     const handleEntryPlayerChange = async (event) => {
         const value = event.target.value;
         setEntryPlayer(value);
+        setEntryPlayerId('');
         setEntryPlayerSearch(value);
         await searchDraftBoardPlayers(value);
     };
 
     const handleSelectEntryPlayer = (player) => {
         setEntryPlayer(player.playerName || '');
+        setEntryPlayerId(getPlayerId(player));
         setEntryPlayerSearch(player.playerName || '');
         setEntryPlayerSuggestions([]);
         setShowEntrySuggestions(false);
@@ -320,6 +325,26 @@ const DraftRoomScreen = () => {
         } else if (event.key === 'Escape') {
             setShowPlayerSuggestions(false);
             setHighlightedPlayerIndex(-1);
+        }
+    };
+
+    const handleRecordPurchase = async () => {
+        setEntrySubmitting(true);
+        setEntryError('');
+        const res = await store.recordPurchase(draftSessionId, {
+            playerId: entryPlayerId,
+            playerName: entryPlayer,
+            teamId: entryWonBy,
+            price: Number(entryPrice),
+        });
+        setEntrySubmitting(false);
+        if (res.status === 200 && res.data?.success) {
+            setEntryPlayer('');
+            setEntryPlayerId('');
+            setEntryPrice('');
+            setEntryNotes('');
+        } else {
+            setEntryError(res.data?.errorMessage || 'Failed to record purchase.');
         }
     };
 
@@ -552,7 +577,7 @@ const DraftRoomScreen = () => {
                         <span>Auctioned By</span>
                         <select value={entryNominatedBy} onChange={(event) => setEntryNominatedBy(event.target.value)}>
                             {teamOptions.map((team) => (
-                                <option key={team}>{team}</option>
+                                <option key={team.teamId} value={team.teamId}>{team.label}</option>
                             ))}
                         </select>
                     </label>
@@ -560,7 +585,7 @@ const DraftRoomScreen = () => {
                         <span>Won By</span>
                         <select value={entryWonBy} onChange={(event) => setEntryWonBy(event.target.value)}>
                             {teamOptions.map((team) => (
-                                <option key={team}>{team}</option>
+                                <option key={team.teamId} value={team.teamId}>{team.label}</option>
                             ))}
                         </select>
                     </label>
@@ -578,8 +603,16 @@ const DraftRoomScreen = () => {
                         />
                     </label>
                 </div>
+                {entryError ? <p className="draft-v2-entry-error">{entryError}</p> : null}
                 <div className="draft-v2-auction-actions">
-                    <button type="button" className="draft-v2-auction-btn" disabled>Record Purchase</button>
+                    <button
+                        type="button"
+                        className="draft-v2-auction-btn"
+                        onClick={handleRecordPurchase}
+                        disabled={entrySubmitting || !entryPlayerId || !entryPrice}
+                    >
+                        {entrySubmitting ? 'Recording...' : 'Record Purchase'}
+                    </button>
                 </div>
             </article>
 
@@ -598,11 +631,24 @@ const DraftRoomScreen = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td colSpan={6} className="draft-v2-empty-row">
-                                    No picks logged yet. Enter each completed draft result here during the live draft.
-                                </td>
-                            </tr>
+                            {(draftSession?.draftHistory || []).length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="draft-v2-empty-row">
+                                        No picks logged yet. Enter each completed draft result here during the live draft.
+                                    </td>
+                                </tr>
+                            ) : (
+                                (draftSession.draftHistory).map((entry) => (
+                                    <tr key={entry._id}>
+                                        <td>{entry.nominationOrder}</td>
+                                        <td>{entry.playerName}</td>
+                                        <td>--</td>
+                                        <td>{entry.teamId}</td>
+                                        <td>${entry.price}</td>
+                                        <td>--</td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
