@@ -222,7 +222,8 @@ export default function DraftSessionSetupScreen() {
                                 min="2"
                                 max="30"
                                 value={formState.numberOfTeams}
-                                onChange={(e) => handleNumberOfTeamsChange(e.target.value)}
+                                onChange={(e) => setFormState((prev) => ({ ...prev, numberOfTeams: e.target.value }))}
+                                onBlur={(e) => handleNumberOfTeamsChange(e.target.value)}
                             />
                         </label>
                         <label>
