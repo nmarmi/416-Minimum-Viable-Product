@@ -57,10 +57,10 @@ class MongoDBManager extends DatabaseManager {
     }
 
     // league
-    async createLeague(commissionerId, data) {
+    async createLeague(ownerId, data) {
         const league = new League({
             name: data.name,
-            commissioner: commissionerId,
+            owner: ownerId,
             numberOfTeams: data.numberOfTeams ? Number(data.numberOfTeams) : 12,
             draftType: data.draftType || "Auction",
             leagueMode: data.leagueMode || "Redraft",
@@ -72,8 +72,7 @@ class MongoDBManager extends DatabaseManager {
     async getLeaguesForUser(userId) {
         return await League.find({
             $or: [
-                { commissioner: userId },
-                { members: userId }
+                { owner: userId },
             ]
         }).sort({ createdAt: -1 });
     }

@@ -633,61 +633,25 @@ body {
   margin: 0 0 8px;
 }
 
-.commissioner-home .home-left-column {
+.home-left-column {
   gap: 22px;
 }
 
-.commissioner-sections {
-  display: grid;
-  align-content: start;
-  gap: 18px;
-}
-
-.commissioner-workspace-page {
-  min-height: calc(100vh - 62px);
-  padding: 24px 28px 34px;
-  background: #c2cfe9;
-  display: grid;
-  align-content: start;
-  gap: 16px;
-}
-
-.commissioner-workspace-header {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 12px;
-  align-items: center;
-}
-
-.commissioner-workspace-header h2 {
-  margin: 0;
-  font-size: 30px;
-}
-
-.commissioner-workspace-header p {
-  margin: 4px 0 0;
-}
-
-.commissioner-workspace-grid {
-  display: grid;
-  gap: 16px;
-}
-
-.commissioner-home .home-card h2,
-.commissioner-home .home-card h3 {
+.home-card h2,
+.home-card h3 {
   font-size: 28px;
 }
 
-.commissioner-home .home-card label {
+.home-card label {
   font-size: 13px;
 }
 
-.commissioner-home .home-dark-btn {
+.home-dark-btn {
   height: 38px;
   font-size: 16px;
 }
 
-.commissioner-home .home-light-btn {
+.home-light-btn {
   height: 38px;
   font-size: 16px;
 }
@@ -832,16 +796,6 @@ body {
 .league-card-actions .home-dark-btn {
   height: 38px;
   font-size: 14px;
-}
-
-.commissioner-module {
-  margin-top: 18px;
-}
-
-.commissioner-module > h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .inline-field-row {
@@ -1344,15 +1298,6 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .commissioner-workspace-page {
-    min-height: calc(100vh - 58px);
-    padding: 14px;
-  }
-
-  .commissioner-workspace-header {
-    grid-template-columns: 1fr;
-  }
-
   .league-card-actions {
     grid-template-columns: 1fr;
   }
@@ -1371,10 +1316,6 @@ body {
   .home-card h3,
   .home-leagues-title {
     font-size: 30px;
-  }
-
-  .commissioner-module > h3 {
-    font-size: 24px;
   }
 
   .league-modal-grid {
@@ -1462,27 +1403,6 @@ body {
     margin-top: 24px;
   }
 }
-.commissioner-page {
-    display: grid;
-    grid-template-columns: 46% 54%;
-    height: calc(100vh - 85px);
-    background: #dbe5fb;
-    overflow: hidden;
-}
-
-.commissioner-left {
-    padding: 24px 24px 20px 24px;
-    background: #dbe5fb;
-    height: 100%;
-    overflow: hidden;
-}
-
-.commissioner-right {
-    padding: 20px 28px 20px 28px;
-    background: #cfdcf7;
-    height: 100%;
-    overflow: hidden;
-}
 
 .league-scroll-area {
     height: calc(100% - 60px);
@@ -1501,14 +1421,6 @@ body {
     background: #cfdcf7;
     padding-bottom: 10px;
     z-index: 2;
-}
-
-.commissioner-card {
-    background: #ffffff;
-    border-radius: 24px;
-    padding: 20px 20px;
-    margin-bottom: 18px;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 .card-title {

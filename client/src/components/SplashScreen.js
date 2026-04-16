@@ -39,13 +39,8 @@ const draftCards = [
 const roleCards = [
     {
         title: 'Fantasy Players',
-        description: 'Draft your championship team with powerful tools and insights.',
+        description: 'Create your league and draft your championship team with powerful tools and insights.',
         icon: <EmojiEventsRoundedIcon fontSize="small" />
-    },
-    {
-        title: 'Commissioners',
-        description: 'Manage leagues, configure settings, and oversee draft operations.',
-        icon: <ShieldRoundedIcon fontSize="small" />
     },
     {
         title: 'System Admins',

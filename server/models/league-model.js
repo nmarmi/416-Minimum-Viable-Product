@@ -8,20 +8,10 @@ const LeagueSchema = new Schema(
             required: true,
             trim: true
         },
-        commissioner: {
+        owner: {
             type: Schema.Types.ObjectId,
             ref: 'User',
             required: true
-        },
-        members: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: 'User'
-            }
-        ],
-        seasonYear: {
-            type: Number,
-            default: null
         },
         numberOfTeams: {
             type: Number,
@@ -35,14 +25,6 @@ const LeagueSchema = new Schema(
             type: String,
             default: 'Join Draft'
         },
-        currentTeams: {
-            type: Number,
-            default: 0
-        },
-        isActive: {
-            type: Boolean,
-            default: true
-        }
     },
     { timestamps: true }
 );

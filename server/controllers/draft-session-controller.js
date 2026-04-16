@@ -104,10 +104,9 @@ async function getLeagueForUser(leagueId, userId) {
         return null;
     }
 
-    const isCommissioner = String(league.commissioner) === String(userId);
-    const isMember = Array.isArray(league.members) && league.members.some((memberId) => String(memberId) === String(userId));
+    const isOwner = String(league.owner) === String(userId);
 
-    if (!isCommissioner && !isMember) {
+    if (!isOwner) {
         return null;
     }
 
@@ -191,8 +190,8 @@ const createDraftSession = async (req, res) => {
         }
 
         const league = await getLeagueForUser(leagueId, userId);
-        if (!league || String(league.commissioner) !== String(userId)) {
-            return res.status(403).json({ success: false, errorMessage: 'Only the league commissioner can create a draft session.' });
+        if (!league || String(league.owner) !== String(userId)) {
+            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can create a draft session. (or do any CRUD to the league)' });
         }
 
         const leagueSettings = sanitizeLeagueSettings({
@@ -275,8 +274,8 @@ const updateDraftSession = async (req, res) => {
         }
 
         const league = await getLeagueForUser(session.leagueId, userId);
-        if (!league || String(league.commissioner) !== String(userId)) {
-            return res.status(403).json({ success: false, errorMessage: 'Only the league commissioner can update this draft session.' });
+        if (!league || String(league.owner) !== String(userId)) {
+            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can update this draft session.' });
         }
 
         if (session.status !== 'setup') {
@@ -316,8 +315,8 @@ const startDraftSession = async (req, res) => {
         }
 
         const league = await getLeagueForUser(session.leagueId, userId);
-        if (!league || String(league.commissioner) !== String(userId)) {
-            return res.status(403).json({ success: false, errorMessage: 'Only the league commissioner can start this draft session.' });
+        if (!league || String(league.owner) !== String(userId)) {
+            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can start this draft session.' });
         }
 
         const settings = sanitizeLeagueSettings(session.leagueSettings, session.leagueSettings);

@@ -8,7 +8,7 @@ class DatabaseManager {
     async deleteUser(userId){}
 
     // league
-    async createLeague(commissionerId, leagueData){}
+    async createLeague(ownerId, leagueData){}
     async getLeaguesForUser(userId){}
     async getLeagueById(leagueId){}
 
