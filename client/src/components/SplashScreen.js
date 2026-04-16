@@ -5,7 +5,6 @@ import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import TimelineRoundedIcon from '@mui/icons-material/TimelineRounded';
 import EmojiEventsRoundedIcon from '@mui/icons-material/EmojiEventsRounded';
-import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 
 const draftCards = [
