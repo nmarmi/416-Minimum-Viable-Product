@@ -50,10 +50,12 @@ async function request(path, method = "GET", body = null) {
 
 export const createLeague = async (leagueData) => request("/", "POST", leagueData);
 export const getMyLeagues = async () => request("/", "GET");
+export const deleteLeague = async (leagueId) => request(`/${leagueId}`, "DELETE");
 
 const apis = {
     createLeague,
-    getMyLeagues
+    getMyLeagues,
+    deleteLeague
 };
 
 export default apis;

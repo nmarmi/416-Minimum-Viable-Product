@@ -4,6 +4,7 @@ const db = require('../db');
 const licensedApi = require('../lib/licensed-player-api');
 const DraftSession = require('../models/draft-session-model');
 
+const DEFAULT_NUM_TEAMS = 12;
 const DEFAULT_SCORING_TYPE = '5x5 Roto';
 const DEFAULT_DRAFT_TYPE = 'AUCTION';
 const DEFAULT_SALARY_CAP = 260;
@@ -46,7 +47,7 @@ function buildFilledRosterSlots(rosterSlots = {}) {
 }
 
 function buildTeams(numberOfTeams, salaryCap, rosterSlots, existingTeams = []) {
-    const totalTeams = Math.min(Math.max(toPositiveInt(numberOfTeams, 12), 2), 30);
+    const totalTeams = Math.min(Math.max(toPositiveInt(numberOfTeams, DEFAULT_NUM_TEAMS), 2), 30);
     const resolvedSalaryCap = Math.max(toPositiveInt(salaryCap, DEFAULT_SALARY_CAP), 1);
 
     return Array.from({ length: totalTeams }, (_, index) => {
@@ -82,7 +83,7 @@ function sanitizeLeagueSettings(input = {}, fallback = {}) {
     const scoringType = SCORING_TYPES.includes(resolvedInput.scoringType) ? resolvedInput.scoringType : (resolvedFallback.scoringType || DEFAULT_SCORING_TYPE);
 
     return {
-        numberOfTeams: Math.min(Math.max(toPositiveInt(resolvedInput.numberOfTeams, resolvedFallback.numberOfTeams || 12), 2), 30),
+        numberOfTeams: Math.min(Math.max(toPositiveInt(resolvedInput.numberOfTeams, resolvedFallback.numberOfTeams || DEFAULT_NUM_TEAMS), 2), 30),
         salaryCap: Math.max(toPositiveInt(resolvedInput.salaryCap, resolvedFallback.salaryCap || DEFAULT_SALARY_CAP), 1),
         rosterSlots,
         scoringType,
@@ -160,11 +161,8 @@ function serializeSession(session) {
     return {
         draftSessionId: plainSession.draftSessionId,
         leagueId: String(plainSession.leagueId),
-        name: plainSession.name,
-        status: plainSession.status,
         createdAt: plainSession.createdAt,
         updatedAt: plainSession.updatedAt,
-        startedAt: plainSession.startedAt,
         leagueSettings: {
             ...plainSession.leagueSettings,
             rosterSlots: toPlainObject(plainSession.leagueSettings?.rosterSlots)
@@ -184,18 +182,25 @@ const createDraftSession = async (req, res) => {
             return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
         }
 
-        const { leagueId, name } = req.body || {};
-        if (!name || !String(name).trim()) {
-            return res.status(400).json({ success: false, errorMessage: 'Draft session name is required.' });
-        }
+        const { leagueId } = req.body || {};
 
         const league = await getLeagueForUser(leagueId, userId);
         if (!league || String(league.owner) !== String(userId)) {
-            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can create a draft session. (or do any CRUD to the league)' });
+            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can create a draft session.' });
+        }
+
+        if (league.draftSessionId) {
+            const existing = await db.getDraftSessionById(league.draftSessionId);
+            if (existing) {
+                return res.status(200).json({
+                    success: true,
+                    draftSession: serializeSession(existing)
+                });
+            }
         }
 
         const leagueSettings = sanitizeLeagueSettings({
-            numberOfTeams: league.numberOfTeams || 12,
+            numberOfTeams: DEFAULT_NUM_TEAMS,
             salaryCap: DEFAULT_SALARY_CAP,
             rosterSlots: DEFAULT_ROSTER_SLOTS,
             scoringType: DEFAULT_SCORING_TYPE
@@ -205,12 +210,12 @@ const createDraftSession = async (req, res) => {
             draftSessionId: generateDraftSessionId(),
             leagueId: league._id,
             createdBy: userId,
-            name: String(name).trim(),
-            status: 'setup',
             leagueSettings,
             teams: buildTeams(leagueSettings.numberOfTeams, leagueSettings.salaryCap, leagueSettings.rosterSlots),
             availablePlayerIds: []
         });
+
+        await db.setLeagueDraftSession(league._id, session.draftSessionId);
 
         return res.status(201).json({
             success: true,
@@ -229,19 +234,7 @@ const getDraftSession = async (req, res) => {
             return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
         }
 
-        let session = null;
-        if (req.params.draftSessionId) {
-            session = await db.getDraftSessionById(req.params.draftSessionId);
-        } else if (req.query.leagueId) {
-            const league = await getLeagueForUser(req.query.leagueId, userId);
-            if (!league) {
-                return res.status(404).json({ success: false, errorMessage: 'League not found.' });
-            }
-            session = await db.getLatestDraftSessionForLeague(league._id);
-        } else {
-            return res.status(400).json({ success: false, errorMessage: 'draftSessionId or leagueId is required.' });
-        }
-
+        const session = await DraftSession.findOne({ draftSessionId: req.params.draftSessionId });
         if (!session) {
             return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
         }
@@ -251,13 +244,21 @@ const getDraftSession = async (req, res) => {
             return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
         }
 
+        if (!session.availablePlayerIds || session.availablePlayerIds.length === 0) {
+            session.availablePlayerIds = await getAvailablePlayerIds();
+            await db.saveDraftSession(session);
+        }
+
         return res.status(200).json({
             success: true,
             draftSession: serializeSession(session)
         });
     } catch (err) {
         console.error('getDraftSession error:', err);
-        return res.status(500).json({ success: false, errorMessage: 'Unable to load draft session right now.' });
+        const message = licensedApi.hasConfig()
+            ? `Unable to load draft session from the Player Data API: ${err.message}`
+            : 'Unable to load draft session right now.';
+        return res.status(500).json({ success: false, errorMessage: message });
     }
 };
 
@@ -278,15 +279,10 @@ const updateDraftSession = async (req, res) => {
             return res.status(403).json({ success: false, errorMessage: 'Only the league owner can update this draft session.' });
         }
 
-        if (session.status !== 'setup') {
-            return res.status(400).json({ success: false, errorMessage: 'Only setup draft sessions can be edited.' });
-        }
-
         const nextSettings = sanitizeLeagueSettings(req.body?.leagueSettings || {}, session.leagueSettings);
         const incomingTeams = Array.isArray(req.body?.teams) ? req.body.teams : session.teams;
         const nextTeams = buildTeams(nextSettings.numberOfTeams, nextSettings.salaryCap, nextSettings.rosterSlots, incomingTeams);
 
-        session.name = req.body?.name && String(req.body.name).trim() ? String(req.body.name).trim() : session.name;
         session.leagueSettings = nextSettings;
         session.teams = nextTeams;
 
@@ -302,66 +298,8 @@ const updateDraftSession = async (req, res) => {
     }
 };
 
-const startDraftSession = async (req, res) => {
-    try {
-        const userId = auth.verifyUser(req);
-        if (!userId) {
-            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
-        }
-
-        const session = await DraftSession.findOne({ draftSessionId: req.params.draftSessionId });
-        if (!session) {
-            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
-        }
-
-        const league = await getLeagueForUser(session.leagueId, userId);
-        if (!league || String(league.owner) !== String(userId)) {
-            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can start this draft session.' });
-        }
-
-        const settings = sanitizeLeagueSettings(session.leagueSettings, session.leagueSettings);
-        const totalRosterSize = Object.values(settings.rosterSlots || {}).reduce((sum, count) => sum + Number(count || 0), 0);
-
-        if (settings.numberOfTeams <= 0) {
-            return res.status(400).json({ success: false, errorMessage: 'Number of teams must be greater than zero.' });
-        }
-        if (settings.salaryCap <= 0) {
-            return res.status(400).json({ success: false, errorMessage: 'Salary cap must be greater than zero.' });
-        }
-        if (totalRosterSize <= 0) {
-            return res.status(400).json({ success: false, errorMessage: 'At least one roster slot is required.' });
-        }
-
-        const availablePlayerIds = await getAvailablePlayerIds();
-        session.leagueSettings = settings;
-        session.teams = buildTeams(settings.numberOfTeams, settings.salaryCap, settings.rosterSlots, session.teams).map((team) => ({
-            ...team,
-            purchasedPlayers: [],
-            filledRosterSlots: buildFilledRosterSlots(settings.rosterSlots),
-            budgetRemaining: settings.salaryCap
-        }));
-        session.availablePlayerIds = availablePlayerIds;
-        session.status = 'active';
-        session.startedAt = new Date();
-
-        await db.saveDraftSession(session);
-
-        return res.status(200).json({
-            success: true,
-            draftSession: serializeSession(session)
-        });
-    } catch (err) {
-        console.error('startDraftSession error:', err);
-        const message = licensedApi.hasConfig()
-            ? `Unable to initialize draft session from the Player Data API: ${err.message}`
-            : 'Unable to initialize draft session right now.';
-        return res.status(500).json({ success: false, errorMessage: message });
-    }
-};
-
 module.exports = {
     createDraftSession,
     getDraftSession,
-    updateDraftSession,
-    startDraftSession
+    updateDraftSession
 };

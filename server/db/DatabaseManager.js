@@ -15,7 +15,6 @@ class DatabaseManager {
     // draft session
     async createDraftSession(sessionData){}
     async getDraftSessionById(draftSessionId){}
-    async getLatestDraftSessionForLeague(leagueId){}
     async saveDraftSession(draftSession){}
 
     // players

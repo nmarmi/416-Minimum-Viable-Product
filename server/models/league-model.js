@@ -13,18 +13,10 @@ const LeagueSchema = new Schema(
             ref: 'User',
             required: true
         },
-        numberOfTeams: {
-            type: Number,
-            default: 12
-        },
-        draftType: {
+        draftSessionId: {
             type: String,
-            default: 'Auction Draft'
-        },
-        leagueMode: {
-            type: String,
-            default: 'Join Draft'
-        },
+            default: null
+        }
     },
     { timestamps: true }
 );

@@ -719,7 +719,7 @@ const DraftRoomScreen = () => {
     return (
         <main className="draft-v2-page">
             <header className="draft-v2-header">
-                <button type="button" className="draft-v2-icon-btn" aria-label="Back" onClick={() => history.goBack()}>
+                <button type="button" className="draft-v2-icon-btn" aria-label="Back" onClick={() => history.push('/home')}>
                     ←
                 </button>
 

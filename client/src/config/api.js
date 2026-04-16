@@ -13,7 +13,7 @@ const LEAGUES_API_BASE_URL = trimTrailingSlash(
 );
 
 const PLAYERS_API_BASE_URL = trimTrailingSlash(
-    process.env.REACT_APP_PLAYERS_API_URL || API_BASE_URL
+    process.env.REACT_APP_PLAYERS_API_URL || (API_BASE_URL ? `${API_BASE_URL}/players` : "/players")
 );
 
 const DRAFT_SESSIONS_API_BASE_URL = trimTrailingSlash(

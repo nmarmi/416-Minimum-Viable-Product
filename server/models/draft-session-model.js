@@ -49,16 +49,6 @@ const DraftSessionSchema = new Schema(
             ref: 'User',
             required: true
         },
-        name: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        status: {
-            type: String,
-            enum: ['setup', 'active'],
-            default: 'setup'
-        },
         leagueSettings: {
             numberOfTeams: {
                 type: Number,
@@ -89,10 +79,6 @@ const DraftSessionSchema = new Schema(
         availablePlayerIds: {
             type: [String],
             default: []
-        },
-        startedAt: {
-            type: Date,
-            default: null
         }
     },
     { timestamps: true }

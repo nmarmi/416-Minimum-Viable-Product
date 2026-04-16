@@ -60,10 +60,7 @@ class MongoDBManager extends DatabaseManager {
     async createLeague(ownerId, data) {
         const league = new League({
             name: data.name,
-            owner: ownerId,
-            numberOfTeams: data.numberOfTeams ? Number(data.numberOfTeams) : 12,
-            draftType: data.draftType || "Auction",
-            leagueMode: data.leagueMode || "Redraft",
+            owner: ownerId
         });
 
         return await league.save();
@@ -81,6 +78,14 @@ class MongoDBManager extends DatabaseManager {
         return await League.findById(leagueId);
     }
 
+    async setLeagueDraftSession(leagueId, draftSessionId) {
+        return await League.findByIdAndUpdate(leagueId, { draftSessionId }, { new: true });
+    }
+
+    async deleteLeagueById(leagueId) {
+        return await League.findByIdAndDelete(leagueId);
+    }
+
     // draft session
     async createDraftSession(sessionData) {
         const session = new DraftSession(sessionData);
@@ -91,12 +96,12 @@ class MongoDBManager extends DatabaseManager {
         return await DraftSession.findOne({ draftSessionId }).lean();
     }
 
-    async getLatestDraftSessionForLeague(leagueId) {
-        return await DraftSession.findOne({ leagueId }).sort({ createdAt: -1 }).lean();
-    }
-
     async saveDraftSession(draftSession) {
         return await draftSession.save();
+    }
+
+    async deleteDraftSessionBySessionId(draftSessionId) {
+        return await DraftSession.deleteOne({ draftSessionId });
     }
 
     // players (projections / stats)
