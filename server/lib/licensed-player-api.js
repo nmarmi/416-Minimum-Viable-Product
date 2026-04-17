@@ -72,6 +72,49 @@ async function getPlayer(playerId) {
 }
 
 /**
+ * Pull: GET /api/v1/players/pool from the licensed API.
+ * Returns the full player pool in `PlayerStub` shape plus `dataAsOf` / `staleWarnings`.
+ * Supported filters (all optional): search, position(s), team, limit, offset.
+ * @param {Object} params
+ * @returns {Promise<{ success: boolean, players: Array, dataAsOf?: string, staleWarnings?: Array, apiVersion?: string } | null>}
+ */
+async function getPlayerPool(params = {}) {
+    if (!hasConfig()) return null;
+    const q = new URLSearchParams();
+    if (params.search) q.set('search', params.search);
+    if (params.team) q.set('team', params.team);
+    const position = params.position ?? params.positions;
+    if (position) {
+        // Upstream /pool expects `position` (singular). If we get an
+        // array or comma-delimited list, take the first value and
+        // rely on local filtering in the caller for the rest.
+        const value = Array.isArray(position) ? position[0] : String(position).split(',')[0].trim();
+        if (value) q.set('position', value);
+    }
+    if (params.limit != null) q.set('limit', params.limit);
+    if (params.offset != null) q.set('offset', params.offset);
+    const query = q.toString();
+    const url = `${baseUrl.replace(/\/$/, '')}/api/v1/players/pool${query ? `?${query}` : ''}`;
+    try {
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: getHeaders()
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            const err = new Error(data.error || data.errorMessage || `Player Data API responded with ${res.status}`);
+            err.status = res.status;
+            err.upstream = data;
+            throw err;
+        }
+        return data;
+    } catch (err) {
+        console.error('Licensed API getPlayerPool error:', err.message);
+        throw err;
+    }
+}
+
+/**
  * Push: POST /usage to the licensed API.
  * @param {Object} payload - { event, timestamp, metadata }
  * @returns {Promise<{ success: boolean } | null>}
@@ -105,5 +148,6 @@ module.exports = {
     hasConfig,
     getPlayers,
     getPlayer,
+    getPlayerPool,
     postUsage
 };

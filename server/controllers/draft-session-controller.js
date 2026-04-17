@@ -4,6 +4,11 @@ const db = require('../db');
 const licensedApi = require('../lib/licensed-player-api');
 const DraftSession = require('../models/draft-session-model');
 const draftService = require('../services/draft-service');
+const {
+    fetchPoolPlayerIds,
+    toPlayerStub,
+    PlayerPoolUnavailableError
+} = require('../services/player-pool-service');
 
 const DEFAULT_NUM_TEAMS = 12;
 const DEFAULT_SCORING_TYPE = '5x5 Roto';
@@ -132,44 +137,16 @@ async function getLeagueForUser(leagueId, userId) {
     return league;
 }
 
-async function getAvailablePlayerIds() {
-    if (!licensedApi.hasConfig()) {
-        return await db.getAvailablePlayerIds({ source: 'projection' });
-    }
-
-    const collected = [];
-    const seen = new Set();
-    const pageSize = 1000;
-    let offset = 0;
-    let total = null;
-
-    do {
-        const data = await licensedApi.getPlayers({ limit: pageSize, offset });
-        const players = data?.players || [];
-
-        players.forEach((player) => {
-            const playerId = String(
-                player.id ||
-                player._id ||
-                player.playerId ||
-                `${player.playerName || player.name || 'player'}-${player.team || player.mlbTeam || 'team'}`
-            );
-
-            if (!seen.has(playerId)) {
-                seen.add(playerId);
-                collected.push(playerId);
-            }
-        });
-
-        total = Number.isFinite(data?.total) ? data.total : null;
-        offset += players.length;
-
-        if (players.length === 0) {
-            break;
-        }
-    } while (total == null ? true : offset < total);
-
-    return collected;
+/**
+ * US-3.2: Pull the current player pool from the Player Data API and
+ * return the IDs that should populate `DraftSession.availablePlayerIds`.
+ * This replaces the old paginated `/players` scrape with a single
+ * `/api/v1/players/pool` call. Upstream failures surface as
+ * `PlayerPoolUnavailableError` so callers can reply with 503.
+ */
+async function loadPoolPlayerIds() {
+    const { playerIds, pooledAt } = await fetchPoolPlayerIds();
+    return { playerIds, pooledAt };
 }
 
 function serializeSession(session) {
@@ -189,6 +166,7 @@ function serializeSession(session) {
         leagueId: String(plainSession.leagueId),
         createdAt: plainSession.createdAt,
         updatedAt: plainSession.updatedAt,
+        pooledAt: plainSession.pooledAt || null,
         leagueSettings: {
             ...plainSession.leagueSettings,
             rosterSlots: toPlainObject(plainSession.leagueSettings?.rosterSlots)
@@ -288,8 +266,23 @@ const getDraftSession = async (req, res) => {
         }
 
         if (!session.availablePlayerIds || session.availablePlayerIds.length === 0) {
-            session.availablePlayerIds = await getAvailablePlayerIds();
-            await db.saveDraftSession(session);
+            try {
+                const { playerIds, pooledAt } = await loadPoolPlayerIds();
+                session.availablePlayerIds = playerIds;
+                session.pooledAt = pooledAt;
+                await db.saveDraftSession(session);
+            } catch (poolErr) {
+                if (poolErr instanceof PlayerPoolUnavailableError) {
+                    // US-3.2: when PLAYER_API_URL is set and the upstream
+                    // fails, do NOT transition the session or swallow the
+                    // error as 500 — reply 503 so the client can retry.
+                    return res.status(503).json({
+                        success: false,
+                        errorMessage: 'Player Data API unavailable. Please try again shortly.'
+                    });
+                }
+                throw poolErr;
+            }
         }
 
         return res.status(200).json({
@@ -298,10 +291,10 @@ const getDraftSession = async (req, res) => {
         });
     } catch (err) {
         console.error('getDraftSession error:', err);
-        const message = licensedApi.hasConfig()
-            ? `Unable to load draft session from the Player Data API: ${err.message}`
-            : 'Unable to load draft session right now.';
-        return res.status(500).json({ success: false, errorMessage: message });
+        return res.status(500).json({
+            success: false,
+            errorMessage: 'Unable to load draft session right now.'
+        });
     }
 };
 
@@ -382,9 +375,132 @@ const recordPurchase = async (req, res) => {
     }
 };
 
+/**
+ * US-3.3: Proxy the Player Data API pool through a session-scoped endpoint.
+ *
+ * GET /draft-sessions/:draftSessionId/players?status=available
+ *   &search=&position=&team=&limit=&offset=
+ *
+ * Returns PlayerStub records whose availability is derived from the session
+ * (not from the upstream `isAvailable` flag) so the UI never shows a player
+ * as available after it has been purchased in this draft.
+ *
+ * `status` query values:
+ *   - `available` (default): intersect with session.availablePlayerIds
+ *   - `purchased`:            intersect with session.purchasedPlayerIds
+ *   - `all`:                  no session intersection
+ */
+const getSessionPlayers = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const session = await DraftSession.findOne({ draftSessionId: req.params.draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const { search, position, team } = req.query;
+        const statusFilter = typeof req.query.status === 'string' ? req.query.status : 'available';
+        const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 200, 1), 2000);
+        const offset = Math.max(Number.parseInt(req.query.offset, 10) || 0, 0);
+
+        // Pull the upstream catalog filtered by name/position/team if provided.
+        // The upstream response also carries `dataAsOf` / `staleWarnings` which
+        // we forward to the client for freshness UX (consumed by US-11.7).
+        let upstreamPlayers = [];
+        let dataAsOf = null;
+        let staleWarnings = [];
+
+        if (licensedApi.hasConfig()) {
+            try {
+                const data = await licensedApi.getPlayerPool({ search, position, team });
+                upstreamPlayers = Array.isArray(data?.players) ? data.players : [];
+                dataAsOf = data?.dataAsOf || null;
+                staleWarnings = data?.staleWarnings || [];
+            } catch (err) {
+                return res.status(503).json({
+                    success: false,
+                    errorMessage: 'Player Data API unavailable. Please try again shortly.'
+                });
+            }
+        } else {
+            // Dev-only fallback: read the locally cached projection rows if the
+            // licensed API isn't configured. Mirrors US-3.2's fallback stance.
+            const { list } = await db.getPlayers({
+                search: search || '',
+                team: team || '',
+                position: position || '',
+                source: 'projection',
+                limit: 2000,
+                offset: 0
+            });
+            upstreamPlayers = list || [];
+        }
+
+        const availableSet = new Set(session.availablePlayerIds || []);
+        const purchasedSet = new Set(session.purchasedPlayerIds || []);
+
+        const intersect = (playerId) => {
+            if (statusFilter === 'all') return true;
+            if (statusFilter === 'purchased') return purchasedSet.has(playerId);
+            return availableSet.has(playerId);
+        };
+
+        // The upstream `/pool` endpoint honors `position` but currently
+        // ignores `search` and `team`. Per US-3.3 we apply those filters
+        // locally so the endpoint behaves consistently regardless of
+        // what the Player Data API supports today.
+        const searchLower = typeof search === 'string' ? search.trim().toLowerCase() : '';
+        const teamLower = typeof team === 'string' ? team.trim().toLowerCase() : '';
+        const positionUpper = typeof position === 'string' ? position.trim().toUpperCase() : '';
+
+        const matchesLocalFilters = (stub) => {
+            if (searchLower && !(stub.name || '').toLowerCase().includes(searchLower)) return false;
+            if (teamLower && !(stub.mlbTeam || '').toLowerCase().includes(teamLower)) return false;
+            if (positionUpper && !stub.positions.some((p) => String(p).toUpperCase() === positionUpper)) return false;
+            return true;
+        };
+
+        const stubs = upstreamPlayers
+            .map(toPlayerStub)
+            .filter((p) => p.playerId && intersect(p.playerId))
+            .filter(matchesLocalFilters)
+            .map((p) => ({ ...p, isAvailable: availableSet.has(p.playerId) }));
+
+        const total = stubs.length;
+        const page = stubs.slice(offset, offset + limit);
+
+        return res.status(200).json({
+            success: true,
+            players: page,
+            total,
+            limit,
+            offset,
+            pooledAt: session.pooledAt || null,
+            dataAsOf,
+            staleWarnings
+        });
+    } catch (err) {
+        console.error('getSessionPlayers error:', err);
+        return res.status(500).json({
+            success: false,
+            errorMessage: 'Unable to load players for this draft session.'
+        });
+    }
+};
+
 module.exports = {
     createDraftSession,
     getDraftSession,
     updateDraftSession,
     recordPurchase,
+    getSessionPlayers,
 };
