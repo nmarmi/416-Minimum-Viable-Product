@@ -639,7 +639,7 @@ const DraftRoomScreen = () => {
                                 </tr>
                             ) : (
                                 (draftSession.draftHistory).map((entry) => (
-                                    <tr key={entry._id}>
+                                    <tr key={entry.purchaseId || entry.nominationOrder}>
                                         <td>{entry.nominationOrder}</td>
                                         <td>{entry.playerName}</td>
                                         <td>--</td>

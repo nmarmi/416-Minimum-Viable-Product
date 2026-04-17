@@ -47,6 +47,23 @@ function buildFilledRosterSlots(rosterSlots = {}) {
     }, {});
 }
 
+function normalizePurchasedPlayers(purchasedPlayers) {
+    if (!Array.isArray(purchasedPlayers)) return [];
+    return purchasedPlayers
+        .map((entry) => {
+            if (!entry) return null;
+            if (typeof entry === 'string') return { playerId: entry, price: 0 };
+            if (entry.playerId) {
+                return {
+                    playerId: String(entry.playerId),
+                    price: Number.isFinite(Number(entry.price)) ? Number(entry.price) : 0
+                };
+            }
+            return null;
+        })
+        .filter(Boolean);
+}
+
 function buildTeams(numberOfTeams, salaryCap, rosterSlots, existingTeams = []) {
     const totalTeams = Math.min(Math.max(toPositiveInt(numberOfTeams, DEFAULT_NUM_TEAMS), 2), 30);
     const resolvedSalaryCap = Math.max(toPositiveInt(salaryCap, DEFAULT_SALARY_CAP), 1);
@@ -60,7 +77,7 @@ function buildTeams(numberOfTeams, salaryCap, rosterSlots, existingTeams = []) {
             teamId,
             teamName: existingName || teamId,
             budgetRemaining: resolvedSalaryCap,
-            purchasedPlayers: Array.isArray(existingTeam?.purchasedPlayers) ? existingTeam.purchasedPlayers : [],
+            purchasedPlayers: normalizePurchasedPlayers(existingTeam?.purchasedPlayers),
             filledRosterSlots: buildFilledRosterSlots(rosterSlots)
         };
     });
@@ -159,8 +176,16 @@ function serializeSession(session) {
     if (!session) return null;
     const plainSession = typeof session.toObject === 'function' ? session.toObject() : session;
 
+    const purchasedPlayerIds = plainSession.purchasedPlayerIds && plainSession.purchasedPlayerIds.length > 0
+        ? plainSession.purchasedPlayerIds
+        : (plainSession.draftHistory || []).map((entry) => entry.playerId);
+
     return {
         draftSessionId: plainSession.draftSessionId,
+        name: plainSession.name || '',
+        status: plainSession.status || 'setup',
+        myTeamId: plainSession.myTeamId || null,
+        nominationOrder: plainSession.nominationOrder || 0,
         leagueId: String(plainSession.leagueId),
         createdAt: plainSession.createdAt,
         updatedAt: plainSession.updatedAt,
@@ -169,16 +194,24 @@ function serializeSession(session) {
             rosterSlots: toPlainObject(plainSession.leagueSettings?.rosterSlots)
         },
         teams: (plainSession.teams || []).map((team) => ({
-            ...team,
+            teamId: team.teamId,
+            teamName: team.teamName,
+            budgetRemaining: team.budgetRemaining,
+            purchasedPlayers: (team.purchasedPlayers || []).map((p) => ({
+                playerId: p.playerId,
+                price: p.price
+            })),
             filledRosterSlots: toPlainObject(team.filledRosterSlots)
         })),
         availablePlayerIds: plainSession.availablePlayerIds || [],
+        purchasedPlayerIds,
         draftHistory: (plainSession.draftHistory || []).map((entry) => ({
-            _id: String(entry._id),
+            purchaseId: entry.purchaseId,
             playerId: entry.playerId,
             playerName: entry.playerName,
             teamId: entry.teamId,
             price: entry.price,
+            positionFilled: entry.positionFilled || null,
             timestamp: entry.timestamp,
             nominationOrder: entry.nominationOrder,
         })),
