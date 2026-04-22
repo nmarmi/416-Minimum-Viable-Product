@@ -89,12 +89,6 @@ const DraftRoomScreen = () => {
         const id = getPlayerId(player);
         const dollarVal = valuationsMap[id];
         if (dollarVal != null) return `$${Math.round(dollarVal)}`;
-        if (player.fpts != null && Number.isFinite(player.fpts)) {
-            if (Object.keys(valuationsMap).length > 0) {
-                console.error(`No valuation for player ${id} (${player.playerName})`);
-            }
-            return formatStat(player.fpts);
-        }
         return '--';
     }, [valuationsMap]);
 
