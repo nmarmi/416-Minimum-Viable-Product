@@ -83,6 +83,8 @@ const DraftRoomScreen = () => {
 
     const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession), [draftSession]);
 
+    const availableSet = useMemo(() => new Set(draftSession?.availablePlayerIds || []), [draftSession]);
+
     const getPlayerValuation = useCallback((player) => {
         const id = getPlayerId(player);
         const dollarVal = valuationsMap[id];
@@ -169,8 +171,10 @@ const DraftRoomScreen = () => {
             return;
         }
 
+        const isAvailable = (player) => availableSet.size === 0 || availableSet.has(getPlayerId(player));
+
         const localMatches = (players || [])
-            .filter((player) => playerNameStartsWithSearch(player.playerName, trimmed))
+            .filter((player) => isAvailable(player) && playerNameStartsWithSearch(player.playerName, trimmed))
             .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')))
             .slice(0, 8);
 
@@ -184,7 +188,7 @@ const DraftRoomScreen = () => {
         const res = await getPlayers({ search: trimmed, limit: 8 });
         if (res.status === 200 && res.data?.success) {
             const matched = (res.data.players || [])
-                .filter((player) => playerNameStartsWithSearch(player.playerName, trimmed))
+                .filter((player) => isAvailable(player) && playerNameStartsWithSearch(player.playerName, trimmed))
                 .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')));
 
             setEntryPlayerSuggestions(matched);
@@ -195,7 +199,7 @@ const DraftRoomScreen = () => {
             setShowEntrySuggestions(false);
             setEntryHighlightedIndex(-1);
         }
-    }, [players]);
+    }, [players, availableSet]);
 
     const searchPlayerSuggestions = useCallback(async (searchTerm) => {
         const trimmed = String(searchTerm || '').trim();
