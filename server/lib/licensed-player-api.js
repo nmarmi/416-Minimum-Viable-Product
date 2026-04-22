@@ -115,6 +115,34 @@ async function getPlayerPool(params = {}) {
 }
 
 /**
+ * POST /api/v1/players/valuations — runs the z-score auction dollar value
+ * algorithm and returns dollarValue per player.
+ * @param {Object} leagueSettings - { numTeams, budget, hitterBudgetPct, hitterSlotsPerTeam, pitcherSlotsPerTeam, statSeason }
+ * @param {Object} draftState - optionally { availablePlayerIds: string[] }
+ * @returns {Promise<{ success: boolean, valuations: Array } | null>}
+ */
+async function postValuations(leagueSettings = {}, draftState = {}) {
+    if (!hasConfig()) return null;
+    const url = `${baseUrl.replace(/\/$/, '')}/api/v1/players/valuations`;
+    const body = { leagueSettings, draftState };
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(body)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data.error || data.errorMessage || `API ${res.status}`);
+        }
+        return data;
+    } catch (err) {
+        console.error('Licensed API postValuations error:', err.message);
+        throw err;
+    }
+}
+
+/**
  * Push: POST /usage to the licensed API.
  * @param {Object} payload - { event, timestamp, metadata }
  * @returns {Promise<{ success: boolean } | null>}
@@ -149,5 +177,6 @@ module.exports = {
     getPlayers,
     getPlayer,
     getPlayerPool,
+    postValuations,
     postUsage
 };

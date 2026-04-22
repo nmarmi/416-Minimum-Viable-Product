@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
+import { getSessionValuations } from '../draft-sessions/requests';
 import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
@@ -70,6 +71,7 @@ const DraftRoomScreen = () => {
     const [entryError, setEntryError] = useState('');
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
+    const [valuationsMap, setValuationsMap] = useState({});
 
     const draftSession = store.currentDraftSession;
 
@@ -79,6 +81,19 @@ const DraftRoomScreen = () => {
     }, [draftSession]);
 
     const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession), [draftSession]);
+
+    const getPlayerValuation = useCallback((player) => {
+        const id = getPlayerId(player);
+        const dollarVal = valuationsMap[id];
+        if (dollarVal != null) return `$${Math.round(dollarVal)}`;
+        if (player.fpts != null && Number.isFinite(player.fpts)) {
+            if (Object.keys(valuationsMap).length > 0) {
+                console.error(`No valuation for player ${id} (${player.playerName})`);
+            }
+            return formatStat(player.fpts);
+        }
+        return '--';
+    }, [valuationsMap]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -116,13 +131,26 @@ const DraftRoomScreen = () => {
     }, [draftSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
+        if (!draftSessionId) return;
+        getSessionValuations(draftSessionId).then((res) => {
+            if (res.status === 200 && res.data?.success) {
+                const map = {};
+                for (const v of (res.data.valuations || [])) {
+                    if (v.playerId != null) map[v.playerId] = v.dollarValue;
+                }
+                setValuationsMap(map);
+            }
+        }).catch(() => {});
+    }, [draftSessionId]);
+
+    useEffect(() => {
         const defaultTeamId = teamOptions[0]?.teamId || FALLBACK_TEAMS[0];
         setEntryNominatedBy(defaultTeamId);
         setEntryWonBy(defaultTeamId);
     }, [teamOptions]);
 
     useEffect(() => {
-        if (activeTab !== 'Players') return;
+        if (activeTab !== 'Players' && activeTab !== 'Draft Board') return;
         loadPlayers();
     }, [activeTab, loadPlayers]);
 
@@ -475,7 +503,7 @@ const DraftRoomScreen = () => {
                                         <td>{player.playerName}</td>
                                         <td>{getPlayerTeamLabel(player)}</td>
                                         <td>{player.position}</td>
-                                        <td>{formatStat(player.fpts)}</td>
+                                        <td>{getPlayerValuation(player)}</td>
                                         <td>--</td>
                                         <td>{formatStat(player.hr)}</td>
                                         <td>{formatStat(player.rbi)}</td>
@@ -566,7 +594,7 @@ const DraftRoomScreen = () => {
                                             <span>{getPlayerTeamLabel(player)} • {player.position}</span>
                                         </div>
                                         <div className="draft-v2-player-suggestion-value">
-                                            ${Math.round(player.fpts || 0)}
+                                            {getPlayerValuation(player)}
                                         </div>
                                     </button>
                                 ))}
