@@ -628,6 +628,7 @@ const DraftRoomScreen = () => {
                     <label className="draft-v2-field">
                         <span>Winning Price ($)</span>
                         <input type="number" min="1" placeholder="e.g., 37" value={entryPrice} onChange={(event) => setEntryPrice(event.target.value)} />
+                        {priceError ? <span className="draft-v2-field-error">{priceError}</span> : null}
                     </label>
                     <label className="draft-v2-field full">
                         <span>Notes (Optional)</span>
@@ -646,7 +647,7 @@ const DraftRoomScreen = () => {
                         type="button"
                         className="draft-v2-auction-btn"
                         onClick={handleRecordPurchase}
-                        disabled={entrySubmitting || !entryPlayerId || !entryPrice}
+                        disabled={entrySubmitting || !entryPlayerId || !entryPrice || Boolean(priceError)}
                     >
                         {entrySubmitting ? 'Recording...' : 'Record Purchase'}
                     </button>
@@ -788,6 +789,26 @@ const DraftRoomScreen = () => {
     }
 
     const rosterPositions = rosterPlanner.length > 0 ? rosterPlanner.map((entry) => entry.slot) : DEFAULT_ROSTER_POSITIONS;
+
+    const selectedTeam = draftSession?.teams?.find((t) => t.teamId === entryWonBy) ?? null;
+    const selectedTeamOpenSlots = (() => {
+        if (!selectedTeam) return null;
+        const rosterSlots = draftSession?.leagueSettings?.rosterSlots || {};
+        const totalSlots = Object.values(rosterSlots).reduce((sum, v) => sum + Number(v || 0), 0);
+        const filled = Object.values(selectedTeam.filledRosterSlots || {}).reduce((sum, v) => sum + Number(v || 0), 0);
+        return Math.max(totalSlots - filled, 0);
+    })();
+    const maxBid = selectedTeam && selectedTeamOpenSlots > 0
+        ? Math.max(selectedTeam.budgetRemaining - (selectedTeamOpenSlots - 1), 1)
+        : null;
+    const priceError = (() => {
+        if (!entryPrice) return '';
+        const parsed = Number(entryPrice);
+        if (!Number.isInteger(parsed) || parsed < 1) return 'Price must be a whole number of at least $1.';
+        if (maxBid != null && parsed > maxBid) return `Price exceeds max bid of $${maxBid}.`;
+        return '';
+    })();
+
     const draftTitle = draftSession?.name || 'Fantasy Baseball League';
     const draftSubtitle = draftSession
         ? `${draftSession.status === 'active' ? 'Active draft session' : 'Draft setup preview'} for league ${leagueId}.`
