@@ -78,7 +78,7 @@ const DraftRoomScreen = () => {
 
     const teamOptions = useMemo(() => {
         if (!draftSession?.teams?.length) return FALLBACK_TEAMS.map((name) => ({ teamId: name, label: name }));
-        return draftSession.teams.map((t) => ({ teamId: t.teamId, label: getTeamName(t) }));
+        return draftSession.teams.map((t) => ({ teamId: t.teamId, label: `${getTeamName(t)} ($${t.budgetRemaining ?? '--'})` }));
     }, [draftSession]);
 
     const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession), [draftSession]);
