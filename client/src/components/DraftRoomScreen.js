@@ -69,6 +69,7 @@ const DraftRoomScreen = () => {
     const [entryHighlightedIndex, setEntryHighlightedIndex] = useState(-1);
     const [entrySubmitting, setEntrySubmitting] = useState(false);
     const [entryError, setEntryError] = useState('');
+    const [entrySuccess, setEntrySuccess] = useState('');
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
@@ -359,6 +360,7 @@ const DraftRoomScreen = () => {
     const handleRecordPurchase = async () => {
         setEntrySubmitting(true);
         setEntryError('');
+        setEntrySuccess('');
         const res = await store.recordPurchase(draftSessionId, {
             playerId: entryPlayerId,
             playerName: entryPlayer,
@@ -371,6 +373,8 @@ const DraftRoomScreen = () => {
             setEntryPlayerId('');
             setEntryPrice('');
             setEntryNotes('');
+            setEntrySuccess('Purchase recorded.');
+            setTimeout(() => setEntrySuccess(''), 3000);
         } else {
             setEntryError(res.data?.errorMessage || 'Failed to record purchase.');
         }
@@ -632,6 +636,7 @@ const DraftRoomScreen = () => {
                     </label>
                 </div>
                 {entryError ? <p className="draft-v2-entry-error">{entryError}</p> : null}
+                {entrySuccess ? <p className="draft-v2-entry-success">{entrySuccess}</p> : null}
                 <div className="draft-v2-auction-actions">
                     <button
                         type="button"
