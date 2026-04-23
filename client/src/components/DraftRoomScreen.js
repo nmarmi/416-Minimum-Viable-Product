@@ -67,7 +67,13 @@ const DraftRoomScreen = () => {
     const [showEntrySuggestions, setShowEntrySuggestions] = useState(false);
     const [entryHighlightedIndex, setEntryHighlightedIndex] = useState(-1);
     const [entrySubmitting, setEntrySubmitting] = useState(false);
+    const [undoSubmitting, setUndoSubmitting] = useState(false);
+    const [editSubmitting, setEditSubmitting] = useState(false);
     const [entryError, setEntryError] = useState('');
+    const [editError, setEditError] = useState('');
+    const [editingPurchaseId, setEditingPurchaseId] = useState('');
+    const [editPrice, setEditPrice] = useState('');
+    const [editTeamId, setEditTeamId] = useState('');
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
 
@@ -331,6 +337,7 @@ const DraftRoomScreen = () => {
     const handleRecordPurchase = async () => {
         setEntrySubmitting(true);
         setEntryError('');
+        setEditError('');
         const res = await store.recordPurchase(draftSessionId, {
             playerId: entryPlayerId,
             playerName: entryPlayer,
@@ -345,6 +352,107 @@ const DraftRoomScreen = () => {
             setEntryNotes('');
         } else {
             setEntryError(res.data?.errorMessage || 'Failed to record purchase.');
+        }
+    };
+
+    const handleUndoPurchase = async (entry) => {
+        if (!entry?.purchaseId) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to undo ${entry.playerName} to ${entry.teamId} for $${entry.price}?`
+        );
+        if (!confirmed) {
+            return;
+        }
+
+        setUndoSubmitting(true);
+        setEntryError('');
+        setEditError('');
+
+        const res = await store.undoPurchase(draftSessionId, entry.purchaseId);
+
+        setUndoSubmitting(false);
+        if (!res.data?.success) {
+            setEntryError(res.data?.errorMessage || 'Failed to undo purchase.');
+        }
+    };
+
+    const handleStartEditPurchase = (entry) => {
+        setEditingPurchaseId(entry.purchaseId || '');
+        setEditPrice(String(entry.price ?? ''));
+        setEditTeamId(entry.teamId || '');
+        setEditError('');
+        setEntryError('');
+    };
+
+    const handleCancelEditPurchase = () => {
+        setEditingPurchaseId('');
+        setEditPrice('');
+        setEditTeamId('');
+        setEditError('');
+    };
+
+    const getEditValidationMessage = (entry) => {
+        if (!entry || !editingPurchaseId || editingPurchaseId !== entry.purchaseId) {
+            return '';
+        }
+
+        const parsedPrice = Number(editPrice);
+        if (!Number.isInteger(parsedPrice) || parsedPrice < 1) {
+            return 'Price must be a whole number of at least $1.';
+        }
+
+        const selectedTeam = (draftSession?.teams || []).find((team) => team.teamId === editTeamId);
+        if (!selectedTeam) {
+            return 'Select a valid team.';
+        }
+
+        const rosterSlots = draftSession?.leagueSettings?.rosterSlots || {};
+        const totalSlots = Object.values(rosterSlots).reduce((sum, value) => sum + Number(value || 0), 0);
+        const selectedTeamFilled = Object.values(selectedTeam.filledRosterSlots || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+        const openSlotsAfterRefund = editTeamId === entry.teamId
+            ? totalSlots - Math.max(selectedTeamFilled - 1, 0)
+            : totalSlots - selectedTeamFilled;
+
+        if (openSlotsAfterRefund <= 0) {
+            return 'Selected team has no open roster slots.';
+        }
+
+        const refundableBudget = editTeamId === entry.teamId
+            ? selectedTeam.budgetRemaining + Number(entry.price || 0)
+            : selectedTeam.budgetRemaining;
+        const maxBid = refundableBudget - (openSlotsAfterRefund - 1);
+
+        if (parsedPrice > maxBid) {
+            return `Price exceeds max bid of $${maxBid}.`;
+        }
+
+        return '';
+    };
+
+    const handleSaveEditPurchase = async (entry) => {
+        const validationMessage = getEditValidationMessage(entry);
+        if (validationMessage) {
+            setEditError(validationMessage);
+            return;
+        }
+
+        setEditSubmitting(true);
+        setEntryError('');
+        setEditError('');
+
+        const res = await store.editPurchase(draftSessionId, entry.purchaseId, {
+            price: Number(editPrice),
+            teamId: editTeamId,
+        });
+
+        setEditSubmitting(false);
+        if (res.status === 200 && res.data?.success) {
+            handleCancelEditPurchase();
+        } else {
+            setEditError(res.data?.errorMessage || 'Failed to edit purchase.');
         }
     };
 
@@ -534,8 +642,8 @@ const DraftRoomScreen = () => {
     );
 
     const renderDraftBoardTab = () => (
-        <section className="draft-v2-module-grid two-col">
-            <article className="draft-v2-module-card full">
+        <section className="draft-v2-draft-board-layout">
+            <article className="draft-v2-module-card">
                 <h3>Draft Entry</h3>
                 <p className="draft-v2-auction-muted">Enter each completed pick as the real draft happens.</p>
                 <div className="draft-v2-module-grid two-col">
@@ -616,53 +724,139 @@ const DraftRoomScreen = () => {
                 </div>
             </article>
 
-            <article className="draft-v2-module-card">
-                <h3>Draft Results Log</h3>
-                <div className="draft-v2-table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Player</th>
-                                <th>Auctioned By</th>
-                                <th>Won By</th>
-                                <th>Price</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(draftSession?.draftHistory || []).length === 0 ? (
+            <div className="draft-v2-history-stack">
+                <article className="draft-v2-module-card">
+                    <div className="draft-v2-section-head">
+                        <div>
+                            <h3>Draft Results Log</h3>
+                            <p>{(draftSession?.draftHistory || []).length} recorded purchases</p>
+                        </div>
+                    </div>
+                    <div className="draft-v2-table-wrap draft-v2-history-table">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td colSpan={6} className="draft-v2-empty-row">
-                                        No picks logged yet. Enter each completed draft result here during the live draft.
-                                    </td>
+                                    <th>#</th>
+                                    <th>Player</th>
+                                    <th>Auctioned By</th>
+                                    <th>Won By</th>
+                                    <th>Price</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
                                 </tr>
-                            ) : (
-                                (draftSession.draftHistory).map((entry) => (
-                                    <tr key={entry.purchaseId || entry.nominationOrder}>
-                                        <td>{entry.nominationOrder}</td>
-                                        <td>{entry.playerName}</td>
-                                        <td>--</td>
-                                        <td>{entry.teamId}</td>
-                                        <td>${entry.price}</td>
-                                        <td>--</td>
+                            </thead>
+                            <tbody>
+                                {(draftSession?.draftHistory || []).length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="draft-v2-empty-row">
+                                            No picks logged yet. Enter each completed draft result here during the live draft.
+                                        </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </article>
+                                ) : (
+                                    (draftSession.draftHistory).map((entry) => {
+                                        const isEditing = editingPurchaseId === entry.purchaseId;
+                                        const editValidationMessage = isEditing ? getEditValidationMessage(entry) : '';
 
-            <article className="draft-v2-module-card">
-                <h3>Live Draft Snapshot</h3>
-                <ul className="draft-v2-checklist">
-                    <li>Available players remaining: <strong>{playersTotal || '--'}</strong></li>
-                    <li>Tracked available player IDs: <strong>{draftSession?.availablePlayerIds?.length ?? '--'}</strong></li>
-                    <li>Team budgets after each saved pick</li>
-                </ul>
-                <p className="draft-v2-auction-muted">These values update after each manual entry once actions are connected.</p>
-            </article>
+                                        return (
+                                            <tr key={entry.purchaseId || entry.nominationOrder}>
+                                                <td>{entry.nominationOrder}</td>
+                                                <td>
+                                                    <div className="draft-v2-history-player">
+                                                        <strong>{entry.playerName}</strong>
+                                                        <span>{entry.positionFilled || 'Rostered player'}</span>
+                                                    </div>
+                                                </td>
+                                                <td>--</td>
+                                                <td>
+                                                    {isEditing ? (
+                                                        <select className="draft-v2-inline-select" value={editTeamId} onChange={(event) => setEditTeamId(event.target.value)}>
+                                                            {teamOptions.map((team) => (
+                                                                <option key={team.teamId} value={team.teamId}>{team.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : entry.teamId}
+                                                </td>
+                                                <td>
+                                                    {isEditing ? (
+                                                        <input
+                                                            className="draft-v2-inline-input"
+                                                            type="number"
+                                                            min="1"
+                                                            value={editPrice}
+                                                            onChange={(event) => setEditPrice(event.target.value)}
+                                                        />
+                                                    ) : `$${entry.price}`}
+                                                </td>
+                                                <td className="draft-v2-history-notes">
+                                                    {isEditing ? (editError || editValidationMessage || 'Adjust team or price, then save.') : '--'}
+                                                </td>
+                                                <td>
+                                                    <div className="draft-v2-action-group">
+                                                        {isEditing ? (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    className="draft-v2-filter-btn draft-v2-action-btn draft-v2-action-btn-primary"
+                                                                    onClick={() => handleSaveEditPurchase(entry)}
+                                                                    disabled={editSubmitting || undoSubmitting || Boolean(editValidationMessage)}
+                                                                >
+                                                                    {editSubmitting ? 'Saving...' : 'Save'}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="draft-v2-filter-btn draft-v2-action-btn"
+                                                                    onClick={handleCancelEditPurchase}
+                                                                    disabled={editSubmitting}
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    className="draft-v2-filter-btn draft-v2-action-btn"
+                                                                    onClick={() => handleUndoPurchase(entry)}
+                                                                    disabled={undoSubmitting || editSubmitting}
+                                                                >
+                                                                    Undo
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="draft-v2-filter-btn draft-v2-action-btn"
+                                                                    onClick={() => handleStartEditPurchase(entry)}
+                                                                    disabled={undoSubmitting || editSubmitting}
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article className="draft-v2-module-card">
+                    <div className="draft-v2-section-head">
+                        <div>
+                            <h3>Live Draft Snapshot</h3>
+                            <p>Quick checks while purchases are being corrected live.</p>
+                        </div>
+                    </div>
+                    <ul className="draft-v2-checklist">
+                        <li>Available players remaining: <strong>{playersTotal || '--'}</strong></li>
+                        <li>Tracked available player IDs: <strong>{draftSession?.availablePlayerIds?.length ?? '--'}</strong></li>
+                        <li>Team budgets after each saved pick</li>
+                    </ul>
+                    <p className="draft-v2-auction-muted">These values update after each manual entry once actions are connected.</p>
+                </article>
+            </div>
         </section>
     );
 
@@ -776,7 +970,6 @@ const DraftRoomScreen = () => {
                     <span className={`league-status ${draftSession?.status === 'active' ? 'active' : 'inactive'}`}>
                         {draftSession?.status === 'active' ? 'Active' : 'Classic'}
                     </span>
-                    <button type="button" className="draft-v2-icon-btn" aria-label="Undo">⟲</button>
                     <button type="button" className="draft-v2-icon-btn" aria-label="Export">⬇︎</button>
                 </div>
             </header>

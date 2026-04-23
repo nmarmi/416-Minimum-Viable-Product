@@ -7,5 +7,7 @@ router.get('/:draftSessionId', DraftSessionController.getDraftSession);
 router.put('/:draftSessionId', DraftSessionController.updateDraftSession);
 router.get('/:draftSessionId/players', DraftSessionController.getSessionPlayers);
 router.post('/:draftSessionId/purchases', DraftSessionController.recordPurchase);
+router.put('/:draftSessionId/purchases/:purchaseId', DraftSessionController.editPurchase);
+router.delete('/:draftSessionId/purchases/:purchaseId', DraftSessionController.undoPurchase);
 
 module.exports = router;
