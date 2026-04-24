@@ -376,8 +376,6 @@ const DraftRoomScreen = () => {
             setEntryPlayerId('');
             setEntryPrice('');
             setEntryNotes('');
-            setEntrySuccess('Purchase recorded.');
-            setTimeout(() => setEntrySuccess(''), 3000);
         } else {
             setEntryError(res.data?.errorMessage || 'Failed to record purchase.');
         }
@@ -741,7 +739,6 @@ const DraftRoomScreen = () => {
                     </label>
                 </div>
                 {entryError ? <p className="draft-v2-entry-error">{entryError}</p> : null}
-                {entrySuccess ? <p className="draft-v2-entry-success">{entrySuccess}</p> : null}
                 <div className="draft-v2-auction-actions">
                     <button
                         type="button"
