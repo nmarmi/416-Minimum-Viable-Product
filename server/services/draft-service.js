@@ -211,7 +211,8 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
 
 /**
  * US-2.7: Undo a purchase by purchaseId — restore availability, refund the
- * team, free the roster slot, and drop the history entry.
+ * team, free the roster slot, drop the history entry, and reset the session's
+ * purchase counter so the next record reuses the undone slot when appropriate.
  */
 async function undoPurchase(draftSessionId, purchaseId) {
     const session = await DraftSession.findOne({ draftSessionId });
@@ -247,6 +248,10 @@ async function undoPurchase(draftSessionId, purchaseId) {
     }
 
     session.draftHistory = session.draftHistory.filter((h) => h.purchaseId !== purchaseId);
+    session.nominationOrder = session.draftHistory.reduce(
+        (maxOrder, historyEntry) => Math.max(maxOrder, Number(historyEntry.nominationOrder) || 0),
+        0
+    );
 
     session.markModified('teams');
     await session.save();

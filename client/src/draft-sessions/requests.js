@@ -53,6 +53,8 @@ export const getDraftSession = async (draftSessionId) => request(`/${draftSessio
 export const updateDraftSession = async (draftSessionId, payload) => request(`/${draftSessionId}`, "PUT", payload);
 export const getSessionValuations = async (draftSessionId) => request(`/${draftSessionId}/valuations`, "GET");
 export const recordPurchase = async (draftSessionId, payload) => request(`/${draftSessionId}/purchases`, "POST", payload);
+export const undoPurchase = async (draftSessionId, purchaseId) => request(`/${draftSessionId}/purchases/${purchaseId}`, "DELETE");
+export const editPurchase = async (draftSessionId, purchaseId, payload) => request(`/${draftSessionId}/purchases/${purchaseId}`, "PUT", payload);
 
 const draftSessionsApi = {
     createDraftSession,
@@ -60,6 +62,8 @@ const draftSessionsApi = {
     updateDraftSession,
     getSessionValuations,
     recordPurchase,
+    undoPurchase,
+    editPurchase,
 };
 
 export default draftSessionsApi;
