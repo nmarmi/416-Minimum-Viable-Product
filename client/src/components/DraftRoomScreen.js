@@ -70,6 +70,9 @@ const DraftRoomScreen = () => {
     const [entrySubmitting, setEntrySubmitting] = useState(false);
     const [entryError, setEntryError] = useState('');
     const [entrySuccess, setEntrySuccess] = useState('');
+    const [editingPurchaseId, setEditingPurchaseId] = useState('');
+    const [editingPrice, setEditingPrice] = useState('');
+    const [editSubmitting, setEditSubmitting] = useState(false);
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
@@ -378,6 +381,35 @@ const DraftRoomScreen = () => {
         }
     };
 
+    const handleUndoLastPurchase = async () => {
+        const history = draftSession?.draftHistory || [];
+        if (!history.length) return;
+        const lastPurchaseId = history[history.length - 1].purchaseId;
+        await store.undoPurchase(draftSessionId, lastPurchaseId);
+    };
+
+    const handleUndoRowPurchase = async (purchaseId) => {
+        await store.undoPurchase(draftSessionId, purchaseId);
+    };
+
+    const handleStartEdit = (entry) => {
+        setEditingPurchaseId(entry.purchaseId);
+        setEditingPrice(String(entry.price));
+    };
+
+    const handleCancelEdit = () => {
+        setEditingPurchaseId('');
+        setEditingPrice('');
+    };
+
+    const handleSaveEdit = async (purchaseId) => {
+        setEditSubmitting(true);
+        await store.editPurchase(draftSessionId, purchaseId, { newPrice: Number(editingPrice) });
+        setEditSubmitting(false);
+        setEditingPurchaseId('');
+        setEditingPrice('');
+    };
+
     const toggleCompare = (player) => {
         const id = getPlayerId(player);
         setComparePlayers((prev) => {
@@ -660,12 +692,13 @@ const DraftRoomScreen = () => {
                                 <th>Won By</th>
                                 <th>Price</th>
                                 <th>Notes</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {(draftSession?.draftHistory || []).length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="draft-v2-empty-row">
+                                    <td colSpan={7} className="draft-v2-empty-row">
                                         No picks logged yet. Enter each completed draft result here during the live draft.
                                     </td>
                                 </tr>
@@ -676,8 +709,50 @@ const DraftRoomScreen = () => {
                                         <td>{entry.playerName}</td>
                                         <td>--</td>
                                         <td>{entry.teamId}</td>
-                                        <td>${entry.price}</td>
+                                        <td>
+                                            {editingPurchaseId === entry.purchaseId ? (
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={editingPrice}
+                                                    onChange={(e) => setEditingPrice(e.target.value)}
+                                                    style={{ width: '60px' }}
+                                                />
+                                            ) : (
+                                                `$${entry.price}`
+                                            )}
+                                        </td>
                                         <td>--</td>
+                                        <td>
+                                            {editingPurchaseId === entry.purchaseId ? (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="draft-v2-filter-btn"
+                                                        disabled={editSubmitting}
+                                                        onClick={() => handleSaveEdit(entry.purchaseId)}
+                                                    >Save</button>
+                                                    <button
+                                                        type="button"
+                                                        className="draft-v2-filter-btn"
+                                                        onClick={handleCancelEdit}
+                                                    >Cancel</button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="draft-v2-filter-btn"
+                                                        onClick={() => handleUndoRowPurchase(entry.purchaseId)}
+                                                    >Undo</button>
+                                                    <button
+                                                        type="button"
+                                                        className="draft-v2-filter-btn"
+                                                        onClick={() => handleStartEdit(entry)}
+                                                    >Edit</button>
+                                                </>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -828,7 +903,13 @@ const DraftRoomScreen = () => {
                     <span className={`league-status ${draftSession?.status === 'active' ? 'active' : 'inactive'}`}>
                         {draftSession?.status === 'active' ? 'Active' : 'Classic'}
                     </span>
-                    <button type="button" className="draft-v2-icon-btn" aria-label="Undo">⟲</button>
+                    <button
+                        type="button"
+                        className="draft-v2-icon-btn"
+                        aria-label="Undo"
+                        disabled={!draftSession?.draftHistory?.length}
+                        onClick={handleUndoLastPurchase}
+                    >⟲</button>
                     <button type="button" className="draft-v2-icon-btn" aria-label="Export">⬇︎</button>
                 </div>
             </header>
