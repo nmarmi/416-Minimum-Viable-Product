@@ -684,7 +684,7 @@ const DraftRoomScreen = () => {
                 </div>
             </article>
 
-            <article className="draft-v2-module-card">
+            <article className="draft-v2-module-card full">
                 <h3>Draft Results Log</h3>
                 <div className="draft-v2-table-wrap">
                     <table>
