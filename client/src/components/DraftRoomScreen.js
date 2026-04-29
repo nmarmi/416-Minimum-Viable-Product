@@ -72,6 +72,7 @@ const DraftRoomScreen = () => {
     const [entrySuccess, setEntrySuccess] = useState('');
     const [editingPurchaseId, setEditingPurchaseId] = useState('');
     const [editingPrice, setEditingPrice] = useState('');
+    const [editingWonBy, setEditingWonBy] = useState('');
     const [editSubmitting, setEditSubmitting] = useState(false);
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
@@ -395,19 +396,22 @@ const DraftRoomScreen = () => {
     const handleStartEdit = (entry) => {
         setEditingPurchaseId(entry.purchaseId);
         setEditingPrice(String(entry.price));
+        setEditingWonBy(entry.teamId);
     };
 
     const handleCancelEdit = () => {
         setEditingPurchaseId('');
         setEditingPrice('');
+        setEditingWonBy('');
     };
 
     const handleSaveEdit = async (purchaseId) => {
         setEditSubmitting(true);
-        await store.editPurchase(draftSessionId, purchaseId, { newPrice: Number(editingPrice) });
+        await store.editPurchase(draftSessionId, purchaseId, { newPrice: Number(editingPrice), newTeamId: editingWonBy });
         setEditSubmitting(false);
         setEditingPurchaseId('');
         setEditingPrice('');
+        setEditingWonBy('');
     };
 
     const toggleCompare = (player) => {
@@ -708,7 +712,17 @@ const DraftRoomScreen = () => {
                                         <td>{entry.nominationOrder}</td>
                                         <td>{entry.playerName}</td>
                                         <td>--</td>
-                                        <td>{entry.teamId}</td>
+                                        <td>
+                                            {editingPurchaseId === entry.purchaseId ? (
+                                                <select value={editingWonBy} onChange={(e) => setEditingWonBy(e.target.value)}>
+                                                    {teamOptions.map((team) => (
+                                                        <option key={team.teamId} value={team.teamId}>{team.label}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                getTeamName(draftSession.teams.find((t) => t.teamId === entry.teamId))
+                                            )}
+                                        </td>
                                         <td>
                                             {editingPurchaseId === entry.purchaseId ? (
                                                 <input
