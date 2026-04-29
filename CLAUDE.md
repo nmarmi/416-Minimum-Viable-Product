@@ -2,11 +2,10 @@ See @README.md, @PLAN.md, and @docs/architecture-diagram.md.
 
 ## Project Description
 DraftIQ is a fantasy baseball draft application with a React frontend (`client/`) and an Express + MongoDB backend (`server/`).
-It should support players creating and editing leagues, and managing draft purchases in the league.
+It should support users creating and editing leagues, and managing draft purchases in the league.
 Core backend domains are auth, leagues, and players.
-Player data comes either from MongoDB-imported projection CSV data or an optional licensed external Player Data API, depending on environment variables.
+Player data comes either a licensed external Player Data API (default, preferred) or from MongoDB-imported projection CSV data, depending on environment variables.
 Authentication is cookie-based JWT.
-Current work is centered on making the draft room and player data flows reliable rather than redesigning the architecture.
 
 
 ## Repo Map
@@ -21,6 +20,7 @@ Current work is centered on making the draft room and player data flows reliable
 - run server: `cd server && npm start`
 - run client: `cd client && npm start`
 - run server tests: `cd server && npm test`
+- run client tests: `cd client && CI=true npm test`
 - import projections: `node server/scripts/import-projections.js`
 
 ## Working Rules

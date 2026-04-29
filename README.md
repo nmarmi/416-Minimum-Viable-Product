@@ -2,6 +2,22 @@
 
 DraftIQ is a fantasy baseball draft application (commissioners, players, live auction draft room). See **PLAN.md** for features, remaining work, and how player data (CSV projections) is used.
 
+### Run the tests
+
+**Server** (41 tests — run from the `server/` directory):
+```bash
+cd server
+npm test
+```
+
+**Client** (19 tests — run from the `client/` directory):
+```bash
+cd client
+CI=true npm test
+```
+
+`CI=true` tells the test runner to execute once and exit instead of entering watch mode. No real database or external API connection is required.
+
 ### AWS deployment
 
 Use the step-by-step AWS guide in `docs/AWS_DEPLOYMENT.md`.
