@@ -375,6 +375,69 @@ const recordPurchase = async (req, res) => {
     }
 };
 
+const undoPurchase = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const { draftSessionId, purchaseId } = req.params;
+
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const result = await draftService.undoPurchase(draftSessionId, purchaseId);
+        if (!result.success) {
+            return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        }
+
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('undoPurchase error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to undo purchase.' });
+    }
+};
+
+const editPurchase = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const { draftSessionId, purchaseId } = req.params;
+        const { newPrice, newTeamId } = req.body || {};
+
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const result = await draftService.editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId });
+        if (!result.success) {
+            return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        }
+
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('editPurchase error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to edit purchase.' });
+    }
+};
+
 /**
  * US-3.3: Proxy the Player Data API pool through a session-scoped endpoint.
  *
@@ -576,6 +639,8 @@ module.exports = {
     getDraftSession,
     updateDraftSession,
     recordPurchase,
+    undoPurchase,
+    editPurchase,
     getSessionPlayers,
     getSessionValuations,
 };
