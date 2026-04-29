@@ -17,5 +17,9 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.4",
     "vitest": "^3.2.4"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.1.0",
+    "supertest": "^7.2.2"
   }
 }
