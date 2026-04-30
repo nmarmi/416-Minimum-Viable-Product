@@ -123,19 +123,29 @@ async function getPlayerPool(params = {}) {
  */
 async function postValuations(leagueSettings = {}, draftState = {}) {
     if (!hasConfig()) return null;
-    const url = `${baseUrl.replace(/\/$/, '')}/api/v1/players/valuations`;
     const body = { leagueSettings, draftState };
+    const normalizedBase = baseUrl.replace(/\/$/, '');
+    const urls = [
+        `${normalizedBase}/players/valuations`,
+        `${normalizedBase}/api/v1/players/valuations`
+    ];
     try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(body)
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            throw new Error(data.error || data.errorMessage || `API ${res.status}`);
+        let lastError = null;
+
+        for (const url of urls) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(body)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                return data;
+            }
+            lastError = new Error(data.error || data.errorMessage || `API ${res.status}`);
         }
-        return data;
+
+        throw lastError || new Error('Valuations request failed');
     } catch (err) {
         console.error('Licensed API postValuations error:', err.message);
         throw err;
