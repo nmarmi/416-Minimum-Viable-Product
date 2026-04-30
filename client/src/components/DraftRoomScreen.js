@@ -9,7 +9,7 @@ import PlayerCompareModal from './PlayerCompareModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
-const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
+const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Injury', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 
 const formatStat = (val) => (val != null && Number.isFinite(val) ? (Number(val) === val && val < 1 && val > 0 ? val.toFixed(3) : String(Math.round(val))) : '--');
@@ -28,6 +28,12 @@ const playerNameStartsWithSearch = (playerName, searchTerm) => {
 const getTeamName = (team) => team?.teamName || team?.teamId || 'Fantasy Team';
 
 const getPlayerTeamLabel = (player) => player?.mlbTeam || player?.team || '';
+const getStatusLabel = (player) => {
+    const status = String(player?.status || '').trim();
+    if (!status) return 'UNKNOWN';
+    return status.toLowerCase() === 'active' ? 'ACTIVE' : status.toUpperCase();
+};
+const isInjuredStatus = (player) => String(player?.status || '').trim().toLowerCase() !== 'active';
 const pickFirstDefined = (player, keys) => {
     for (let i = 0; i < keys.length; i += 1) {
         const value = player?.[keys[i]];
@@ -63,6 +69,7 @@ const DraftRoomScreen = () => {
     const [playersTotal, setPlayersTotal] = useState(0);
     const [playersLoading, setPlayersLoading] = useState(false);
     const [playersError, setPlayersError] = useState('');
+    const [injuryOnly, setInjuryOnly] = useState(false);
     const [playerSearch, setPlayerSearch] = useState('');
     const [playerSuggestions, setPlayerSuggestions] = useState([]);
     const [showPlayerSuggestions, setShowPlayerSuggestions] = useState(false);
@@ -117,6 +124,11 @@ const DraftRoomScreen = () => {
         if (dollarVal != null) return `$${Math.round(dollarVal)}`;
         return '--';
     }, [valuationsMap]);
+
+    const displayedPlayers = useMemo(() => {
+        if (!injuryOnly) return players;
+        return (players || []).filter((player) => isInjuredStatus(player));
+    }, [players, injuryOnly]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -501,6 +513,13 @@ const DraftRoomScreen = () => {
                         <button type="button" className="draft-v2-filter-btn">All</button>
                         <button type="button" className="draft-v2-filter-btn">Watchlist (0)</button>
                         <button type="button" className="draft-v2-filter-btn">All Tags</button>
+                        <button
+                            type="button"
+                            className={`draft-v2-filter-btn ${injuryOnly ? 'active' : ''}`}
+                            onClick={() => setInjuryOnly((prev) => !prev)}
+                        >
+                            Injured Only
+                        </button>
                         {comparePlayers.length > 0 ? (
                             <button
                                 type="button"
@@ -563,18 +582,25 @@ const DraftRoomScreen = () => {
                                 <tr>
                                     <td colSpan={TABLE_HEADERS.length + 1} className="draft-v2-empty-row">{playersError}</td>
                                 </tr>
-                            ) : players.length === 0 ? (
+                            ) : displayedPlayers.length === 0 ? (
                                 <tr>
                                     <td colSpan={TABLE_HEADERS.length + 1} className="draft-v2-empty-row">
-                                        No players found. Make sure the player source is available for the current mode.
+                                        {injuryOnly
+                                            ? 'No injured players match the current view.'
+                                            : 'No players found. Make sure the player source is available for the current mode.'}
                                     </td>
                                 </tr>
                             ) : (
-                                players.map((player) => (
+                                displayedPlayers.map((player) => (
                                     <tr key={getPlayerId(player)} className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}>
                                         <td>{player.playerName}</td>
                                         <td>{getPlayerTeamLabel(player)}</td>
                                         <td>{player.position}</td>
+                                        <td>
+                                            <span className={`draft-v2-status-badge ${isInjuredStatus(player) ? 'injured' : 'active'}`}>
+                                                {getStatusLabel(player)}
+                                            </span>
+                                        </td>
                                         <td>{getPlayerValuation(player)}</td>
                                         <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
                                         <td>{formatStat(player.hr)}</td>

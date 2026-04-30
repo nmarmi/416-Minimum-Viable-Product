@@ -2162,6 +2162,12 @@ body {
   cursor: pointer;
 }
 
+.draft-v2-filter-btn.active {
+  background: #23252a;
+  color: #ffffff;
+  border-color: #23252a;
+}
+
 .draft-v2-table-wrap {
   background: #fff;
   border: 1px solid #d5d8e1;
@@ -2180,6 +2186,27 @@ body {
   padding: 10px 8px;
   text-align: left;
   white-space: nowrap;
+}
+
+.draft-v2-status-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.draft-v2-status-badge.active {
+  color: #1f8f4a;
+  background: #ecf9f0;
+  border-color: #bfeacb;
+}
+
+.draft-v2-status-badge.injured {
+  color: #aa2e2e;
+  background: #fff1f1;
+  border-color: #f2c8c8;
 }
 
 .draft-v2-table-wrap th {
