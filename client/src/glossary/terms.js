@@ -104,6 +104,22 @@ export const GLOSSARY_TERMS = [
     definition: 'Saves. Awarded to a relief pitcher who finishes a close game under save conditions. Closers are the main source of saves.',
   },
   {
+    term: 'IL-10',
+    definition: '10-day Injured List. Player is inactive for at least 10 days before becoming eligible to return.',
+  },
+  {
+    term: 'IL-15',
+    definition: '15-day Injured List. Common for pitchers; player is inactive for at least 15 days before eligibility to return.',
+  },
+  {
+    term: 'IL-60',
+    definition: '60-day Injured List. Long-term injury designation; player is out for at least 60 days.',
+  },
+  {
+    term: 'DTD',
+    definition: 'Day-to-day. Minor injury status where availability can change quickly and should be monitored before lineup lock.',
+  },
+  {
     term: 'HLD',
     definition: 'Holds. Awarded to a relief pitcher who preserves a lead before the closer enters. Common in leagues that value setup relievers.',
   },
