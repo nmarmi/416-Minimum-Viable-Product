@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
-import { getSessionValuations } from '../draft-sessions/requests';
+import { getSessionValuations, getSessionPlayers } from '../draft-sessions/requests';
 import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
@@ -27,6 +27,7 @@ const playerNameStartsWithSearch = (playerName, searchTerm) => {
 
 const getTeamName = (team) => team?.teamName || team?.teamId || 'Fantasy Team';
 
+const getPlayerName = (player) => player.playerName || player.name || '';
 const getPlayerTeamLabel = (player) => player?.mlbTeam || player?.team || '';
 const getStatusLabel = (player) => {
     const status = String(player?.status || '').trim();
@@ -42,8 +43,12 @@ const pickFirstDefined = (player, keys) => {
     return null;
 };
 const getValuationValue = (valuation) => pickFirstDefined(valuation, ['dollarValue', 'value', 'valuation', 'auctionValue', 'dollars']);
+const getPlayerPosition = (player) =>
+    player.position ||
+    (Array.isArray(player.positions) ? player.positions.join('/') : '') ||
+    '';
 
-const getPlayerId = (player) => player.playerId || player.id || player._id || `${player.playerName}-${getPlayerTeamLabel(player)}`;
+const getPlayerId = (player) => player.playerId || player.id || player._id || `${getPlayerName(player)}-${getPlayerTeamLabel(player)}`;
 
 const buildRosterPlanner = (draftSession, teamId) => {
     const slots = draftSession?.leagueSettings?.rosterSlots || {};
@@ -256,8 +261,8 @@ const DraftRoomScreen = () => {
         const isAvailable = (player) => availableSet.size === 0 || availableSet.has(getPlayerId(player));
 
         const localMatches = (players || [])
-            .filter((player) => isAvailable(player) && playerNameStartsWithSearch(player.playerName, trimmed))
-            .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')))
+            .filter((player) => isAvailable(player) && playerNameStartsWithSearch(getPlayerName(player), trimmed))
+            .sort((left, right) => getPlayerName(left).localeCompare(getPlayerName(right)))
             .slice(0, 8);
 
         if (localMatches.length > 0) {
@@ -270,8 +275,8 @@ const DraftRoomScreen = () => {
         const res = await getPlayers({ search: trimmed, limit: 8 });
         if (res.status === 200 && res.data?.success) {
             const matched = (res.data.players || [])
-                .filter((player) => isAvailable(player) && playerNameStartsWithSearch(player.playerName, trimmed))
-                .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')));
+                .filter((player) => isAvailable(player) && playerNameStartsWithSearch(getPlayerName(player), trimmed))
+                .sort((left, right) => getPlayerName(left).localeCompare(getPlayerName(right)));
 
             setEntryPlayerSuggestions(matched);
             setShowEntrySuggestions(matched.length > 0);
@@ -294,8 +299,8 @@ const DraftRoomScreen = () => {
         }
 
         const localMatches = (players || [])
-            .filter((player) => playerNameStartsWithSearch(player.playerName, trimmed))
-            .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')))
+            .filter((player) => playerNameStartsWithSearch(getPlayerName(player), trimmed))
+            .sort((left, right) => getPlayerName(left).localeCompare(getPlayerName(right)))
             .slice(0, 8);
 
         if (localMatches.length > 0) {
@@ -308,8 +313,8 @@ const DraftRoomScreen = () => {
         const res = await getPlayers({ search: trimmed, limit: 8 });
         if (res.status === 200 && res.data?.success) {
             const matched = (res.data.players || [])
-                .filter((player) => String(player.playerName || '').toLowerCase().includes(trimmed.toLowerCase()))
-                .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')));
+                .filter((player) => getPlayerName(player).toLowerCase().includes(trimmed.toLowerCase()))
+                .sort((left, right) => getPlayerName(left).localeCompare(getPlayerName(right)));
 
             setPlayerSuggestions(matched);
             setShowPlayerSuggestions(matched.length > 0);
@@ -330,9 +335,9 @@ const DraftRoomScreen = () => {
     };
 
     const handleSelectEntryPlayer = (player) => {
-        setEntryPlayer(player.playerName || '');
+        setEntryPlayer(getPlayerName(player));
         setEntryPlayerId(getPlayerId(player));
-        setEntryPlayerSearch(player.playerName || '');
+        setEntryPlayerSearch(getPlayerName(player));
         setEntryPlayerSuggestions([]);
         setShowEntrySuggestions(false);
         setEntryHighlightedIndex(-1);
@@ -379,8 +384,8 @@ const DraftRoomScreen = () => {
         const res = await getPlayers({ search: trimmed, limit: 500 });
         if (res.status === 200 && res.data?.success) {
             const filteredPlayers = (res.data.players || [])
-                .filter((player) => playerNameStartsWithSearch(player.playerName, trimmed))
-                .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')));
+                .filter((player) => playerNameStartsWithSearch(getPlayerName(player), trimmed))
+                .sort((left, right) => getPlayerName(left).localeCompare(getPlayerName(right)));
 
             setPlayers(filteredPlayers);
             setPlayersTotal(filteredPlayers.length);
@@ -393,7 +398,7 @@ const DraftRoomScreen = () => {
     };
 
     const handleSelectPlayerSuggestion = async (player) => {
-        const selectedName = player.playerName || '';
+        const selectedName = getPlayerName(player);
 
         setPlayerSearch(selectedName);
         setPlayerSuggestions([]);
@@ -403,8 +408,8 @@ const DraftRoomScreen = () => {
         const res = await getPlayers({ search: selectedName, limit: 500 });
         if (res.status === 200 && res.data?.success) {
             const matched = (res.data.players || [])
-                .filter((entry) => playerNameStartsWithSearch(entry.playerName, selectedName))
-                .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')));
+                .filter((entry) => playerNameStartsWithSearch(getPlayerName(entry), selectedName))
+                .sort((left, right) => getPlayerName(left).localeCompare(getPlayerName(right)));
 
             setPlayers(matched);
             setPlayersTotal(matched.length);
@@ -604,8 +609,8 @@ const DraftRoomScreen = () => {
                                         onMouseDown={() => handleSelectPlayerSuggestion(player)}
                                     >
                                         <div className="draft-v2-live-search-item-main">
-                                            <strong>{player.playerName}</strong>
-                                            <span>{getPlayerTeamLabel(player)} • {player.position}</span>
+                                            <strong>{getPlayerName(player)}</strong>
+                                            <span>{getPlayerTeamLabel(player)} • {getPlayerPosition(player)}</span>
                                         </div>
                                     </button>
                                 ))}
@@ -704,7 +709,7 @@ const DraftRoomScreen = () => {
                             ) : (
                                 displayedPlayers.map((player) => (
                                     <tr key={getPlayerId(player)} className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}>
-                                        <td>{player.playerName}</td>
+                                        <td>{getPlayerName(player)}</td>
                                         <td>{getPlayerTeamLabel(player)}</td>
                                         <td>{player.position}</td>
                                         <td>
@@ -712,6 +717,7 @@ const DraftRoomScreen = () => {
                                                 {getStatusLabel(player)}
                                             </span>
                                         </td>
+                                        <td>{getPlayerPosition(player)}</td>
                                         <td>{getPlayerValuation(player)}</td>
                                         <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
                                         <td>{formatStat(player.hr)}</td>
@@ -944,8 +950,8 @@ const DraftRoomScreen = () => {
                                         onMouseDown={() => handleSelectEntryPlayer(player)}
                                     >
                                         <div className="draft-v2-player-suggestion-main">
-                                            <strong>{player.playerName}</strong>
-                                            <span>{getPlayerTeamLabel(player)} • {player.position}</span>
+                                            <strong>{getPlayerName(player)}</strong>
+                                            <span>{getPlayerTeamLabel(player)} • {getPlayerPosition(player)}</span>
                                         </div>
                                         <div className="draft-v2-player-suggestion-value">
                                             {getPlayerValuation(player)}

@@ -53,6 +53,17 @@ export const getDraftSession = async (draftSessionId) => request(`/${draftSessio
 export const updateDraftSession = async (draftSessionId, payload) => request(`/${draftSessionId}`, "PUT", payload);
 export const startDraft = async (draftSessionId) => request(`/${draftSessionId}/start`, "POST");
 export const getSessionValuations = async (draftSessionId) => request(`/${draftSessionId}/valuations`, "GET");
+export const getSessionPlayers = async (draftSessionId, params = {}) => {
+    const q = new URLSearchParams();
+    if (params.status) q.set('status', params.status);
+    if (params.search) q.set('search', params.search);
+    if (params.position) q.set('position', params.position);
+    if (params.team) q.set('team', params.team);
+    if (params.limit != null) q.set('limit', params.limit);
+    if (params.offset != null) q.set('offset', params.offset);
+    const qs = q.toString();
+    return request(`/${draftSessionId}/players${qs ? `?${qs}` : ''}`, 'GET');
+};
 export const recordPurchase = async (draftSessionId, payload) => request(`/${draftSessionId}/purchases`, "POST", payload);
 export const undoPurchase = async (draftSessionId, purchaseId) => request(`/${draftSessionId}/purchases/${purchaseId}`, "DELETE");
 export const editPurchase = async (draftSessionId, purchaseId, payload) => request(`/${draftSessionId}/purchases/${purchaseId}`, "PUT", payload);
@@ -63,6 +74,7 @@ const draftSessionsApi = {
     updateDraftSession,
     startDraft,
     getSessionValuations,
+    getSessionPlayers,
     recordPurchase,
     undoPurchase,
     editPurchase,
