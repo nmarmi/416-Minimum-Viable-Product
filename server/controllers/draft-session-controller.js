@@ -616,7 +616,7 @@ const getSessionValuations = async (req, res) => {
             hitterBudgetPct: 0.675,
             hitterSlotsPerTeam,
             pitcherSlotsPerTeam,
-            statSeason: new Date().getFullYear()
+            statSeason: 2025
         };
 
         const draftState = session.availablePlayerIds?.length > 0
@@ -630,7 +630,13 @@ const getSessionValuations = async (req, res) => {
         });
     } catch (err) {
         console.error('getSessionValuations error:', err);
-        return res.status(500).json({ success: false, errorMessage: 'Unable to load valuations.' });
+        return res.status(err.status || 500).json({
+            success: false,
+            errorMessage: 'Unable to load valuations.',
+            upstreamStatus: err.status || null,
+            upstreamUrl: err.url || null,
+            upstreamBody: err.upstream || null
+        });
     }
 };
 

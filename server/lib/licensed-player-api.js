@@ -138,16 +138,29 @@ async function postValuations(leagueSettings = {}, draftState = {}) {
                 headers: getHeaders(),
                 body: JSON.stringify(body)
             });
-            const data = await res.json().catch(() => ({}));
+            const raw = await res.text();
+            let data = {};
+            try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
             if (res.ok) {
                 return data;
             }
-            lastError = new Error(data.error || data.errorMessage || `API ${res.status}`);
+            const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
+            err.status = res.status;
+            err.url = url;
+            err.upstream = data;
+            err.raw = raw;
+            lastError = err;
         }
 
         throw lastError || new Error('Valuations request failed');
     } catch (err) {
-        console.error('Licensed API postValuations error:', err.message);
+        console.error('Licensed API postValuations error:', {
+            message: err.message,
+            status: err.status,
+            url: err.url,
+            upstream: err.upstream,
+            raw: err.raw
+        });
         throw err;
     }
 }

@@ -35,6 +35,7 @@ const pickFirstDefined = (player, keys) => {
     }
     return null;
 };
+const getValuationValue = (valuation) => pickFirstDefined(valuation, ['dollarValue', 'value', 'valuation', 'auctionValue', 'dollars']);
 
 const getPlayerId = (player) => player.playerId || player.id || player._id || `${player.playerName}-${getPlayerTeamLabel(player)}`;
 
@@ -98,7 +99,21 @@ const DraftRoomScreen = () => {
 
     const getPlayerValuation = useCallback((player) => {
         const id = getPlayerId(player);
-        const dollarVal = valuationsMap[id];
+        const keyCandidates = [
+            id,
+            player?.playerId,
+            player?.mlbPersonId != null ? String(player.mlbPersonId) : null,
+            player?.mlbId != null ? String(player.mlbId) : null,
+            player?.playerName,
+            player?.name
+        ].filter(Boolean);
+        let dollarVal = null;
+        for (const key of keyCandidates) {
+            if (valuationsMap[key] != null) {
+                dollarVal = valuationsMap[key];
+                break;
+            }
+        }
         if (dollarVal != null) return `$${Math.round(dollarVal)}`;
         return '--';
     }, [valuationsMap]);
@@ -144,7 +159,19 @@ const DraftRoomScreen = () => {
             if (res.status === 200 && res.data?.success) {
                 const map = {};
                 for (const v of (res.data.valuations || [])) {
-                    if (v.playerId != null) map[v.playerId] = v.dollarValue;
+                    const val = getValuationValue(v);
+                    if (val == null) continue;
+                    const candidates = [
+                        v?.playerId,
+                        v?.id,
+                        v?.mlbId,
+                        v?.mlbPersonId,
+                        v?.name,
+                        v?.playerName
+                    ].filter((entry) => entry != null && entry !== '');
+                    for (const candidate of candidates) {
+                        map[String(candidate)] = val;
+                    }
                 }
                 setValuationsMap(map);
             }
