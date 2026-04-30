@@ -28,6 +28,13 @@ const playerNameStartsWithSearch = (playerName, searchTerm) => {
 const getTeamName = (team) => team?.teamName || team?.teamId || 'Fantasy Team';
 
 const getPlayerTeamLabel = (player) => player?.mlbTeam || player?.team || '';
+const pickFirstDefined = (player, keys) => {
+    for (let i = 0; i < keys.length; i += 1) {
+        const value = player?.[keys[i]];
+        if (value != null && value !== '') return value;
+    }
+    return null;
+};
 
 const getPlayerId = (player) => player.playerId || player.id || player._id || `${player.playerName}-${getPlayerTeamLabel(player)}`;
 
@@ -542,17 +549,17 @@ const DraftRoomScreen = () => {
                                         <td>{getPlayerTeamLabel(player)}</td>
                                         <td>{player.position}</td>
                                         <td>{getPlayerValuation(player)}</td>
-                                        <td>--</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
                                         <td>{formatStat(player.hr)}</td>
                                         <td>{formatStat(player.rbi)}</td>
                                         <td>{formatStat(player.r)}</td>
                                         <td>{formatStat(player.sb)}</td>
                                         <td>{player.avg != null ? Number(player.avg).toFixed(3) : '--'}</td>
-                                        <td>--</td>
-                                        <td>--</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['w', 'wins', 'W']))}</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['sv', 'saves', 'SV']))}</td>
                                         <td>{formatStat(player.k)}</td>
-                                        <td>--</td>
-                                        <td>--</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['era', 'ERA']))}</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['whip', 'WHIP']))}</td>
                                         <td className="draft-v2-td-compare">
                                             <button
                                                 type="button"
