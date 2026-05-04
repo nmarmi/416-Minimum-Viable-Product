@@ -675,6 +675,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Returns updated draft snapshot
 - Returns 404 if purchase not found
 
+** COMPLETED** (`DELETE /draft-sessions/:draftSessionId/purchases/:purchaseId` route in `draft-session-router.js` → `undoPurchase` controller delegates to `draft-service.undoPurchase` which restores availability, refunds budget, decrements `filledRosterSlots`, and removes the history entry. Controller now returns **404** specifically when the service errors with "Purchase not found." (regex-matched), keeping other failures as 400. New HTTP test file `tests/draft-session-routes.test.js` (with `createApp` helper extended to mount the draft-sessions router) covers the contract: `401` no-auth, `403` non-owner, `404` unknown session, `404` unknown purchaseId, and `200` success with the reversed snapshot (player back in `availablePlayerIds`, history empty, team budget refunded to $260).)
+
 ### US-8.7: Edit purchase endpoint
 **As a** developer, **I want** `PUT /api/draft-sessions/:id/purchases/:purchaseId` to edit a purchase.
 

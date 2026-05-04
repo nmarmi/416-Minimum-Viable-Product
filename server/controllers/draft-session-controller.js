@@ -254,7 +254,10 @@ const undoPurchase = async (req, res) => {
 
         const result = await draftService.undoPurchase(draftSessionId, purchaseId);
         if (!result.success) {
-            return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+            // US-8.6: an unknown purchaseId is a 404 — the resource doesn't
+            // exist. Other failures (status guard, state issues) stay 400.
+            const status = /purchase\s+not\s+found/i.test(result.errorMessage || '') ? 404 : 400;
+            return res.status(status).json({ success: false, errorMessage: result.errorMessage });
         }
 
         return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });

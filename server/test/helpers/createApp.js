@@ -8,6 +8,7 @@ function createApp() {
     app.use(cookieParser());
     app.use('/auth', require('../../routes/auth-router'));
     app.use('/leagues', require('../../routes/league-router'));
+    app.use('/draft-sessions', require('../../routes/draft-session-router'));
     return app;
 }
 
