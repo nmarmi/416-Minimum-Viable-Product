@@ -444,3 +444,142 @@ describe('draftService.editPurchase', () => {
         }
     );
 });
+
+// ── US-7.5: State consistency invariants ─────────────────────────────────────
+
+describe('US-7.5: state consistency invariants', () => {
+    /**
+     * Invariant A — player conservation:
+     *   availablePlayerIds.length + purchasedPlayerIds.length === totalPlayers
+     */
+    function assertPlayerConservation(session, totalPlayers) {
+        const available = session.availablePlayerIds?.length ?? 0;
+        const purchased = session.purchasedPlayerIds?.length ?? 0;
+        expect(available + purchased).toBe(totalPlayers);
+        // No double-counting: a playerId is either available OR purchased, never both.
+        const overlap = (session.availablePlayerIds || []).filter((id) =>
+            (session.purchasedPlayerIds || []).includes(id)
+        );
+        expect(overlap).toHaveLength(0);
+    }
+
+    /**
+     * Invariant B — budget conservation:
+     *   sum(team.budgetRemaining) + sum(team.purchasedPlayers.price)
+     *     === numberOfTeams * salaryCap
+     */
+    function assertBudgetConservation(session) {
+        const numTeams = session.leagueSettings.numberOfTeams;
+        const cap      = session.leagueSettings.salaryCap;
+        const totalCap = numTeams * cap;
+
+        let remaining = 0;
+        let spent = 0;
+        for (const team of session.teams) {
+            remaining += Number(team.budgetRemaining || 0);
+            for (const p of team.purchasedPlayers || []) {
+                spent += Number(p.price || 0);
+            }
+        }
+        expect(remaining + spent).toBe(totalCap);
+    }
+
+    async function reload(sessionId) {
+        return DraftSession.findOne({ draftSessionId: sessionId });
+    }
+
+    test('invariants hold across initialize → purchase → purchase → edit price → edit team → undo → re-record', async () => {
+        // Seed with 5 available players, 2 teams, $260 cap each, 5 roster slots per team.
+        const session = await createSession();
+        const totalPlayers = session.availablePlayerIds.length + (session.purchasedPlayerIds?.length || 0);
+        const sessionId = session.draftSessionId;
+
+        // Step 0 — fresh active session.
+        let snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+
+        // Step 1 — record p1 to team1 for $50.
+        const r1 = await draftService.recordPurchase(sessionId, {
+            playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 50
+        });
+        expect(r1.success).toBe(true);
+        const p1Id = r1.snapshot.draftHistory[0].purchaseId;
+        snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+
+        // Step 2 — record p2 to team2 for $30.
+        const r2 = await draftService.recordPurchase(sessionId, {
+            playerId: 'p2', playerName: 'Player Two', teamId: 'team2', price: 30
+        });
+        expect(r2.success).toBe(true);
+        const p2Id = r2.snapshot.draftHistory[1].purchaseId;
+        snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+
+        // Step 3 — edit p1's price from $50 → $40 (refund $10 to team1).
+        const e1 = await draftService.editPurchase(sessionId, p1Id, { newPrice: 40 });
+        expect(e1.success).toBe(true);
+        snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+
+        // Step 4 — move p2 from team2 → team1 (refund team2 $30, charge team1 $30).
+        const e2 = await draftService.editPurchase(sessionId, p2Id, { newTeamId: 'team1' });
+        expect(e2.success).toBe(true);
+        snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+
+        // Step 5 — undo p2's purchase (player back to available, refund $30 to team1).
+        const u1 = await draftService.undoPurchase(sessionId, p2Id);
+        expect(u1.success).toBe(true);
+        snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+
+        // Step 6 — re-record p2 to team2 for $25.
+        const r3 = await draftService.recordPurchase(sessionId, {
+            playerId: 'p2', playerName: 'Player Two', teamId: 'team2', price: 25
+        });
+        expect(r3.success).toBe(true);
+        snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+    });
+
+    test('invariants survive a rejected duplicate purchase (US-7.1) and a rejected overrun (US-7.2)', async () => {
+        const session = await createSession();
+        const totalPlayers = session.availablePlayerIds.length;
+        const sessionId = session.draftSessionId;
+
+        // Establish a recorded baseline so the "after" assertions have signal.
+        await draftService.recordPurchase(sessionId, {
+            playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 80
+        });
+        let snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+
+        // Duplicate purchase → rejected; invariants must still hold.
+        const dup = await draftService.recordPurchase(sessionId, {
+            playerId: 'p1', playerName: 'Player One', teamId: 'team2', price: 20
+        });
+        expect(dup.success).toBe(false);
+        snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+
+        // Budget overrun → rejected; invariants must still hold.
+        // team1 has $180 remaining and 4 open slots → maxBid = 180 - 3 = 177.
+        const overrun = await draftService.recordPurchase(sessionId, {
+            playerId: 'p2', playerName: 'Player Two', teamId: 'team1', price: 200
+        });
+        expect(overrun.success).toBe(false);
+        snap = await reload(sessionId);
+        assertPlayerConservation(snap, totalPlayers);
+        assertBudgetConservation(snap);
+    });
+});

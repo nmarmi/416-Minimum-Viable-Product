@@ -604,6 +604,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Tests verify that `sum of all team budgets spent + all team budgets remaining === numberOfTeams * salaryCap`
 - Tests run in CI (vitest)
 
+** COMPLETED** (operation coverage was already in `tests/draft-service.test.js` from earlier stories — initialize, purchase happy-path, undo, edit price/team, US-7.1 duplicate, US-7.2 overrun, US-7.3 roster full, US-7.4 inactive-status guards. Added a dedicated `US-7.5: state consistency invariants` describe block with two helpers: `assertPlayerConservation` (asserts `available.length + purchased.length === totalPlayers` AND no overlap between the two arrays) and `assertBudgetConservation` (asserts `sum(team.budgetRemaining) + sum(team.purchasedPlayers.price) === numberOfTeams * salaryCap`). Two tests apply both helpers: (1) a 7-step happy-path sequence (initialize → record × 2 → edit price → edit team → undo → re-record) re-asserting after each step, and (2) a rejection-survival test that records a baseline then attempts a duplicate-player purchase and a budget overrun, asserting both invariants still hold after each rejected call. Tests run via vitest as part of `npm test`. **54/54 passing.**)
+
 ---
 
 ## Epic 8: API Routes for Draft Operations
