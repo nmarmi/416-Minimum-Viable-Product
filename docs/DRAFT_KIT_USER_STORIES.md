@@ -160,6 +160,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - User is taken to the draft session configuration screen
 - `draftSessionId` is generated and stored
 
+** COMPLETED**
+
 ### US-1.2: Configure number of teams
 **As a** drafter, **I want** to specify how many teams are in my league (e.g. 10, 12, 14), **so that** budgets and roster math are correct.
 
@@ -168,6 +170,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Value persists in `LeagueSettings` within the draft session
 - Changing the number regenerates the `teams[]` array to match
 
+** COMPLETED**
+
 ### US-1.3: Configure salary cap
 **As a** drafter, **I want** to set the salary cap per team (e.g. $260), **so that** budget tracking is accurate.
 
@@ -175,6 +179,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Numeric input for `salaryCap` (min 1)
 - Value persists in `LeagueSettings`
 - Each team's `budgetRemaining` initializes to this value
+
+** COMPLETED**
 
 ### US-1.4: Configure roster slots
 **As a** drafter, **I want** to define roster slot counts by position (C, 1B, 2B, 3B, SS, OF, UTIL, SP, RP, BENCH), **so that** the app can track filled vs. open slots.
@@ -185,6 +191,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Total roster size is computed and displayed
 - Default values are provided (e.g. standard 23-slot roster)
 
+** COMPLETED**
+
 ### US-1.5: Set scoring type placeholder
 **As a** drafter, **I want** to select a scoring type label (e.g. "5x5 Roto", "H2H Categories", "Points"), **so that** the session records my league format for later use.
 
@@ -193,6 +201,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Value persists in `LeagueSettings.scoringType`
 - This is informational only for now (no scoring calculations)
 
+** COMPLETED**
+
 ### US-1.6: Draft type defaults to auction
 **As a** drafter, **I want** the draft type to default to "AUCTION" and be displayed but not editable (for now), **so that** the entire app is oriented around auction drafts.
 
@@ -200,6 +210,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - `LeagueSettings.draftType` is set to `"AUCTION"`
 - Displayed as read-only in settings UI
 - No snake/linear draft option exists
+
+** COMPLETED**
 
 ### US-1.7: Name fantasy teams
 **As a** drafter, **I want** to assign names to each fantasy team, **so that** I can identify who is purchasing players during the draft.
@@ -210,6 +222,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - User can rename any team (e.g. "Eric's Team", "Table 3 Guy")
 - Each team gets a `teamId` in the format `fantasy-team-{n}`
 
+** COMPLETED**
+
 ### US-1.8: Initialize draft session
 **As a** drafter, **I want** to finalize setup and start the draft, **so that** the session transitions from setup to active.
 
@@ -219,6 +233,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - All teams are initialized with `budgetRemaining = salaryCap`, empty `purchasedPlayers[]`, and zeroed `filledRosterSlots`
 - `availablePlayerIds[]` is populated from the player pool
 - User is taken to the active draft view
+
+** COMPLETED**
 
 ---
 
@@ -599,6 +615,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - On Player Data API failure with `PLAYER_API_URL` set, returns `503` with `{ success: false, errorMessage: "Player Data API unavailable" }` and does **not** transition the session
 - `GET /draft-sessions/:id` no longer initializes the pool as a side-effect — it only reads
 - Client `DraftSessionSetupScreen` "Start Draft" button POSTs to this endpoint
+
+** COMPLETED**
 
 ### US-8.5: Record purchase endpoint
 **As a** developer, **I want** `POST /api/draft-sessions/:id/purchases` to record a purchase.

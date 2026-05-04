@@ -51,6 +51,7 @@ async function request(path, method = "GET", body = null) {
 export const createDraftSession = async (payload) => request("/", "POST", payload);
 export const getDraftSession = async (draftSessionId) => request(`/${draftSessionId}`, "GET");
 export const updateDraftSession = async (draftSessionId, payload) => request(`/${draftSessionId}`, "PUT", payload);
+export const startDraft = async (draftSessionId) => request(`/${draftSessionId}/start`, "POST");
 export const getSessionValuations = async (draftSessionId) => request(`/${draftSessionId}/valuations`, "GET");
 export const recordPurchase = async (draftSessionId, payload) => request(`/${draftSessionId}/purchases`, "POST", payload);
 export const undoPurchase = async (draftSessionId, purchaseId) => request(`/${draftSessionId}/purchases/${purchaseId}`, "DELETE");
@@ -60,6 +61,7 @@ const draftSessionsApi = {
     createDraftSession,
     getDraftSession,
     updateDraftSession,
+    startDraft,
     getSessionValuations,
     recordPurchase,
     undoPurchase,

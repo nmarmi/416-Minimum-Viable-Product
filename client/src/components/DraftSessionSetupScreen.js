@@ -116,7 +116,7 @@ export default function DraftSessionSetupScreen() {
         }))
     });
 
-    const saveSetup = async () => {
+    const startDraft = async () => {
         const nextError = validate();
         if (nextError) {
             setFormError(nextError);
@@ -125,15 +125,23 @@ export default function DraftSessionSetupScreen() {
 
         setSaving(true);
         setFormError('');
-        const res = await store.updateDraftSession(draftSessionId, buildPayload());
+
+        const saveRes = await store.updateDraftSession(draftSessionId, buildPayload());
+        if (!(saveRes.status === 200 && saveRes.data?.success)) {
+            setSaving(false);
+            setFormError(saveRes.data?.errorMessage || 'Unable to save draft settings.');
+            return;
+        }
+
+        const startRes = await store.startDraft(draftSessionId);
         setSaving(false);
 
-        if (res.status === 200 && res.data?.success) {
+        if (startRes.status === 200 && startRes.data?.success) {
             history.push(`/league/${leagueId}/draft-room/${draftSessionId}`);
             return;
         }
 
-        setFormError(res.data?.errorMessage || 'Unable to save draft settings.');
+        setFormError(startRes.data?.errorMessage || 'Unable to start draft.');
     };
 
     const handleCancel = async () => {
@@ -198,7 +206,7 @@ export default function DraftSessionSetupScreen() {
         return (
             <main className="page-shell">
                 <p>{loadError}</p>
-                <button className="home-light-btn" type="button" onClick={() => 1('/home')}>
+                <button className="home-light-btn" type="button" onClick={() => history.push('/home')}>
                     Back to Home
                 </button>
             </main>
@@ -302,8 +310,8 @@ export default function DraftSessionSetupScreen() {
                         <button type="button" className="home-light-btn" onClick={handleCancel} disabled={saving || cancelling}>
                             {cancelling ? 'Cancelling...' : 'Cancel'}
                         </button>
-                        <button type="button" className="home-dark-btn" onClick={saveSetup} disabled={saving || cancelling}>
-                            {saving ? 'Saving...' : 'Save'}
+                        <button type="button" className="home-dark-btn" onClick={startDraft} disabled={saving || cancelling}>
+                            {saving ? 'Starting...' : 'Start Draft'}
                         </button>
                     </div>
                 </article>

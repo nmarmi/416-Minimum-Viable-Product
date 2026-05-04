@@ -128,26 +128,8 @@ const getDraftSession = async (req, res) => {
             return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
         }
 
-        if (!session.availablePlayerIds || session.availablePlayerIds.length === 0) {
-            try {
-                const { playerIds, pooledAt } = await loadPoolPlayerIds();
-                session.availablePlayerIds = playerIds;
-                session.pooledAt = pooledAt;
-                await db.saveDraftSession(session);
-            } catch (poolErr) {
-                if (poolErr instanceof PlayerPoolUnavailableError) {
-                    // US-3.2: when PLAYER_API_URL is set and the upstream
-                    // fails, do NOT transition the session or swallow the
-                    // error as 500 — reply 503 so the client can retry.
-                    return res.status(503).json({
-                        success: false,
-                        errorMessage: 'Player Data API unavailable. Please try again shortly.'
-                    });
-                }
-                throw poolErr;
-            }
-        }
-
+        // US-8.4: GET is read-only. The pool is populated by the explicit
+        // POST /start action; in `setup` status `availablePlayerIds` may be empty.
         return res.status(200).json({
             success: true,
             draftSession: serializeSession(session)
@@ -503,10 +485,91 @@ const getSessionValuations = async (req, res) => {
     }
 };
 
+/**
+ * US-1.8 / US-8.4: Explicit `POST /draft-sessions/:id/start` action that
+ * validates setup, runs `initializeDraft`, populates `availablePlayerIds`
+ * from the Player Data API pool, and transitions the session to `active`.
+ * Idempotent for sessions already `active` (returns the current snapshot);
+ * rejects `paused`/`completed`. Returns 503 when the Player Data API is
+ * unreachable so the session stays in `setup`.
+ */
+const startDraft = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const session = await DraftSession.findOne({ draftSessionId: req.params.draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league || String(league.owner) !== String(userId)) {
+            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can start this draft.' });
+        }
+
+        if (session.status === 'active') {
+            return res.status(200).json({ success: true, draftSession: serializeSession(session) });
+        }
+
+        if (session.status !== 'setup') {
+            return res.status(400).json({
+                success: false,
+                errorMessage: `Cannot start a draft in '${session.status}' status.`
+            });
+        }
+
+        const numberOfTeams = Number(session.leagueSettings?.numberOfTeams) || 0;
+        const salaryCap = Number(session.leagueSettings?.salaryCap) || 0;
+        const rosterSlotTotal = Object.values(toPlainObject(session.leagueSettings?.rosterSlots))
+            .reduce((sum, n) => sum + (Number(n) || 0), 0);
+
+        if (numberOfTeams < 2 || salaryCap < 1 || rosterSlotTotal < 1) {
+            return res.status(400).json({
+                success: false,
+                errorMessage: 'Draft settings incomplete: need at least 2 teams, salary cap > 0, and one roster slot.'
+            });
+        }
+
+        let pool;
+        try {
+            pool = await loadPoolPlayerIds();
+        } catch (poolErr) {
+            if (poolErr instanceof PlayerPoolUnavailableError) {
+                return res.status(503).json({
+                    success: false,
+                    errorMessage: 'Player Data API unavailable. Please try again shortly.'
+                });
+            }
+            throw poolErr;
+        }
+
+        session.availablePlayerIds = pool.playerIds;
+        session.pooledAt = pool.pooledAt;
+        await db.saveDraftSession(session);
+
+        const result = await draftService.initializeDraft(req.params.draftSessionId);
+        if (!result.success) {
+            return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        }
+
+        return res.status(200).json({
+            success: true,
+            draftSession: serializeSession(result.session)
+        });
+    } catch (err) {
+        console.error('startDraft error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to start draft right now.' });
+    }
+};
+
 module.exports = {
     createDraftSession,
     getDraftSession,
     updateDraftSession,
+    startDraft,
     recordPurchase,
     undoPurchase,
     editPurchase,
