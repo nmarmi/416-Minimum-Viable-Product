@@ -1013,22 +1013,40 @@ const DraftRoomScreen = () => {
         <section className="draft-v2-module-grid one-col">
             <article className="draft-v2-module-card">
                 <h3>Team Budget Tracking</h3>
-                <div className="draft-v2-team-board">
-                    {(draftSession?.teams || FALLBACK_TEAMS.map((teamName) => ({ teamName }))).map((team) => {
-                        const rosterSlots = draftSession?.leagueSettings?.rosterSlots || {};
-                        const filled = Object.values(team.filledRosterSlots || {}).reduce((sum, value) => sum + Number(value || 0), 0);
-                        const target = Object.values(rosterSlots).reduce((sum, value) => sum + Number(value || 0), 0);
-                        const spotsRemaining = Math.max(target - filled, 0);
+                <div className="draft-v2-table-shell">
+                    <div className="draft-v2-table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Team</th>
+                                    <th>Budget Remaining</th>
+                                    <th>Budget Spent</th>
+                                    <th>Slots Filled</th>
+                                    <th>Max Bid</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(draftSession?.teams || []).map((team) => {
+                                    const rosterSlots = draftSession?.leagueSettings?.rosterSlots || {};
+                                    const filled = Object.values(team.filledRosterSlots || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+                                    const target = Object.values(rosterSlots).reduce((sum, value) => sum + Number(value || 0), 0);
+                                    const spotsRemaining = Math.max(target - filled, 0);
+                                    const cap = Number(draftSession?.leagueSettings?.salaryCap || 0);
+                                    const spent = Math.max(cap - Number(team.budgetRemaining || 0), 0);
 
-                        return (
-                            <div key={team.teamId || team.teamName} className="draft-v2-team-row">
-                                <span>{getTeamName(team)}</span>
-                                <span>Budget: {team.budgetRemaining != null ? `$${team.budgetRemaining}` : '--'}</span>
-                                <span>Max Bid: {team.budgetRemaining != null && spotsRemaining > 0 ? `$${Math.max(team.budgetRemaining - (spotsRemaining - 1), 1)}` : '--'}</span>
-                                <span>Spots: {spotsRemaining || '--'}</span>
-                            </div>
-                        );
-                    })}
+                                    return (
+                                        <tr key={team.teamId}>
+                                            <td><strong>{getTeamName(team)}</strong></td>
+                                            <td>{team.budgetRemaining != null ? `$${team.budgetRemaining}` : '--'}</td>
+                                            <td>${spent}</td>
+                                            <td>{filled} / {target || '--'}</td>
+                                            <td>{team.budgetRemaining != null && spotsRemaining > 0 ? `$${Math.max(team.budgetRemaining - (spotsRemaining - 1), 1)}` : '--'}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </article>
             <article className="draft-v2-module-card">

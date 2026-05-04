@@ -515,6 +515,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Max bid = `budgetRemaining - (openSlots - 1)`
 - Updates in real time after each purchase
 
+** COMPLETED** (`renderTeamsTab` is now a real table: Team / Budget Remaining / Budget Spent (`salaryCap − budgetRemaining`) / Slots Filled (`filled / target`) / Max Bid (`budgetRemaining − (openSlots − 1)`). Updates flow live via the store's `RECORD_PURCHASE`/`UPDATE_DRAFT_SESSION` reducers.)
+
 ### US-6.4: Draft history view
 **As a** drafter, **I want** to see the ordered log of all purchases, **so that** I can review what happened in the draft.
 
