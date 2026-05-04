@@ -88,7 +88,9 @@ const DraftRoomScreen = () => {
     const [editingPurchaseId, setEditingPurchaseId] = useState('');
     const [editingPrice, setEditingPrice] = useState('');
     const [editingWonBy, setEditingWonBy] = useState('');
+    const [editingOriginal, setEditingOriginal] = useState(null);
     const [editSubmitting, setEditSubmitting] = useState(false);
+    const [editError, setEditError] = useState('');
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
@@ -428,36 +430,96 @@ const DraftRoomScreen = () => {
         }
     };
 
+    // US-5.2: confirm before undo so an accidental click doesn't rewind state.
+    const confirmAndUndo = async (entry) => {
+        if (!entry) return;
+        const teamName = getTeamName(draftSession?.teams?.find((t) => t.teamId === entry.teamId));
+        const ok = typeof window !== 'undefined' && typeof window.confirm === 'function'
+            ? window.confirm(`Undo ${entry.playerName} to ${teamName} for $${entry.price}?`)
+            : true;
+        if (!ok) return;
+        await store.undoPurchase(draftSessionId, entry.purchaseId);
+    };
+
     const handleUndoLastPurchase = async () => {
         const history = draftSession?.draftHistory || [];
         if (!history.length) return;
-        const lastPurchaseId = history[history.length - 1].purchaseId;
-        await store.undoPurchase(draftSessionId, lastPurchaseId);
+        await confirmAndUndo(history[history.length - 1]);
     };
 
     const handleUndoRowPurchase = async (purchaseId) => {
-        await store.undoPurchase(draftSessionId, purchaseId);
+        const entry = (draftSession?.draftHistory || []).find((h) => h.purchaseId === purchaseId);
+        await confirmAndUndo(entry);
     };
 
     const handleStartEdit = (entry) => {
         setEditingPurchaseId(entry.purchaseId);
         setEditingPrice(String(entry.price));
         setEditingWonBy(entry.teamId);
+        setEditingOriginal(entry);
+        setEditError('');
     };
 
     const handleCancelEdit = () => {
         setEditingPurchaseId('');
         setEditingPrice('');
         setEditingWonBy('');
+        setEditingOriginal(null);
+        setEditError('');
     };
 
+    // US-5.3 / US-5.4: validate price + team affordability before submitting.
     const handleSaveEdit = async (purchaseId) => {
+        setEditError('');
+        const parsedPrice = Number(editingPrice);
+        if (!Number.isInteger(parsedPrice) || parsedPrice < 1) {
+            setEditError('Price must be a whole number of at least $1.');
+            return;
+        }
+
+        const teams = draftSession?.teams || [];
+        const newTeam = teams.find((t) => t.teamId === editingWonBy);
+        if (!newTeam) {
+            setEditError('Select a team for this purchase.');
+            return;
+        }
+
+        // Effective remaining budget for the new team after the edit:
+        // - same team, same price → no change
+        // - same team, new price  → refund old price, charge new
+        // - different team        → new team gets fully charged
+        const original = editingOriginal;
+        const sameTeam = original && original.teamId === editingWonBy;
+        const refund   = sameTeam ? Number(original.price) : 0;
+        const projectedBudget = Number(newTeam.budgetRemaining || 0) + refund - parsedPrice;
+
+        // Reserve $1 for every still-open slot (post-edit, the player still occupies one).
+        const teamPurchases = sameTeam
+            ? (newTeam.purchasedPlayers || []).length
+            : (newTeam.purchasedPlayers || []).length + 1;
+        const totalSlots = Object.values(draftSession?.leagueSettings?.rosterSlots || {})
+            .reduce((sum, n) => sum + (Number(n) || 0), 0);
+        const openSlotsAfter = Math.max(totalSlots - teamPurchases, 0);
+
+        if (projectedBudget < openSlotsAfter) {
+            setEditError(`Price exceeds ${getTeamName(newTeam)}'s max bid (would leave ${projectedBudget} for ${openSlotsAfter} open slots).`);
+            return;
+        }
+
+        if (!sameTeam && openSlotsAfter < 0) {
+            setEditError(`${getTeamName(newTeam)}'s roster has no open slots.`);
+            return;
+        }
+
         setEditSubmitting(true);
-        await store.editPurchase(draftSessionId, purchaseId, { newPrice: Number(editingPrice), newTeamId: editingWonBy });
+        const res = await store.editPurchase(draftSessionId, purchaseId, { newPrice: parsedPrice, newTeamId: editingWonBy });
         setEditSubmitting(false);
-        setEditingPurchaseId('');
-        setEditingPrice('');
-        setEditingWonBy('');
+
+        if (res?.status === 200 && res.data?.success) {
+            handleCancelEdit();
+        } else {
+            setEditError(res?.data?.errorMessage || 'Failed to save edit.');
+        }
     };
 
     const toggleCompare = (player) => {
@@ -774,7 +836,7 @@ const DraftRoomScreen = () => {
                                         <td>--</td>
                                         <td>
                                             {editingPurchaseId === entry.purchaseId ? (
-                                                <select value={editingWonBy} onChange={(e) => setEditingWonBy(e.target.value)}>
+                                                <select value={editingWonBy} onChange={(e) => { setEditingWonBy(e.target.value); setEditError(''); }}>
                                                     {teamOptions.map((team) => (
                                                         <option key={team.teamId} value={team.teamId}>{team.label}</option>
                                                     ))}
@@ -785,13 +847,19 @@ const DraftRoomScreen = () => {
                                         </td>
                                         <td>
                                             {editingPurchaseId === entry.purchaseId ? (
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    value={editingPrice}
-                                                    onChange={(e) => setEditingPrice(e.target.value)}
-                                                    style={{ width: '60px' }}
-                                                />
+                                                <>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        step="1"
+                                                        value={editingPrice}
+                                                        onChange={(e) => { setEditingPrice(e.target.value); setEditError(''); }}
+                                                        style={{ width: '60px' }}
+                                                    />
+                                                    {editError ? (
+                                                        <div className="draft-v2-field-error" style={{ marginTop: 4 }}>{editError}</div>
+                                                    ) : null}
+                                                </>
                                             ) : (
                                                 `$${entry.price}`
                                             )}
@@ -805,11 +873,12 @@ const DraftRoomScreen = () => {
                                                         className="draft-v2-filter-btn"
                                                         disabled={editSubmitting}
                                                         onClick={() => handleSaveEdit(entry.purchaseId)}
-                                                    >Save</button>
+                                                    >{editSubmitting ? 'Saving…' : 'Save'}</button>
                                                     <button
                                                         type="button"
                                                         className="draft-v2-filter-btn"
                                                         onClick={handleCancelEdit}
+                                                        disabled={editSubmitting}
                                                     >Cancel</button>
                                                 </>
                                             ) : (

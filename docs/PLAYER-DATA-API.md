@@ -1,5 +1,13 @@
 # Player Data API — Request Reference
 
+> **Canonical contract:** the OpenAPI spec lives in the Player Data API repo at
+> [`docs/openapi.yaml`](../../player-data-api/docs/openapi.yaml). The
+> `LeagueSettings` and `DraftState` schemas there are the cross-repo source of
+> truth for US-5.3 / US-5.4 — when this Draft Kit's `toPlayerApiLeagueSettings`
+> and `toPlayerApiDraftState` serializers (US-11.6) drift, that spec is what to
+> reconcile against. The drift-guard test in the Player Data API
+> (`tests/openapi.test.js`) asserts every documented path still responds.
+
 ## Authentication
 
 All endpoints except `/health` require an API key passed in one of two ways:

@@ -393,6 +393,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - On success: form clears, views refresh, success feedback shown
 - On validation error (budget exceeded, player unavailable): error message displayed, no state change
 
+** COMPLETED** (`DraftRoomScreen.js#renderDraftBoardTab` — player autocomplete + auctioned-by/won-by team dropdowns + price input; "Record Purchase" disabled until all filled; `handleRecordPurchase` calls `store.recordPurchase`, clears the form on success and surfaces server `errorMessage` inline on failure.)
+
 ### US-4.2: Player autocomplete filters to available players only
 **As a** drafter, **I want** the player search in the purchase form to only show available (unpurchased) players, **so that** I cannot accidentally re-select a purchased player.
 
@@ -400,6 +402,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Autocomplete queries only players where `isAvailable === true`
 - Previously purchased players do not appear in suggestions
 - If the user types a purchased player's name, no results appear
+
+** COMPLETED** (`searchDraftBoardPlayers()` filters by `isAvailable()` against the `availableSet` derived from `draftSession.availablePlayerIds`; the API fallback path applies the same filter so server-side suggestions also exclude purchased players.)
 
 ### US-4.3: Team dropdown reflects session teams
 **As a** drafter, **I want** the team dropdown in the purchase form to list the actual teams from my draft session, **so that** I select the correct buyer.
@@ -409,6 +413,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Shows team name and remaining budget (e.g. "Eric's Team ($238)")
 - Updates after each purchase to show current budget
 
+** COMPLETED** (`teamOptions` memoized selector renders `${getTeamName(t)} ($${t.budgetRemaining})`; live updates flow through the store's `RECORD_PURCHASE` reducer when the server returns the refreshed session.)
+
 ### US-4.4: Price validation on purchase
 **As a** drafter, **I want** the app to validate that the purchase price does not exceed the team's remaining budget (accounting for $1 minimums for remaining roster slots), **so that** invalid purchases are prevented.
 
@@ -417,6 +423,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - If entered price exceeds max bid, show inline validation error
 - Price must be >= $1
 - Price must be a whole number
+
+** COMPLETED** (`maxBid = budgetRemaining - (openSlots - 1)` computed from the selected won-by team and roster config; `priceError` rejects non-integers, `< 1`, and overruns; error renders inline next to the price input and disables the submit button until cleared.)
 
 ---
 
@@ -433,6 +441,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Draft history entry is removed
 - Button is disabled if history is empty
 
+** COMPLETED** (header ⟲ button in `DraftRoomScreen` is `disabled={!draftSession?.draftHistory?.length}`; `handleUndoLastPurchase` resolves the last `purchaseId` and routes through `confirmAndUndo` so it shares the same prompt + server call as the per-row Undo. State reversal happens server-side via `draft-service.undoPurchase`.)
+
 ### US-5.2: Undo any purchase from draft history
 **As a** drafter, **I want** to undo any specific purchase from the draft history log, **so that** I can correct errors found later.
 
@@ -442,6 +452,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - All state effects are reversed (availability, budget, roster)
 - The history list re-renders without that entry
 - Confirmation prompt before undo ("Are you sure?")
+
+** COMPLETED** (each draft-history row has an Undo button that calls `handleUndoRowPurchase`, which routes through `confirmAndUndo` — a `window.confirm("Undo {player} to {team} for $${price}?")` prompt; on accept, calls `store.undoPurchase` which fires the server `DELETE /draft-sessions/:id/purchases/:purchaseId`. Cancel aborts with no state change.)
 
 ### US-5.3: Edit a purchase price
 **As a** drafter, **I want** to edit the price of a recorded purchase, **so that** I can fix a typo without undoing and re-entering.
@@ -453,6 +465,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Budgets adjust (old team gets refund of difference, or new team is charged)
 - Validation applies (new price must be affordable)
 
+** COMPLETED** (Edit button on each row triggers `handleStartEdit` which swaps the row to inline editors for team + price. `handleSaveEdit` validates: integer ≥ $1, and `projectedBudget = currentBudget + refundIfSameTeam − newPrice` must be ≥ remaining open slots × $1. On client validation failure, an inline `editError` renders next to the price field and the Save button is held; on server failure (e.g. roster full), the upstream `errorMessage` is surfaced in the same slot. Server `PUT /draft-sessions/:id/purchases/:purchaseId` handles the budget delta.)
+
 ### US-5.4: Edit the purchasing team of a purchase
 **As a** drafter, **I want** to change which team a purchase is assigned to, **so that** I can fix a team-selection error.
 
@@ -461,6 +475,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - On save: old team's budget is restored, new team's budget is charged
 - Player moves from old team's roster to new team's roster
 - Validation: new team must have sufficient budget and open roster slots
+
+** COMPLETED** (the inline editor includes a team `<select>` populated from `teamOptions` (showing `{teamName} ($budget)`); the same `handleSaveEdit` validation path checks the destination team — when the team changes (`!sameTeam`), the projection uses the new team's full budget without refund, and roster capacity is checked from `purchasedPlayers.length + 1 ≤ totalSlots`. The server's `editPurchase` does the actual roster-slot swap.)
 
 ---
 
