@@ -583,6 +583,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Returns 400 with "Roster full" if all slots are filled
 - Optionally: position-specific enforcement
 
+** COMPLETED** (`draft-service.recordPurchase` computes `openSlots = totalSlots − totalFilled` and returns `Team roster is full.` when `openSlots <= 0`. Controller maps to HTTP 400. `tests/draft-service.test.js` adds (a) full-roster rejection with no-state-change assertions (budget intact, history empty, player still in `availablePlayerIds`) and (b) a boundary test where a team with 1 open slot accepts the next pick but the one after that hits the full-roster guard. Position-specific enforcement is intentionally deferred — flexible position eligibility (e.g. UTIL-eligible bats slotting into BENCH) makes per-position validation a UX-trap that's better handled in a future polish story.)
+
 ### US-7.4: Validate draft session status before mutations
 **As a** developer, **I want** all mutation endpoints to check that the draft session is active, **so that** completed or paused drafts cannot be modified.
 

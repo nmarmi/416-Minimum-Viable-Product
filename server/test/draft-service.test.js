@@ -211,13 +211,13 @@ describe('draftService.recordPurchase', () => {
         expect(overrun.errorMessage).toMatch(/insufficient.*budget/i);
     });
 
-    test('roster is full -> failure', async () => {
-        // Fill all 5 slots (C:1, OF:2, SP:1, BENCH:1)
+    test('US-7.3: roster full -> rejects with no state change', async () => {
+        // Fill all 5 slots (C:1, OF:2, SP:1, BENCH:1) — openSlots = 0.
         const session = await createSession({
             teams: [{
                 teamId: 'team1',
                 teamName: 'Team One',
-                budgetRemaining: 260,
+                budgetRemaining: 210, // already spent 50 across 5 picks
                 purchasedPlayers: [
                     { playerId: 'x1', price: 10 },
                     { playerId: 'x2', price: 10 },
@@ -236,14 +236,55 @@ describe('draftService.recordPurchase', () => {
         });
 
         const result = await draftService.recordPurchase(session.draftSessionId, {
-            playerId: 'p1',
-            playerName: 'Player One',
-            teamId: 'team1',
-            price: 10
+            playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 10
         });
 
         expect(result.success).toBe(false);
         expect(result.errorMessage).toMatch(/full/i);
+
+        // No state change: budget intact, no new history entry, player still available.
+        const after = await DraftSession.findOne({ draftSessionId: session.draftSessionId });
+        const team1 = after.teams.find((t) => t.teamId === 'team1');
+        expect(team1.budgetRemaining).toBe(210);
+        expect(team1.purchasedPlayers).toHaveLength(5);
+        expect(after.availablePlayerIds).toContain('p1');
+        expect(after.draftHistory).toHaveLength(0);
+    });
+
+    test('US-7.3: roster boundary — last open slot succeeds, then next purchase rejects', async () => {
+        // 4 of 5 slots filled → openSlots = 1; the next pick is allowed,
+        // but the one after that hits the full-roster guard.
+        const session = await createSession({
+            teams: [{
+                teamId: 'team1',
+                teamName: 'Team One',
+                budgetRemaining: 220,
+                purchasedPlayers: [
+                    { playerId: 'x1', price: 10 },
+                    { playerId: 'x2', price: 10 },
+                    { playerId: 'x3', price: 10 },
+                    { playerId: 'x4', price: 10 },
+                ],
+                filledRosterSlots: new Map([['C', 1], ['OF', 2], ['SP', 1], ['BENCH', 0]])
+            }, {
+                teamId: 'team2',
+                teamName: 'Team Two',
+                budgetRemaining: 260,
+                purchasedPlayers: [],
+                filledRosterSlots: new Map([['C', 0], ['OF', 0], ['SP', 0], ['BENCH', 0]])
+            }]
+        });
+
+        const ok = await draftService.recordPurchase(session.draftSessionId, {
+            playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 5
+        });
+        expect(ok.success).toBe(true);
+
+        const overflow = await draftService.recordPurchase(session.draftSessionId, {
+            playerId: 'p2', playerName: 'Player Two', teamId: 'team1', price: 5
+        });
+        expect(overflow.success).toBe(false);
+        expect(overflow.errorMessage).toMatch(/full/i);
     });
 
     test('draft not active (completed) -> failure', async () => {
