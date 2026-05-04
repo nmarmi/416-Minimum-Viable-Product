@@ -45,12 +45,23 @@ describe('POST /leagues (createLeague)', () => {
         expect(res.status).toBe(400);
     });
 
-    test('success -> 201 with league', async () => {
+    test('success -> 201 with league and draftSession', async () => {
         vi.spyOn(db, 'createLeague').mockResolvedValue({
             _id: 'league123',
             name: 'My League',
             owner: OWNER_ID
         });
+        vi.spyOn(db, 'createDraftSession').mockResolvedValue({
+            draftSessionId: 'draft-test-abc',
+            leagueId: 'league123',
+            status: 'setup',
+            leagueSettings: { numberOfTeams: 12, salaryCap: 260, rosterSlots: {}, scoringType: '5x5 Roto', draftType: 'AUCTION' },
+            teams: [],
+            availablePlayerIds: [],
+            purchasedPlayerIds: [],
+            draftHistory: []
+        });
+        vi.spyOn(db, 'setLeagueDraftSession').mockResolvedValue(null);
 
         const res = await request(app)
             .post('/leagues')
@@ -60,6 +71,7 @@ describe('POST /leagues (createLeague)', () => {
         expect(res.status).toBe(201);
         expect(res.body.success).toBe(true);
         expect(res.body.league.name).toBe('My League');
+        expect(res.body.draftSession.draftSessionId).toBe('draft-test-abc');
     });
 });
 

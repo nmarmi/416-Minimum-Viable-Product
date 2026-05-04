@@ -14,6 +14,9 @@ const PlayerHomeScreen = () => {
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState('');
 
+    const [leagueToDelete, setLeagueToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+
     const loadLeagues = async () => {
         setLoadingLeagues(true);
         const res = await store.loadLeagues();
@@ -62,6 +65,14 @@ const PlayerHomeScreen = () => {
 
         setCreateError('League created but failed to initialize draft settings.');
         await loadLeagues();
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!leagueToDelete) return;
+        setDeleting(true);
+        await store.deleteLeague(leagueToDelete._id);
+        setDeleting(false);
+        setLeagueToDelete(null);
     };
 
     return (
@@ -120,6 +131,13 @@ const PlayerHomeScreen = () => {
                                     >
                                         Draft Settings
                                     </button>
+                                    <button
+                                        className="home-danger-btn"
+                                        type="button"
+                                        onClick={() => setLeagueToDelete(league)}
+                                    >
+                                        Delete
+                                    </button>
                                 </div>
                             </article>
                         ))}
@@ -150,6 +168,21 @@ const PlayerHomeScreen = () => {
                             <button type="button" className="home-light-btn" onClick={() => setShowCreateModal(false)} disabled={creating}>Cancel</button>
                             <button type="button" className="home-dark-btn" onClick={handleCreate} disabled={creating}>
                                 {creating ? 'Creating...' : 'Create League'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            {leagueToDelete ? (
+                <div className="role-modal-overlay">
+                    <div className="role-modal-card league-modal-card">
+                        <h3>Delete League</h3>
+                        <p>Delete <strong>{leagueToDelete.name}</strong>? This will permanently remove the league and all draft data.</p>
+                        <div className="role-modal-actions">
+                            <button type="button" className="home-light-btn" onClick={() => setLeagueToDelete(null)} disabled={deleting}>Cancel</button>
+                            <button type="button" className="home-danger-btn" onClick={handleDeleteConfirm} disabled={deleting}>
+                                {deleting ? 'Deleting...' : 'Delete'}
                             </button>
                         </div>
                     </div>

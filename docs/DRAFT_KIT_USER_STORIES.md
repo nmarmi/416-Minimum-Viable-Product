@@ -108,6 +108,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Manager approval, announcement broadcast, draft pause/resume (commissioner controls) are gone
 - Audit log for commissioner actions is gone
 
+** COMPLETED**
+
 ### US-0.3: Rescope league as a single-owner draft container
 **As a** drafter, **I want** the `League` entity kept but reduced to an owner-scoped container that holds exactly one draft session, **so that** "create a league, then draft inside it" remains the user flow without any pretense of multi-user league management.
 
@@ -121,6 +123,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - `PlayerHomeScreen` lists the authenticated user's leagues with create/delete only
 - Each league maps 1:1 to a draft session (creating a league creates the session; deleting a league deletes the session)
 
+** COMPLETED**
+
 ### US-0.4: Remove season/standings/schedule concepts
 **As a** drafter, **I want** all references to seasons, standings, and schedules removed, **so that** the product clearly focuses on the draft and doesn't carry dead code.
 
@@ -130,6 +134,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - No controllers, routes, or models exist for standings/schedules
 - Tests no longer exercise those code paths
 
+** COMPLETED**
+
 ### US-0.5: Clean up unused server dependencies
 **As a** developer, **I want** unused packages (`sequelize`, `pg`, `pg-hstore`, duplicate `bcrypt`/`bcryptjs`) removed from `server/package.json`, **so that** the dependency tree reflects actual usage.
 
@@ -137,6 +143,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - `sequelize`, `pg`, `pg-hstore` removed from `package.json`
 - Only one of `bcrypt` / `bcryptjs` remains (whichever controllers actually use)
 - `npm install` succeeds with no extraneous packages
+
+** COMPLETED**
 
 ---
 

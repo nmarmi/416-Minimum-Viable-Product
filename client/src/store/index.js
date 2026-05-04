@@ -142,17 +142,12 @@ function GlobalStoreContextProvider(props) {
     };
 
     store.createLeague = async function (name) {
-        const leagueRes = await leaguesRequestSender.createLeague({ name });
-        if (leagueRes.status !== 201 || !leagueRes.data?.success) {
-            return leagueRes;
+        const res = await leaguesRequestSender.createLeague({ name });
+        if (res.status !== 201 || !res.data?.success) {
+            return res;
         }
 
-        const league = leagueRes.data.league;
-        const sessionRes = await draftSessionsRequestSender.createDraftSession({ leagueId: league._id });
-        const draftSession =
-            (sessionRes.status === 201 || sessionRes.status === 200) && sessionRes.data?.success
-                ? sessionRes.data.draftSession
-                : null;
+        const { league, draftSession } = res.data;
 
         storeReducer({
             type: GlobalStoreActionType.CREATE_LEAGUE,

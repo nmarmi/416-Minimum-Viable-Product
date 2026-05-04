@@ -67,11 +67,7 @@ class MongoDBManager extends DatabaseManager {
     }
 
     async getLeaguesForUser(userId) {
-        return await League.find({
-            $or: [
-                { owner: userId },
-            ]
-        }).sort({ createdAt: -1 });
+        return await League.find({ owner: userId }).sort({ createdAt: -1 });
     }
 
     async getLeagueById(leagueId) {
