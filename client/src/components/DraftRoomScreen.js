@@ -45,12 +45,14 @@ const getValuationValue = (valuation) => pickFirstDefined(valuation, ['dollarVal
 
 const getPlayerId = (player) => player.playerId || player.id || player._id || `${player.playerName}-${getPlayerTeamLabel(player)}`;
 
-const buildRosterPlanner = (draftSession) => {
+const buildRosterPlanner = (draftSession, teamId) => {
     const slots = draftSession?.leagueSettings?.rosterSlots || {};
+    const team = (draftSession?.teams || []).find((t) => t.teamId === teamId);
+    const filledMap = team?.filledRosterSlots || {};
     return Object.keys(slots).map((slot) => ({
         slot,
-        filled: 0,
-        target: Number(slots[slot] || 0)
+        filled: Number(filledMap[slot] || 0),
+        target: Number(slots[slot] || 0),
     }));
 };
 
@@ -104,8 +106,6 @@ const DraftRoomScreen = () => {
         return draftSession.teams.map((t) => ({ teamId: t.teamId, label: `${getTeamName(t)} ($${t.budgetRemaining ?? '--'})` }));
     }, [draftSession]);
 
-    const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession), [draftSession]);
-
     // US-6.5: derive the active "my team" — explicit `myTeamId` from server,
     // falling back to the first team so the sidebar always has something to render.
     const myTeam = useMemo(() => {
@@ -113,6 +113,10 @@ const DraftRoomScreen = () => {
         const explicit = draftSession.teams.find((t) => t.teamId === draftSession.myTeamId);
         return explicit || draftSession.teams[0];
     }, [draftSession]);
+
+    // US-6.6: the sidebar planner reads filled counts off `myTeam`, so it
+    // recomputes whenever the session state replaces (purchase / undo / edit).
+    const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession, myTeam?.teamId), [draftSession, myTeam]);
 
     const availableSet = useMemo(() => new Set(draftSession?.availablePlayerIds || []), [draftSession]);
 
@@ -1256,6 +1260,12 @@ const DraftRoomScreen = () => {
     const sidebarMaxBid = sidebarTeam && sidebarOpenSlots > 0
         ? Math.max(Number(sidebarTeam.budgetRemaining || 0) - (sidebarOpenSlots - 1), 1)
         : null;
+    // US-6.6: live avg-spent-per-purchased-player metric.
+    const sidebarPurchased = sidebarTeam?.purchasedPlayers || [];
+    const sidebarSpent = sidebarPurchased.reduce((sum, p) => sum + Number(p.price || 0), 0);
+    const sidebarAvgPerPlayer = sidebarPurchased.length > 0
+        ? Math.round((sidebarSpent / sidebarPurchased.length) * 100) / 100
+        : null;
     const sidebarAvgPerOpenSlot = sidebarOpenSlots > 0 && sidebarTeam
         ? Math.round((Number(sidebarTeam.budgetRemaining || 0) / sidebarOpenSlots) * 100) / 100
         : null;
@@ -1328,6 +1338,10 @@ const DraftRoomScreen = () => {
                             <strong>{sidebarMaxBid != null ? `$${sidebarMaxBid}` : '--'}</strong>
                         </div>
                         <div className="draft-v2-metric-row">
+                            <span>Avg $/Player</span>
+                            <strong>{sidebarAvgPerPlayer != null ? `$${sidebarAvgPerPlayer}` : '--'}</strong>
+                        </div>
+                        <div className="draft-v2-metric-row">
                             <span>Avg $/Open Slot</span>
                             <strong>{sidebarAvgPerOpenSlot != null ? `$${sidebarAvgPerOpenSlot}` : '--'}</strong>
                         </div>
@@ -1349,17 +1363,21 @@ const DraftRoomScreen = () => {
                             {rosterPositions.map((pos) => {
                                 const plannerEntry = rosterPlanner.find((entry) => entry.slot === pos);
                                 const target = plannerEntry?.target ?? 1;
+                                const filled = plannerEntry?.filled ?? 0;
+                                const open = Math.max(target - filled, 0);
                                 return (
                                     <div key={pos} className="draft-v2-roster-row">
                                         <span>{pos}</span>
-                                        <span className="draft-v2-muted">0 / {target}</span>
-                                        <span className="draft-v2-need-pill">Need {target}</span>
+                                        <span className="draft-v2-muted">{filled} / {target}</span>
+                                        {open > 0
+                                            ? <span className="draft-v2-need-pill">Need {open}</span>
+                                            : <span className="draft-v2-muted">Filled</span>}
                                     </div>
                                 );
                             })}
                         </div>
                         <div className="draft-v2-next-priority">
-                            Next Priority: {rosterPlanner.find((entry) => entry.target > 0)?.slot || 'TBD'}
+                            Next Priority: {(rosterPlanner.find((entry) => entry.target - entry.filled > 0))?.slot || 'TBD'}
                         </div>
                     </article>
 

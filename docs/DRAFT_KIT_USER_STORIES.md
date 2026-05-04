@@ -549,6 +549,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Avg $/player and avg budget/slot recalculate
 - Roster planning section shows filled/open per position
 
+** COMPLETED** (sidebar adds an `Avg $/Player` row (`spent / purchased.length`) alongside the existing `Avg $/Open Slot`. `buildRosterPlanner(draftSession, teamId)` now reads `filled` from `team.filledRosterSlots` instead of returning hardcoded 0; the Roster Planning panel renders `${filled} / ${target}` per position with a "Filled" pill or `Need N` for the open count, and "Next Priority" advances as slots fill. Everything reflows automatically because the store's reducers replace `currentDraftSession` after each purchase/undo/edit.)
+
 ---
 
 ## Epic 7: State Validation & Integrity (Milestone 2)
