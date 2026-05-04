@@ -493,6 +493,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Count of available players is displayed
 - Purchased players are excluded
 
+** COMPLETED** (`renderPlayersTab` table; `displayedPlayers` memo filters by `availableSet` (from `draftSession.availablePlayerIds`), the new `positionFilter` chip row, and the existing `injuryOnly` toggle. Count pill renders `${displayedPlayers.length} of ${availableSet.size} Available` so it tracks the live state, not the stale API total.)
+
 ### US-6.2: Purchased players view
 **As a** drafter, **I want** to see all purchased players with their buyer and price, **so that** I can track what has been drafted.
 

@@ -94,6 +94,7 @@ const DraftRoomScreen = () => {
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
+    const [positionFilter, setPositionFilter] = useState('ALL');
 
     const draftSession = store.currentDraftSession;
 
@@ -105,6 +106,16 @@ const DraftRoomScreen = () => {
     const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession), [draftSession]);
 
     const availableSet = useMemo(() => new Set(draftSession?.availablePlayerIds || []), [draftSession]);
+
+    // US-6.1: position filter for the player pool view.
+    const availablePositions = useMemo(() => {
+        const set = new Set();
+        for (const p of players || []) {
+            const raw = String(p?.position || p?.positions || '');
+            for (const tok of raw.split(/[,/]/).map((s) => s.trim()).filter(Boolean)) set.add(tok);
+        }
+        return ['ALL', ...Array.from(set).sort()];
+    }, [players]);
 
     const getPlayerValuation = useCallback((player) => {
         const id = getPlayerId(player);
@@ -128,9 +139,21 @@ const DraftRoomScreen = () => {
     }, [valuationsMap]);
 
     const displayedPlayers = useMemo(() => {
-        if (!injuryOnly) return players;
-        return (players || []).filter((player) => isInjuredStatus(player));
-    }, [players, injuryOnly]);
+        let list = players || [];
+        // US-6.1: only show available (un-purchased) players in this view.
+        if (availableSet.size > 0) {
+            list = list.filter((p) => availableSet.has(getPlayerId(p)));
+        }
+        // US-6.1: position filter.
+        if (positionFilter && positionFilter !== 'ALL') {
+            list = list.filter((p) => {
+                const raw = String(p?.position || p?.positions || '');
+                return raw.split(/[,/]/).map((s) => s.trim()).includes(positionFilter);
+            });
+        }
+        if (injuryOnly) list = list.filter((p) => isInjuredStatus(p));
+        return list;
+    }, [players, injuryOnly, availableSet, positionFilter]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -572,9 +595,16 @@ const DraftRoomScreen = () => {
                     </label>
                     <button type="button" className="draft-v2-filter-btn" onClick={loadPlayers}>Search</button>
                     <div className="draft-v2-filter-row">
-                        <button type="button" className="draft-v2-filter-btn">All</button>
-                        <button type="button" className="draft-v2-filter-btn">Watchlist (0)</button>
-                        <button type="button" className="draft-v2-filter-btn">All Tags</button>
+                        {availablePositions.map((pos) => (
+                            <button
+                                key={pos}
+                                type="button"
+                                className={`draft-v2-filter-btn ${positionFilter === pos ? 'active' : ''}`}
+                                onClick={() => setPositionFilter(pos)}
+                            >
+                                {pos === 'ALL' ? 'All Positions' : pos}
+                            </button>
+                        ))}
                         <button
                             type="button"
                             className={`draft-v2-filter-btn ${injuryOnly ? 'active' : ''}`}
@@ -1130,7 +1160,11 @@ const DraftRoomScreen = () => {
                 <section className="draft-v2-main">
                     <div className="draft-v2-main-head">
                         <h2>{activeTab === 'Players' ? 'Player Pool' : activeTab}</h2>
-                        {activeTab === 'Players' ? <span className="draft-v2-count-pill">{playersTotal} Players</span> : null}
+                        {activeTab === 'Players' ? (
+                            <span className="draft-v2-count-pill">
+                                {displayedPlayers.length} of {availableSet.size || playersTotal} Available
+                            </span>
+                        ) : null}
                     </div>
                     {renderTabContent()}
                 </section>
