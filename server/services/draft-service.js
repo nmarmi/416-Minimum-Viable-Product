@@ -3,10 +3,15 @@ const Player = require('../models/player-model');
 const licensedApi = require('../lib/licensed-player-api');
 
 const PITCHER_POSITIONS = new Set(['SP', 'RP', 'P']);
-// Statuses that reject any draft mutations. US-7.4 may narrow this further to
-// require `active` specifically, but Epic 2 only requires blocking finished /
-// paused drafts so existing setup-phase flows keep working.
-const MUTATION_BLOCKED_STATUSES = new Set(['completed', 'paused']);
+// US-7.4: every mutation requires `status === 'active'`. Setup-phase sessions
+// reject purchases (the explicit `POST /start` action transitions to active);
+// paused and completed sessions reject any further mutations.
+const MUTATION_REQUIRED_STATUS = 'active';
+
+function rejectInactive(session) {
+    if (session.status === MUTATION_REQUIRED_STATUS) return null;
+    return { success: false, errorMessage: `Draft is not active (current status: ${session.status}).` };
+}
 
 function toPlainObject(value) {
     if (!value) return {};
@@ -146,9 +151,8 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
         return { success: false, errorMessage: 'Draft session not found.' };
     }
 
-    if (MUTATION_BLOCKED_STATUSES.has(session.status)) {
-        return { success: false, errorMessage: 'Draft is not active.' };
-    }
+    const inactive = rejectInactive(session);
+    if (inactive) return inactive;
 
     const playerIdStr = String(playerId);
 
@@ -225,9 +229,8 @@ async function undoPurchase(draftSessionId, purchaseId) {
         return { success: false, errorMessage: 'Draft session not found.' };
     }
 
-    if (MUTATION_BLOCKED_STATUSES.has(session.status)) {
-        return { success: false, errorMessage: 'Draft is not active.' };
-    }
+    const inactive = rejectInactive(session);
+    if (inactive) return inactive;
 
     const entry = session.draftHistory.find((h) => h.purchaseId === purchaseId);
     if (!entry) {
@@ -270,9 +273,8 @@ async function editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId } 
         return { success: false, errorMessage: 'Draft session not found.' };
     }
 
-    if (MUTATION_BLOCKED_STATUSES.has(session.status)) {
-        return { success: false, errorMessage: 'Draft is not active.' };
-    }
+    const inactive = rejectInactive(session);
+    if (inactive) return inactive;
 
     const entry = session.draftHistory.find((h) => h.purchaseId === purchaseId);
     if (!entry) {

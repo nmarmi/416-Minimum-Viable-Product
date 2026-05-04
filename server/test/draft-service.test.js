@@ -287,19 +287,25 @@ describe('draftService.recordPurchase', () => {
         expect(overflow.errorMessage).toMatch(/full/i);
     });
 
-    test('draft not active (completed) -> failure', async () => {
-        const session = await createSession({ status: 'completed' });
+    test.each(['setup', 'paused', 'completed'])(
+        'US-7.4: recordPurchase rejects when status is "%s"',
+        async (status) => {
+            const session = await createSession({ status });
 
-        const result = await draftService.recordPurchase(session.draftSessionId, {
-            playerId: 'p1',
-            playerName: 'Player One',
-            teamId: 'team1',
-            price: 10
-        });
+            const result = await draftService.recordPurchase(session.draftSessionId, {
+                playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 10
+            });
 
-        expect(result.success).toBe(false);
-        expect(result.errorMessage).toMatch(/not active/i);
-    });
+            expect(result.success).toBe(false);
+            expect(result.errorMessage).toMatch(/not active/i);
+            expect(result.errorMessage).toContain(status);
+
+            // No state change.
+            const after = await DraftSession.findOne({ draftSessionId: session.draftSessionId });
+            expect(after.draftHistory).toHaveLength(0);
+            expect(after.availablePlayerIds).toContain('p1');
+        }
+    );
 });
 
 // ── undoPurchase ──────────────────────────────────────────────────────────────
@@ -336,6 +342,42 @@ describe('draftService.undoPurchase', () => {
         expect(result.success).toBe(false);
         expect(result.errorMessage).toMatch(/not found/i);
     });
+
+    test.each(['setup', 'paused', 'completed'])(
+        'US-7.4: undoPurchase rejects when status is "%s"',
+        async (status) => {
+            // Build a session that already has a purchase recorded so undo has a target.
+            const active = await createSession({
+                draftHistory: [{
+                    purchaseId: 'existing-purchase',
+                    playerId: 'p1', playerName: 'Player One', teamId: 'team1',
+                    price: 50, positionFilled: 'OF',
+                    timestamp: new Date(), nominationOrder: 1,
+                }],
+                purchasedPlayerIds: ['p1'],
+                availablePlayerIds: ['p2', 'p3', 'p4', 'p5'],
+                teams: [
+                    { teamId: 'team1', teamName: 'Team One', budgetRemaining: 210,
+                      purchasedPlayers: [{ playerId: 'p1', price: 50 }],
+                      filledRosterSlots: new Map([['C', 0], ['OF', 1], ['SP', 0], ['BENCH', 0]]) },
+                    { teamId: 'team2', teamName: 'Team Two', budgetRemaining: 260,
+                      purchasedPlayers: [],
+                      filledRosterSlots: new Map([['C', 0], ['OF', 0], ['SP', 0], ['BENCH', 0]]) },
+                ],
+                status,
+            });
+
+            const result = await draftService.undoPurchase(active.draftSessionId, 'existing-purchase');
+
+            expect(result.success).toBe(false);
+            expect(result.errorMessage).toMatch(/not active/i);
+
+            // No state change.
+            const after = await DraftSession.findOne({ draftSessionId: active.draftSessionId });
+            expect(after.draftHistory).toHaveLength(1);
+            expect(after.purchasedPlayerIds).toContain('p1');
+        }
+    );
 });
 
 // ── editPurchase ──────────────────────────────────────────────────────────────
@@ -374,4 +416,31 @@ describe('draftService.editPurchase', () => {
         expect(result.success).toBe(false);
         expect(result.errorMessage).toMatch(/whole number/i);
     });
+
+    test.each(['setup', 'paused', 'completed'])(
+        'US-7.4: editPurchase rejects when status is "%s"',
+        async (status) => {
+            // Record a purchase against an active session, then flip the status
+            // and try to edit. This proves the guard fires regardless of how we
+            // got into the inactive state.
+            const active = await createSession();
+            const purchase = await draftService.recordPurchase(active.draftSessionId, {
+                playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 50
+            });
+            const purchaseId = purchase.snapshot.draftHistory[0].purchaseId;
+
+            await DraftSession.updateOne({ draftSessionId: active.draftSessionId }, { status });
+
+            const result = await draftService.editPurchase(active.draftSessionId, purchaseId, { newPrice: 60 });
+
+            expect(result.success).toBe(false);
+            expect(result.errorMessage).toMatch(/not active/i);
+
+            // No state change: the original $50 price stays.
+            const after = await DraftSession.findOne({ draftSessionId: active.draftSessionId });
+            const team = after.teams.find((t) => t.teamId === 'team1');
+            expect(after.draftHistory[0].price).toBe(50);
+            expect(team.budgetRemaining).toBe(210);
+        }
+    );
 });

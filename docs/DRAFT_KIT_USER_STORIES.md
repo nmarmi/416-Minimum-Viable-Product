@@ -593,6 +593,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Returns 400 with "Draft is not active"
 - Setup-phase sessions also reject purchases
 
+** COMPLETED** (`draft-service.js` replaces the previous `MUTATION_BLOCKED_STATUSES` (which only blocked `paused`/`completed`) with a single `rejectInactive(session)` helper that requires `status === 'active'` — `setup` now correctly rejects mutations because the explicit `POST /start` action is the documented transition. All three mutation methods call it before any state read or write. Error message includes the offending status: `Draft is not active (current status: <status>).`. `tests/draft-service.test.js` adds parametrized `test.each(['setup','paused','completed'])` matrices for `recordPurchase`, `undoPurchase`, and `editPurchase` — 9 cases total — each asserting both the rejection AND no-state-change (history length, budget intact, player still available/purchased).)
+
 ### US-7.5: State consistency tests
 **As a** developer, **I want** automated tests for draft state transitions, **so that** regressions are caught early.
 
