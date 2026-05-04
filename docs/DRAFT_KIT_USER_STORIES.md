@@ -527,6 +527,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Each row has Undo and Edit actions (from Epic 5)
 - Empty state: "No picks recorded yet"
 
+** COMPLETED** (`renderDraftBoardTab` "Draft Results Log" table — # / Player / Auctioned By / Won By / Price / Notes / Actions; per-row Undo + Edit (Epic 5); empty state renders "No picks logged yet".)
+
 ### US-6.5: My team view / roster
 **As a** drafter, **I want** to designate one team as "my team" and see my roster and budget prominently, **so that** I can focus on my own draft strategy.
 
