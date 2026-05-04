@@ -106,6 +106,14 @@ const DraftRoomScreen = () => {
 
     const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession), [draftSession]);
 
+    // US-6.5: derive the active "my team" — explicit `myTeamId` from server,
+    // falling back to the first team so the sidebar always has something to render.
+    const myTeam = useMemo(() => {
+        if (!draftSession?.teams?.length) return null;
+        const explicit = draftSession.teams.find((t) => t.teamId === draftSession.myTeamId);
+        return explicit || draftSession.teams[0];
+    }, [draftSession]);
+
     const availableSet = useMemo(() => new Set(draftSession?.availablePlayerIds || []), [draftSession]);
 
     // US-6.1: position filter for the player pool view.
@@ -454,6 +462,12 @@ const DraftRoomScreen = () => {
         }
     };
 
+    // US-6.5: mark a team as "My Team" — persists via store.setMyTeam.
+    const handleSetMyTeam = async (teamId) => {
+        if (!draftSessionId || !teamId) return;
+        await store.setMyTeam(draftSessionId, teamId);
+    };
+
     // US-5.2: confirm before undo so an accidental click doesn't rewind state.
     const confirmAndUndo = async (entry) => {
         if (!entry) return;
@@ -789,30 +803,113 @@ const DraftRoomScreen = () => {
         );
     };
 
-    const renderRosterTab = () => (
-        <section className="draft-v2-module-grid two-col">
-            <article className="draft-v2-module-card">
-                <h3>My Roster Overview</h3>
-                <p className="draft-v2-auction-muted">Your full roster and slot status will appear here once draft picks are recorded.</p>
-                <div className="draft-v2-empty-box">No rostered players yet.</div>
-            </article>
+    // US-6.5: My Roster view — when the user has marked a team, lay out their
+    // purchases against the configured roster slots so filled vs. open is obvious.
+    const renderRosterTab = () => {
+        const teams = draftSession?.teams || [];
+        if (!teams.length) {
+            return (
+                <section className="draft-v2-module-grid one-col">
+                    <article className="draft-v2-module-card">
+                        <h3>My Roster</h3>
+                        <p className="draft-v2-auction-muted">Configure the draft to populate teams.</p>
+                    </article>
+                </section>
+            );
+        }
 
-            <article className="draft-v2-module-card">
-                <h3>Keepers & Bench Strategy</h3>
-                <ul className="draft-v2-checklist">
-                    <li>Mark keepers and salary</li>
-                    <li>Starter vs bench prioritization</li>
-                    <li>Remaining slot needs by position</li>
-                </ul>
-            </article>
+        const isExplicit = Boolean(draftSession?.myTeamId);
+        const team = myTeam;
+        const rosterSlots = draftSession?.leagueSettings?.rosterSlots || {};
+        const purchased = team?.purchasedPlayers || [];
+        const filledByPos = team?.filledRosterSlots || {};
 
-            <article className="draft-v2-module-card full">
-                <h3>Draft Recap & Export</h3>
-                <p className="draft-v2-auction-muted">This area will show final roster, spend, bargains/overpays, and CSV export controls.</p>
-                <div className="draft-v2-empty-box">No recap yet. Complete draft to populate.</div>
-            </article>
-        </section>
-    );
+        return (
+            <section className="draft-v2-module-grid one-col">
+                <article className="draft-v2-module-card">
+                    <h3>My Team</h3>
+                    {!isExplicit ? (
+                        <p className="draft-v2-auction-muted">No team marked yet — defaulting to <strong>{getTeamName(team)}</strong>. Pick yours below.</p>
+                    ) : (
+                        <p className="draft-v2-auction-muted">Tracking <strong>{getTeamName(team)}</strong> as your team.</p>
+                    )}
+                    <div className="draft-v2-filter-row">
+                        {teams.map((t) => (
+                            <button
+                                key={t.teamId}
+                                type="button"
+                                className={`draft-v2-filter-btn ${draftSession?.myTeamId === t.teamId ? 'active' : ''}`}
+                                onClick={() => handleSetMyTeam(t.teamId)}
+                            >
+                                {getTeamName(t)}{draftSession?.myTeamId === t.teamId ? ' ✓' : ''}
+                            </button>
+                        ))}
+                    </div>
+                </article>
+
+                <article className="draft-v2-module-card">
+                    <h3>Roster by Position</h3>
+                    <div className="draft-v2-table-shell">
+                        <div className="draft-v2-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Position</th>
+                                        <th>Filled</th>
+                                        <th>Target</th>
+                                        <th>Open</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {Object.keys(rosterSlots).map((pos) => {
+                                        const target = Number(rosterSlots[pos] || 0);
+                                        const filled = Number(filledByPos[pos] || 0);
+                                        const open = Math.max(target - filled, 0);
+                                        return (
+                                            <tr key={pos}>
+                                                <td><strong>{pos}</strong></td>
+                                                <td>{filled}</td>
+                                                <td>{target}</td>
+                                                <td className={open === 0 ? '' : 'draft-v2-need-pill'}>{open}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+
+                <article className="draft-v2-module-card full">
+                    <h3>Purchased Players ({purchased.length})</h3>
+                    {purchased.length === 0 ? (
+                        <div className="draft-v2-empty-box">No rostered players yet.</div>
+                    ) : (
+                        <div className="draft-v2-table-shell">
+                            <div className="draft-v2-table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Player ID</th>
+                                            <th>Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {purchased.map((p) => (
+                                            <tr key={p.playerId}>
+                                                <td>{p.playerId}</td>
+                                                <td>${p.price}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </article>
+            </section>
+        );
+    };
 
     const renderDraftBoardTab = () => (
         <section className="draft-v2-module-grid two-col">
@@ -1023,6 +1120,7 @@ const DraftRoomScreen = () => {
                                     <th>Budget Spent</th>
                                     <th>Slots Filled</th>
                                     <th>Max Bid</th>
+                                    <th>My Team</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1033,14 +1131,22 @@ const DraftRoomScreen = () => {
                                     const spotsRemaining = Math.max(target - filled, 0);
                                     const cap = Number(draftSession?.leagueSettings?.salaryCap || 0);
                                     const spent = Math.max(cap - Number(team.budgetRemaining || 0), 0);
+                                    const isMine = draftSession?.myTeamId === team.teamId;
 
                                     return (
-                                        <tr key={team.teamId}>
+                                        <tr key={team.teamId} className={isMine ? 'draft-v2-tr-compare-selected' : ''}>
                                             <td><strong>{getTeamName(team)}</strong></td>
                                             <td>{team.budgetRemaining != null ? `$${team.budgetRemaining}` : '--'}</td>
                                             <td>${spent}</td>
                                             <td>{filled} / {target || '--'}</td>
                                             <td>{team.budgetRemaining != null && spotsRemaining > 0 ? `$${Math.max(team.budgetRemaining - (spotsRemaining - 1), 1)}` : '--'}</td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className={`draft-v2-filter-btn ${isMine ? 'active' : ''}`}
+                                                    onClick={() => handleSetMyTeam(team.teamId)}
+                                                >{isMine ? '✓ Mine' : 'Set as Mine'}</button>
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -1137,9 +1243,21 @@ const DraftRoomScreen = () => {
     const draftSubtitle = draftSession
         ? `${draftSession.status === 'active' ? 'Active draft session' : 'Draft setup preview'} for league ${leagueId}.`
         : 'Welcome back. Draft room data will appear once API integration is enabled.';
-    const firstTeam = draftSession?.teams?.[0] || null;
-    const spotsRemaining = draftSession?.leagueSettings?.rosterSlots
+
+    // US-6.5: sidebar metrics bind to `myTeam` (explicit or fallback).
+    const sidebarTeam = myTeam;
+    const totalRosterSlots = draftSession?.leagueSettings?.rosterSlots
         ? Object.values(draftSession.leagueSettings.rosterSlots).reduce((sum, value) => sum + Number(value || 0), 0)
+        : 0;
+    const sidebarFilled = sidebarTeam
+        ? Object.values(sidebarTeam.filledRosterSlots || {}).reduce((sum, v) => sum + Number(v || 0), 0)
+        : 0;
+    const sidebarOpenSlots = Math.max(totalRosterSlots - sidebarFilled, 0);
+    const sidebarMaxBid = sidebarTeam && sidebarOpenSlots > 0
+        ? Math.max(Number(sidebarTeam.budgetRemaining || 0) - (sidebarOpenSlots - 1), 1)
+        : null;
+    const sidebarAvgPerOpenSlot = sidebarOpenSlots > 0 && sidebarTeam
+        ? Math.round((Number(sidebarTeam.budgetRemaining || 0) / sidebarOpenSlots) * 100) / 100
         : null;
 
     return (
@@ -1192,14 +1310,26 @@ const DraftRoomScreen = () => {
                         <h2>$ Budget Tracker</h2>
                         <div className="draft-v2-metric-row">
                             <span>Remaining Budget</span>
-                            <strong>{firstTeam?.budgetRemaining != null ? `$${firstTeam.budgetRemaining}` : '--'}</strong>
+                            <strong>{sidebarTeam?.budgetRemaining != null ? `$${sidebarTeam.budgetRemaining}` : '--'}</strong>
                         </div>
                         <div className="draft-v2-meter" />
-                        <p className="draft-v2-muted">{draftSession ? `${getTeamName(firstTeam)} preview` : 'Awaiting draft data from API'}</p>
+                        <p className="draft-v2-muted">
+                            {draftSession ? (
+                                <>
+                                    {draftSession.myTeamId
+                                        ? <>Tracking <strong>{getTeamName(sidebarTeam)}</strong></>
+                                        : <>No team marked — defaulting to <strong>{getTeamName(sidebarTeam)}</strong></>}
+                                </>
+                            ) : 'Awaiting draft data from API'}
+                        </p>
                         <div className="draft-v2-divider" />
                         <div className="draft-v2-metric-row">
                             <span>Maximum Bid</span>
-                            <strong>{firstTeam?.budgetRemaining != null && spotsRemaining ? `$${Math.max(firstTeam.budgetRemaining - (spotsRemaining - 1), 1)}` : '--'}</strong>
+                            <strong>{sidebarMaxBid != null ? `$${sidebarMaxBid}` : '--'}</strong>
+                        </div>
+                        <div className="draft-v2-metric-row">
+                            <span>Avg $/Open Slot</span>
+                            <strong>{sidebarAvgPerOpenSlot != null ? `$${sidebarAvgPerOpenSlot}` : '--'}</strong>
                         </div>
                         <div className="draft-v2-stat-grid">
                             <div>

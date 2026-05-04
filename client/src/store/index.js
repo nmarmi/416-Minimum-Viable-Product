@@ -190,6 +190,17 @@ function GlobalStoreContextProvider(props) {
         return res;
     };
 
+    store.setMyTeam = async function (draftSessionId, teamId) {
+        const res = await draftSessionsRequestSender.updateDraftSession(draftSessionId, { myTeamId: teamId });
+        if (res.status === 200 && res.data?.success) {
+            storeReducer({
+                type: GlobalStoreActionType.UPDATE_DRAFT_SESSION,
+                payload: res.data.draftSession,
+            });
+        }
+        return res;
+    };
+
     store.startDraft = async function (draftSessionId) {
         const res = await draftSessionsRequestSender.startDraft(draftSessionId);
         if (res.status === 200 && res.data?.success) {

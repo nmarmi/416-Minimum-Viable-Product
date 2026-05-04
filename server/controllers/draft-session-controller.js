@@ -167,6 +167,19 @@ const updateDraftSession = async (req, res) => {
         session.leagueSettings = nextSettings;
         session.teams = nextTeams;
 
+        // US-6.5: persist the user's chosen "my team" so the sidebar / roster
+        // tab can bind to it across sessions. Accepts an explicit null to clear.
+        if (Object.prototype.hasOwnProperty.call(req.body || {}, 'myTeamId')) {
+            const requested = req.body.myTeamId;
+            if (requested === null || requested === '') {
+                session.myTeamId = null;
+            } else if (typeof requested === 'string' && nextTeams.some((t) => t.teamId === requested)) {
+                session.myTeamId = requested;
+            } else {
+                return res.status(400).json({ success: false, errorMessage: `Unknown teamId for myTeamId: ${requested}` });
+            }
+        }
+
         await db.saveDraftSession(session);
 
         return res.status(200).json({

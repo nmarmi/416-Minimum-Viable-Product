@@ -538,6 +538,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - "My Roster" tab shows my purchased players by position slot
 - Filled vs. open slots are clearly indicated
 
+** COMPLETED** (server `updateDraftSession` accepts `myTeamId`; client store action `setMyTeam` posts via `PUT /draft-sessions/:id`. UI: "Set as Mine" button on each row of the Teams tab AND a button-row picker in the My Roster tab. `myTeam` derivation falls back to the first team when nothing is marked. Roster tab shows a Position / Filled / Target / Open table plus a list of purchased players + price for that team. Sidebar binds to `myTeam` for Remaining Budget, Maximum Bid (using live open slots), and Avg $/Open Slot.)
+
 ### US-6.6: Sidebar budget tracker updates live
 **As a** drafter, **I want** the sidebar budget tracker to update immediately after every purchase, **so that** I always see current numbers.
 
