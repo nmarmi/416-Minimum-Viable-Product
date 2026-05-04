@@ -8,7 +8,7 @@ import GlossaryModal from './GlossaryModal';
 import PlayerCompareModal from './PlayerCompareModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
-const TABS = ['Players', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
+const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
 const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Injury', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 
@@ -95,6 +95,7 @@ const DraftRoomScreen = () => {
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
     const [positionFilter, setPositionFilter] = useState('ALL');
+    const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
 
     const draftSession = store.currentDraftSession;
 
@@ -726,6 +727,68 @@ const DraftRoomScreen = () => {
         </>
     );
 
+    // US-6.2: Purchased players view — sortable table of every recorded pick.
+    const renderPurchasedTab = () => {
+        const history = (draftSession?.draftHistory || []).slice();
+        const teamsById = new Map((draftSession?.teams || []).map((t) => [t.teamId, t]));
+        const sorted = (() => {
+            if (purchasedSort === 'price') return [...history].sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+            if (purchasedSort === 'team')  return [...history].sort((a, b) => getTeamName(teamsById.get(a.teamId)).localeCompare(getTeamName(teamsById.get(b.teamId))));
+            return history; // 'order' — chronological as stored
+        })();
+
+        return (
+            <section className="draft-v2-module-grid one-col">
+                <article className="draft-v2-module-card full">
+                    <h3>Purchased Players</h3>
+                    <div className="draft-v2-filter-row">
+                        <span className="draft-v2-auction-muted">Sort by:</span>
+                        {[
+                            { id: 'order', label: 'Order' },
+                            { id: 'price', label: 'Price (high → low)' },
+                            { id: 'team',  label: 'Team' },
+                        ].map((opt) => (
+                            <button
+                                key={opt.id}
+                                type="button"
+                                className={`draft-v2-filter-btn ${purchasedSort === opt.id ? 'active' : ''}`}
+                                onClick={() => setPurchasedSort(opt.id)}
+                            >{opt.label}</button>
+                        ))}
+                    </div>
+                    <div className="draft-v2-table-shell">
+                        <div className="draft-v2-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Player</th>
+                                        <th>Position</th>
+                                        <th>Team That Bought</th>
+                                        <th>Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sorted.length === 0 ? (
+                                        <tr><td colSpan={5} className="draft-v2-empty-row">No picks recorded yet.</td></tr>
+                                    ) : sorted.map((entry) => (
+                                        <tr key={entry.purchaseId}>
+                                            <td>{entry.nominationOrder ?? '--'}</td>
+                                            <td>{entry.playerName}</td>
+                                            <td>{entry.positionFilled || '--'}</td>
+                                            <td>{getTeamName(teamsById.get(entry.teamId))}</td>
+                                            <td>${entry.price}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            </section>
+        );
+    };
+
     const renderRosterTab = () => (
         <section className="draft-v2-module-grid two-col">
             <article className="draft-v2-module-card">
@@ -1009,6 +1072,7 @@ const DraftRoomScreen = () => {
 
     const renderTabContent = () => {
         if (activeTab === 'Players') return renderPlayersTab();
+        if (activeTab === 'Purchased') return renderPurchasedTab();
         if (activeTab === 'My Roster') return renderRosterTab();
         if (activeTab === 'Draft Board') return renderDraftBoardTab();
         if (activeTab === 'Teams') return renderTeamsTab();
@@ -1164,6 +1228,9 @@ const DraftRoomScreen = () => {
                             <span className="draft-v2-count-pill">
                                 {displayedPlayers.length} of {availableSet.size || playersTotal} Available
                             </span>
+                        ) : null}
+                        {activeTab === 'Purchased' ? (
+                            <span className="draft-v2-count-pill">{(draftSession?.draftHistory || []).length} Purchased</span>
                         ) : null}
                     </div>
                     {renderTabContent()}

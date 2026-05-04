@@ -504,6 +504,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Sortable by price, team, or order of purchase
 - Count of purchased players displayed
 
+** COMPLETED** (new `Purchased` tab + `renderPurchasedTab` shows every `draftHistory` row with #, Player, Position, Team That Bought, Price; sort chips for `order | price | team`; count pill in the header tracks `draftHistory.length`.)
+
 ### US-6.3: Team budgets view
 **As a** drafter, **I want** to see every team's remaining budget, roster slots filled, and max bid, **so that** I can gauge the competitive landscape.
 
