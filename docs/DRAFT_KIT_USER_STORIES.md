@@ -19,7 +19,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - No dependencies. Pure removal/cleanup work.
 
 ### Phase 2: Build Domain Models
-- US-2.1, US-2.2, US-2.3, US-2.4
+- US-2.1, US-2.2, US-2.3 (US-2.4 superseded — see story for details)
 - Depends on: Phase 1 (clean codebase)
 
 ### Phase 3: Player Pool via Player Data API
@@ -79,6 +79,10 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - US-13.1, US-13.2, US-13.3, US-13.4
 - Depends on: Phase 14 (client methods exist), Phase 15 (data is flowing), and Player Data API valuation engine (Epics 5–6 in that repo)
 
+### Phase 17: End-to-End Validation (Milestone 5)
+- US-14.1, US-14.2, US-14.3
+- Depends on: Phases 14–16 (full integration surface exists to test)
+
 ---
 
 ## Epic 0: Product Realignment — Remove League-Manager Assumptions
@@ -104,22 +108,27 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Manager approval, announcement broadcast, draft pause/resume (commissioner controls) are gone
 - Audit log for commissioner actions is gone
 
-### US-0.3: Remove league invite/join flow
-**As a** drafter, **I want** the invite-code join flow removed, **so that** the app is not pretending to be a multi-user league platform.
+### US-0.3: Rescope league as a single-owner draft container
+**As a** drafter, **I want** the `League` entity kept but reduced to an owner-scoped container that holds exactly one draft session, **so that** "create a league, then draft inside it" remains the user flow without any pretense of multi-user league management.
+
+> Revised from "remove league invite/join flow." The implementation kept `League` as a 1:1 wrapper around a `DraftSession` (see `CLAUDE.md` repo map and the `/league/:leagueId/draft/:draftSessionId/setup` route). The acceptance criteria below reflect the chosen approach.
 
 **Acceptance criteria:**
-- `PlayerHomeScreen` join-by-code form is removed
-- Server `POST /leagues/join` endpoint is deprecated or removed
-- "My Leagues" list is replaced with "My Draft Sessions" or equivalent
-- League `inviteCode` field is no longer required for draft sessions
+- `League` model retains only `name`, `owner` (ObjectId → User), `draftSessionId` (string)
+- `inviteCode`, `members[]`, `pendingMembers[]`, role/permission, and any commissioner fields are removed
+- `POST /leagues/join` endpoint and join-by-code UI are removed
+- `GET /leagues` returns only leagues where `owner === req.user._id`
+- `PlayerHomeScreen` lists the authenticated user's leagues with create/delete only
+- Each league maps 1:1 to a draft session (creating a league creates the session; deleting a league deletes the session)
 
 ### US-0.4: Remove season/standings/schedule concepts
-**As a** drafter, **I want** all references to seasons, standings, and schedules removed, **so that** the product clearly focuses on the draft.
+**As a** drafter, **I want** all references to seasons, standings, and schedules removed, **so that** the product clearly focuses on the draft and doesn't carry dead code.
 
 **Acceptance criteria:**
-- `League` model fields `seasonYear`, `isActive`, `leagueMode` are removed or ignored
-- No UI references to "season", "standings", or "schedule"
-- No concept of an ongoing season after the draft
+- `League` model fields `seasonYear`, `isActive`, `leagueMode`, `scoringConfig` (and anything not listed in US-0.3) are removed
+- No UI references to "season", "standings", "schedule", or post-draft play
+- No controllers, routes, or models exist for standings/schedules
+- Tests no longer exercise those code paths
 
 ### US-0.5: Clean up unused server dependencies
 **As a** developer, **I want** unused packages (`sequelize`, `pg`, `pg-hstore`, duplicate `bcrypt`/`bcryptjs`) removed from `server/package.json`, **so that** the dependency tree reflects actual usage.
@@ -235,14 +244,10 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-2.4: Create PlayerStub model (local cache of Player Data API)
-**As a** developer, **I want** a `PlayerStub` model for the local player pool, **so that** the draft can function with locally cached player data.
+### US-2.4: ~~Create PlayerStub model (local cache of Player Data API)~~ — SUPERSEDED
+**Status:** **SUPERSEDED by US-3.3.** No local `PlayerStub` collection is required. The Draft Kit hydrates players on demand from `GET /api/v1/players/pool` via the `player-pool-service.js` proxy. Caching, if ever needed, will be added as a separate story under Epic 12 behind a feature flag.
 
-**Acceptance criteria:**
-- Fields: `playerId` (format: `mlb-{id}`), `name`, `positions[]`, `mlbTeam`, `status` (active/injured/minors), `isAvailable` (default true)
-- Schema matches the `PlayerStub` shape defined by the Player Data API
-- Indexed on `playerId` (unique)
-- Note: The canonical player data lives in the Player Data API. This is a local working copy.
+**Why superseded:** maintaining a local `PlayerStub` collection would require a sync job and risk staleness against the Player Data API's `dataAsOf`. The proxy-and-intersect approach keeps the Player Data API as the single source of truth.
 
 ### US-2.5: Implement draft state service — initialize draft
 **As a** developer, **I want** a server-side draft state service that initializes a draft, **so that** business logic is separated from route handlers.
@@ -573,16 +578,19 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-8.4: Start draft endpoint
-**As a** developer, **I want** `POST /api/draft-sessions/:id/start` to initialize and activate the draft.
+### US-8.4: Explicit start-draft endpoint
+**As a** developer, **I want** an explicit `POST /draft-sessions/:id/start` action that idempotently transitions a `setup` session to `active`, **so that** clients have a clear, intentional moment of "the draft has begun" instead of relying on the side-effect of a `GET`.
+
+> **Current state:** lazy initialization is implemented inside `GET /draft-sessions/:id` — when a `setup` session is fetched, the controller hydrates `availablePlayerIds` from `/api/v1/players/pool`. That is enough to make the draft room work, but it (a) makes a "setup vs. active" transition implicit, (b) couples a read endpoint to a write/state-changing side-effect, and (c) makes the 503-on-API-failure path inconsistent (a read shouldn't fail if the upstream pool is down). This story tracks promoting that into a real action.
 
 **Acceptance criteria:**
-- Validates all settings are complete
-- Initializes team budgets and player pool
-- Sets `status` to `"active"`
-- Returns initialized draft snapshot
-- **Replaces** the current paginated `GET /players?limit=1000&offset=…` loop in `getAvailablePlayerIds()` with a single `GET /api/v1/players/pool` call (per US-3.2)
-- On Player Data API failure with `PLAYER_API_URL` set, returns `503` with a clear error and does **not** transition the session to `active`
+- New `POST /draft-sessions/:draftSessionId/start` route + controller
+- Validates all settings are complete (teams > 0, cap > 0, at least one roster slot, all team names set)
+- On success: calls `draft-service.initializeDraft(sessionId)`, populates `availablePlayerIds` from `GET /api/v1/players/pool`, sets `status` to `"active"`, sets `pooledAt` timestamp, returns initialized snapshot
+- Idempotent for already-`active` sessions (returns the current snapshot, no error) — but `400` for `paused` or `completed`
+- On Player Data API failure with `PLAYER_API_URL` set, returns `503` with `{ success: false, errorMessage: "Player Data API unavailable" }` and does **not** transition the session
+- `GET /draft-sessions/:id` no longer initializes the pool as a side-effect — it only reads
+- Client `DraftSessionSetupScreen` "Start Draft" button POSTs to this endpoint
 
 ### US-8.5: Record purchase endpoint
 **As a** developer, **I want** `POST /api/draft-sessions/:id/purchases` to record a purchase.
@@ -619,6 +627,20 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Returns array of `{draftSessionId, name, status, createdAt, numberOfTeams}`
 - Sorted by `createdAt` descending
 - Requires authentication
+
+### US-8.9: Valuations proxy endpoint
+**As a** drafter, **I want** `GET /draft-sessions/:draftSessionId/valuations` to return per-player projected values for the active draft, **so that** the draft room can render the "$ Value" column without the client knowing the Player Data API exists.
+
+> Implementation already exposes the route per `CLAUDE.md` (line 63). This story formalizes its contract.
+
+**Acceptance criteria:**
+- Server-side, builds `{ leagueSettings, draftState }` via `toPlayerApiLeagueSettings(session)` and `toPlayerApiDraftState(session)` (US-11.6) and POSTs to `POST /api/v1/players/valuations` on the Player Data API
+- Returns `{ success: true, valuations: [{ playerId, projectedValue, purchasePrice, valueGap, rank }], dataAsOf, staleWarnings }`
+- Requires authentication; only the session owner may call it
+- Returns `503` (not `500`) if `PLAYER_API_URL` is set and the upstream is unreachable, with `{ success: false, errorMessage: "Player Data API unavailable" }`
+- Returns `200` with `valuations: []` and a meta note (not an error) if upstream returns "no stats yet" (per Player Data API US-5.4 fallback)
+- Errors from upstream are translated per US-11.8 (preserves status code, includes `errorCode` and `fieldErrors`)
+- Used by US-13.1 client-side after each purchase
 
 ---
 
@@ -838,6 +860,37 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ---
 
+## Epic 14: End-to-End Validation (Milestone 5)
+
+> Both repos are now implemented enough to talk to each other for the pool flow (US-3.2, US-3.3). These stories close the loop with executable proof that the two halves work together.
+
+### US-14.1: Two-server local boot script
+**As a** developer, **I want** a single command that boots both the Player Data API and the Draft Kit server with a known-good `PLAYER_API_URL`, `PLAYER_API_KEY`, and Mongo URI, **so that** any contributor can reproduce a draft end-to-end without reading two READMEs.
+
+**Acceptance criteria:**
+- `docs/dev-setup.md` (or root `README`) documents the exact env vars on each side
+- A script (e.g. `npm run dev:full` at the project root, or a documented two-terminal recipe) brings up both servers
+- Health check: hitting `GET /api/v1/health` on the API and `GET /draft-sessions/<id>` on the Draft Kit both return 200 against the same Mongo + same API key
+
+### US-14.2: End-to-end smoke test
+**As a** developer, **I want** an automated smoke test that exercises the full happy path against a real (in-process or containerized) Player Data API, **so that** cross-repo contract drift is caught before merge.
+
+**Acceptance criteria:**
+- Test boots a Player Data API instance (in-memory DB + seed) and points the Draft Kit at it
+- Test scenario, in order: register user → create league → POST `/draft-sessions` → PUT settings → POST `/draft-sessions/:id/start` (US-8.4) → GET `/draft-sessions/:id/players?status=available` (US-3.3) → POST a purchase (US-8.5) → DELETE the purchase (US-8.6) → assert `availablePlayerIds.length` and `sum(team budgets) + sum(prices)` invariants hold
+- Test fails loudly if upstream pool shape changes (e.g. `playerId` field renamed)
+- Runs in CI; gated behind `RUN_E2E=1` locally so default `npm test` stays fast
+
+### US-14.3: Contract drift guard
+**As a** developer, **I want** `toPlayerApiLeagueSettings` and `toPlayerApiDraftState` (US-11.6) covered by a contract test that loads a fixture from the Player Data API repo's documented schema, **so that** if the API changes the request shape, the Draft Kit's serializer test fails — not a live draft.
+
+**Acceptance criteria:**
+- Fixture file checked into both repos (or pulled from a single shared location) with a representative `{ leagueSettings, draftState }` payload
+- Test asserts the serializer output matches the fixture schema exactly (no extra/missing top-level keys)
+- Documented update procedure: when the Player Data API revs the shape, both repos update the fixture in lockstep
+
+---
+
 ## Domain Model Reference
 
 ### DraftSession
@@ -905,9 +958,10 @@ Authoritative definitions live in the Player Data API's US-5.3 / US-5.4 / US-5.5
 
 | Milestone | Epics | Stories |
 |-----------|-------|---------|
-| M1: Realign & Build | 0, 1, 2, 3, 4, 5, 6, 8, 9 | 49 |
+| M1: Realign & Build | 0, 1, 2, 3, 4, 5, 6, 8, 9 | 50 (US-2.4 superseded; US-8.9 added) |
 | M2: Validate & Polish | 7, 10 | 10 |
 | M3: API Integration Readiness | 11 | 8 |
 | M4: External Data (consumer) | 12 | 3 |
 | M5: Valuation Engine | 13 | 4 |
-| **Total** | | **74** |
+| M5: End-to-End Validation | 14 | 3 |
+| **Total** | | **78** |
