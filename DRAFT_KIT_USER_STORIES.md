@@ -214,12 +214,16 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Schema includes: `draftSessionId`, `name`, `createdAt`, `leagueSettings` (embedded), `teams[]` (embedded), `draftHistory[]` (embedded), `availablePlayerIds[]`, `purchasedPlayerIds[]`, `status` (enum: setup, active, paused, completed)
 - Model is exported and registered with Mongoose
 
+** COMPLETED**
+
 ### US-2.2: Create FantasyTeam embedded schema
 **As a** developer, **I want** a `FantasyTeam` sub-schema, **so that** each team's budget and roster are tracked within the draft session.
 
 **Acceptance criteria:**
 - Fields: `teamId`, `teamName`, `budgetRemaining`, `purchasedPlayers[]` (array of `{playerId, price}`), `filledRosterSlots` (map of position to count)
 - Embedded within `DraftSession.teams[]`
+
+** COMPLETED**
 
 ### US-2.3: Create DraftPurchase embedded schema
 **As a** developer, **I want** a `DraftPurchase` sub-schema, **so that** each purchase is recorded in ordered history.
@@ -228,6 +232,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Fields: `purchaseId`, `playerId`, `playerName`, `teamId`, `price`, `timestamp`, `nominationOrder`
 - Embedded within `DraftSession.draftHistory[]`
 - `nominationOrder` auto-increments per session
+
+** COMPLETED**
 
 ### US-2.4: Create PlayerStub model (local cache of Player Data API)
 **As a** developer, **I want** a `PlayerStub` model for the local player pool, **so that** the draft can function with locally cached player data.
@@ -246,6 +252,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Returns the initialized draft snapshot
 - Validation: fails if session is already active
 
+** COMPLETED**
+
 ### US-2.6: Implement draft state service — record purchase
 **As a** developer, **I want** the draft state service to record a purchase, **so that** all state changes happen atomically.
 
@@ -260,6 +268,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
   - Adds player to team's `purchasedPlayers[]`
   - Increments `filledRosterSlots` for the player's position
 - Returns updated draft snapshot
+
+** COMPLETED**
 
 > **Model alignment note (applies to US-2.7, 2.8, 2.9):** The current `server/models/draft-session-model.js` still predates stories US-2.1–2.3. Before implementing the service methods below, extend the schema to match what US-2.1–2.3 already promised:
 > - add `draftHistory: [DraftPurchaseSchema]`
@@ -281,6 +291,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
   - Removes or marks the history entry as undone
 - Returns updated draft snapshot
 
+** COMPLETED**
+
 ### US-2.8: Implement draft state service — edit purchase
 **As a** developer, **I want** the draft state service to edit a purchase (change price or team), **so that** recording errors can be fixed without full undo.
 
@@ -292,6 +304,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
   - Validates new values (budget sufficient, etc.)
 - Returns updated draft snapshot
 
+** COMPLETED**
+
 ### US-2.9: Implement draft state service — get snapshot
 **As a** developer, **I want** a function that returns the current draft snapshot, **so that** views can render the latest state.
 
@@ -302,6 +316,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
   - Each team's remaining budget, purchased players, filled slots
   - Ordered draft history
   - Session status
+
+** COMPLETED**
 
 ---
 
@@ -319,6 +335,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - If the Player Data API is unreachable and `PLAYER_API_URL` is unset, fall back to the legacy MongoDB `Player` collection's IDs (documented as a dev-only fallback)
 - If the Player Data API is unreachable and `PLAYER_API_URL` **is** set, the endpoint returns `503` with a clear "Player Data API unavailable" message — the session is **not** transitioned to `active`
 
+** COMPLETED**
+
 ### US-3.3: Expose player details to the draft room via a proxied endpoint
 **As a** drafter, **I want** the draft room's Players tab to render rich player details (name, team, positions, status), **so that** I can search and bid without a separate API dance.
 
@@ -329,6 +347,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Returns `PlayerStub` shape: `playerId`, `name`, `positions[]`, `mlbTeam`, `status`, `isAvailable` (derived from session availability, not from the upstream field)
 - Pagination via `limit` and `offset`
 - No local `PlayerStub` collection is required — if caching is added later, it is added as a separate story under Epic 12
+
+** COMPLETED**
 
 ---
 
@@ -531,6 +551,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Returns created session with ID and default settings
 - Requires authentication
 
+** COMPLETED**
+
 ### US-8.2: Get draft session endpoint
 **As a** developer, **I want** `GET /api/draft-sessions/:id` to return the full draft snapshot.
 
@@ -539,6 +561,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Requires authentication
 - Returns 404 if not found
 
+** COMPLETED**
+
 ### US-8.3: Update draft settings endpoint
 **As a** developer, **I want** `PUT /api/draft-sessions/:id/settings` to update league settings.
 
@@ -546,6 +570,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Accepts `{numberOfTeams, salaryCap, rosterSlots, scoringType, teams}`
 - Only allowed when `status === "setup"`
 - Returns updated session
+
+** COMPLETED**
 
 ### US-8.4: Start draft endpoint
 **As a** developer, **I want** `POST /api/draft-sessions/:id/start` to initialize and activate the draft.
@@ -566,6 +592,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Runs full validation (availability, budget, roster)
 - Returns updated draft snapshot on success
 - Returns 400 with specific error on validation failure
+
+** COMPLETED**
 
 ### US-8.6: Undo purchase endpoint
 **As a** developer, **I want** `DELETE /api/draft-sessions/:id/purchases/:purchaseId` to undo a purchase.
