@@ -1,0 +1,44 @@
+name: CD – Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI – Automated Tests"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy-server:
+    name: Deploy Server to Render
+    runs-on: ubuntu-latest
+    # Only deploy when triggered by a push to main (not a PR) and tests passed
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    steps:
+      - name: Trigger Render deploy hook
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+
+  deploy-client:
+    name: Deploy Client to Vercel
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel (production)
+        run: vercel --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

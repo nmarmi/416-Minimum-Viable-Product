@@ -1,7 +1,7 @@
 import { createContext, useContext, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import leaguesRequestSender from '../leagues/requests';
-import draftSessionsRequestSender, { recordPurchase as recordPurchaseRequest } from '../draft-sessions/requests';
+import draftSessionsRequestSender from '../draft-sessions/requests';
 import AuthContext from '../auth';
 
 /*
@@ -25,6 +25,8 @@ export const GlobalStoreActionType = {
     LOAD_DRAFT_SESSION: "LOAD_DRAFT_SESSION",
     UPDATE_DRAFT_SESSION: "UPDATE_DRAFT_SESSION",
     RECORD_PURCHASE: "RECORD_PURCHASE",
+    UNDO_PURCHASE: "UNDO_PURCHASE",
+    EDIT_PURCHASE: "EDIT_PURCHASE",
 };
 
 // WITH THIS WE'RE MAKING OUR GLOBAL DATA STORE
@@ -97,6 +99,22 @@ function GlobalStoreContextProvider(props) {
             }
             // UPDATE SESSION AFTER A PURCHASE IS RECORDED
             case GlobalStoreActionType.RECORD_PURCHASE: {
+                return setStore({
+                    leagues: store.leagues,
+                    currentLeague: store.currentLeague,
+                    currentDraftSession: payload,
+                });
+            }
+            // UPDATE SESSION AFTER A PURCHASE IS UNDONE
+            case GlobalStoreActionType.UNDO_PURCHASE: {
+                return setStore({
+                    leagues: store.leagues,
+                    currentLeague: store.currentLeague,
+                    currentDraftSession: payload,
+                });
+            }
+            // UPDATE SESSION AFTER A PURCHASE IS EDITED
+            case GlobalStoreActionType.EDIT_PURCHASE: {
                 return setStore({
                     leagues: store.leagues,
                     currentLeague: store.currentLeague,
@@ -178,10 +196,32 @@ function GlobalStoreContextProvider(props) {
     };
 
     store.recordPurchase = async function (draftSessionId, { playerId, playerName, teamId, price }) {
-        const res = await recordPurchaseRequest(draftSessionId, { playerId, playerName, teamId, price });
+        const res = await draftSessionsRequestSender.recordPurchase(draftSessionId, { playerId, playerName, teamId, price });
         if (res.status === 200 && res.data?.success) {
             storeReducer({
                 type: GlobalStoreActionType.RECORD_PURCHASE,
+                payload: res.data.draftSession,
+            });
+        }
+        return res;
+    };
+
+    store.undoPurchase = async function (draftSessionId, purchaseId) {
+        const res = await draftSessionsRequestSender.undoPurchase(draftSessionId, purchaseId);
+        if (res.status === 200 && res.data?.success) {
+            storeReducer({
+                type: GlobalStoreActionType.UNDO_PURCHASE,
+                payload: res.data.draftSession,
+            });
+        }
+        return res;
+    };
+
+    store.editPurchase = async function (draftSessionId, purchaseId, updates) {
+        const res = await draftSessionsRequestSender.editPurchase(draftSessionId, purchaseId, updates);
+        if (res.status === 200 && res.data?.success) {
+            storeReducer({
+                type: GlobalStoreActionType.EDIT_PURCHASE,
                 payload: res.data.draftSession,
             });
         }

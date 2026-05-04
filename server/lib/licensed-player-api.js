@@ -115,6 +115,57 @@ async function getPlayerPool(params = {}) {
 }
 
 /**
+ * POST /api/v1/players/valuations — runs the z-score auction dollar value
+ * algorithm and returns dollarValue per player.
+ * @param {Object} leagueSettings - { numTeams, budget, hitterBudgetPct, hitterSlotsPerTeam, pitcherSlotsPerTeam, statSeason }
+ * @param {Object} draftState - optionally { availablePlayerIds: string[] }
+ * @returns {Promise<{ success: boolean, valuations: Array } | null>}
+ */
+async function postValuations(leagueSettings = {}, draftState = {}) {
+    if (!hasConfig()) return null;
+    const body = { leagueSettings, draftState };
+    const normalizedBase = baseUrl.replace(/\/$/, '');
+    const urls = [
+        `${normalizedBase}/players/valuations`,
+        `${normalizedBase}/api/v1/players/valuations`
+    ];
+    try {
+        let lastError = null;
+
+        for (const url of urls) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(body)
+            });
+            const raw = await res.text();
+            let data = {};
+            try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
+            if (res.ok) {
+                return data;
+            }
+            const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
+            err.status = res.status;
+            err.url = url;
+            err.upstream = data;
+            err.raw = raw;
+            lastError = err;
+        }
+
+        throw lastError || new Error('Valuations request failed');
+    } catch (err) {
+        console.error('Licensed API postValuations error:', {
+            message: err.message,
+            status: err.status,
+            url: err.url,
+            upstream: err.upstream,
+            raw: err.raw
+        });
+        throw err;
+    }
+}
+
+/**
  * Push: POST /usage to the licensed API.
  * @param {Object} payload - { event, timestamp, metadata }
  * @returns {Promise<{ success: boolean } | null>}
@@ -149,5 +200,6 @@ module.exports = {
     getPlayers,
     getPlayer,
     getPlayerPool,
+    postValuations,
     postUsage
 };

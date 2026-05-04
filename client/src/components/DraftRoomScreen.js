@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
+import { getSessionValuations } from '../draft-sessions/requests';
 import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
@@ -8,7 +9,7 @@ import PlayerCompareModal from './PlayerCompareModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
-const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
+const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Injury', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 
 const formatStat = (val) => (val != null && Number.isFinite(val) ? (Number(val) === val && val < 1 && val > 0 ? val.toFixed(3) : String(Math.round(val))) : '--');
@@ -27,6 +28,20 @@ const playerNameStartsWithSearch = (playerName, searchTerm) => {
 const getTeamName = (team) => team?.teamName || team?.teamId || 'Fantasy Team';
 
 const getPlayerTeamLabel = (player) => player?.mlbTeam || player?.team || '';
+const getStatusLabel = (player) => {
+    const status = String(player?.status || '').trim();
+    if (!status) return 'UNKNOWN';
+    return status.toLowerCase() === 'active' ? 'ACTIVE' : status.toUpperCase();
+};
+const isInjuredStatus = (player) => String(player?.status || '').trim().toLowerCase() !== 'active';
+const pickFirstDefined = (player, keys) => {
+    for (let i = 0; i < keys.length; i += 1) {
+        const value = player?.[keys[i]];
+        if (value != null && value !== '') return value;
+    }
+    return null;
+};
+const getValuationValue = (valuation) => pickFirstDefined(valuation, ['dollarValue', 'value', 'valuation', 'auctionValue', 'dollars']);
 
 const getPlayerId = (player) => player.playerId || player.id || player._id || `${player.playerName}-${getPlayerTeamLabel(player)}`;
 
@@ -54,6 +69,7 @@ const DraftRoomScreen = () => {
     const [playersTotal, setPlayersTotal] = useState(0);
     const [playersLoading, setPlayersLoading] = useState(false);
     const [playersError, setPlayersError] = useState('');
+    const [injuryOnly, setInjuryOnly] = useState(false);
     const [playerSearch, setPlayerSearch] = useState('');
     const [playerSuggestions, setPlayerSuggestions] = useState([]);
     const [showPlayerSuggestions, setShowPlayerSuggestions] = useState(false);
@@ -68,17 +84,51 @@ const DraftRoomScreen = () => {
     const [entryHighlightedIndex, setEntryHighlightedIndex] = useState(-1);
     const [entrySubmitting, setEntrySubmitting] = useState(false);
     const [entryError, setEntryError] = useState('');
+    const [entrySuccess, setEntrySuccess] = useState('');
+    const [editingPurchaseId, setEditingPurchaseId] = useState('');
+    const [editingPrice, setEditingPrice] = useState('');
+    const [editingWonBy, setEditingWonBy] = useState('');
+    const [editSubmitting, setEditSubmitting] = useState(false);
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
+    const [valuationsMap, setValuationsMap] = useState({});
 
     const draftSession = store.currentDraftSession;
 
     const teamOptions = useMemo(() => {
         if (!draftSession?.teams?.length) return FALLBACK_TEAMS.map((name) => ({ teamId: name, label: name }));
-        return draftSession.teams.map((t) => ({ teamId: t.teamId, label: getTeamName(t) }));
+        return draftSession.teams.map((t) => ({ teamId: t.teamId, label: `${getTeamName(t)} ($${t.budgetRemaining ?? '--'})` }));
     }, [draftSession]);
 
     const rosterPlanner = useMemo(() => buildRosterPlanner(draftSession), [draftSession]);
+
+    const availableSet = useMemo(() => new Set(draftSession?.availablePlayerIds || []), [draftSession]);
+
+    const getPlayerValuation = useCallback((player) => {
+        const id = getPlayerId(player);
+        const keyCandidates = [
+            id,
+            player?.playerId,
+            player?.mlbPersonId != null ? String(player.mlbPersonId) : null,
+            player?.mlbId != null ? String(player.mlbId) : null,
+            player?.playerName,
+            player?.name
+        ].filter(Boolean);
+        let dollarVal = null;
+        for (const key of keyCandidates) {
+            if (valuationsMap[key] != null) {
+                dollarVal = valuationsMap[key];
+                break;
+            }
+        }
+        if (dollarVal != null) return `$${Math.round(dollarVal)}`;
+        return '--';
+    }, [valuationsMap]);
+
+    const displayedPlayers = useMemo(() => {
+        if (!injuryOnly) return players;
+        return (players || []).filter((player) => isInjuredStatus(player));
+    }, [players, injuryOnly]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -116,13 +166,38 @@ const DraftRoomScreen = () => {
     }, [draftSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
+        if (!draftSessionId) return;
+        getSessionValuations(draftSessionId).then((res) => {
+            if (res.status === 200 && res.data?.success) {
+                const map = {};
+                for (const v of (res.data.valuations || [])) {
+                    const val = getValuationValue(v);
+                    if (val == null) continue;
+                    const candidates = [
+                        v?.playerId,
+                        v?.id,
+                        v?.mlbId,
+                        v?.mlbPersonId,
+                        v?.name,
+                        v?.playerName
+                    ].filter((entry) => entry != null && entry !== '');
+                    for (const candidate of candidates) {
+                        map[String(candidate)] = val;
+                    }
+                }
+                setValuationsMap(map);
+            }
+        }).catch(() => {});
+    }, [draftSessionId]);
+
+    useEffect(() => {
         const defaultTeamId = teamOptions[0]?.teamId || FALLBACK_TEAMS[0];
         setEntryNominatedBy(defaultTeamId);
         setEntryWonBy(defaultTeamId);
     }, [teamOptions]);
 
     useEffect(() => {
-        if (activeTab !== 'Players') return;
+        if (activeTab !== 'Players' && activeTab !== 'Draft Board') return;
         loadPlayers();
     }, [activeTab, loadPlayers]);
 
@@ -140,8 +215,10 @@ const DraftRoomScreen = () => {
             return;
         }
 
+        const isAvailable = (player) => availableSet.size === 0 || availableSet.has(getPlayerId(player));
+
         const localMatches = (players || [])
-            .filter((player) => playerNameStartsWithSearch(player.playerName, trimmed))
+            .filter((player) => isAvailable(player) && playerNameStartsWithSearch(player.playerName, trimmed))
             .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')))
             .slice(0, 8);
 
@@ -155,7 +232,7 @@ const DraftRoomScreen = () => {
         const res = await getPlayers({ search: trimmed, limit: 8 });
         if (res.status === 200 && res.data?.success) {
             const matched = (res.data.players || [])
-                .filter((player) => playerNameStartsWithSearch(player.playerName, trimmed))
+                .filter((player) => isAvailable(player) && playerNameStartsWithSearch(player.playerName, trimmed))
                 .sort((left, right) => String(left.playerName || '').localeCompare(String(right.playerName || '')));
 
             setEntryPlayerSuggestions(matched);
@@ -166,7 +243,7 @@ const DraftRoomScreen = () => {
             setShowEntrySuggestions(false);
             setEntryHighlightedIndex(-1);
         }
-    }, [players]);
+    }, [players, availableSet]);
 
     const searchPlayerSuggestions = useCallback(async (searchTerm) => {
         const trimmed = String(searchTerm || '').trim();
@@ -331,6 +408,7 @@ const DraftRoomScreen = () => {
     const handleRecordPurchase = async () => {
         setEntrySubmitting(true);
         setEntryError('');
+        setEntrySuccess('');
         const res = await store.recordPurchase(draftSessionId, {
             playerId: entryPlayerId,
             playerName: entryPlayer,
@@ -343,9 +421,43 @@ const DraftRoomScreen = () => {
             setEntryPlayerId('');
             setEntryPrice('');
             setEntryNotes('');
+            setEntrySuccess('Purchase recorded.');
+            setTimeout(() => setEntrySuccess(''), 3000);
         } else {
             setEntryError(res.data?.errorMessage || 'Failed to record purchase.');
         }
+    };
+
+    const handleUndoLastPurchase = async () => {
+        const history = draftSession?.draftHistory || [];
+        if (!history.length) return;
+        const lastPurchaseId = history[history.length - 1].purchaseId;
+        await store.undoPurchase(draftSessionId, lastPurchaseId);
+    };
+
+    const handleUndoRowPurchase = async (purchaseId) => {
+        await store.undoPurchase(draftSessionId, purchaseId);
+    };
+
+    const handleStartEdit = (entry) => {
+        setEditingPurchaseId(entry.purchaseId);
+        setEditingPrice(String(entry.price));
+        setEditingWonBy(entry.teamId);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingPurchaseId('');
+        setEditingPrice('');
+        setEditingWonBy('');
+    };
+
+    const handleSaveEdit = async (purchaseId) => {
+        setEditSubmitting(true);
+        await store.editPurchase(draftSessionId, purchaseId, { newPrice: Number(editingPrice), newTeamId: editingWonBy });
+        setEditSubmitting(false);
+        setEditingPurchaseId('');
+        setEditingPrice('');
+        setEditingWonBy('');
     };
 
     const toggleCompare = (player) => {
@@ -401,6 +513,13 @@ const DraftRoomScreen = () => {
                         <button type="button" className="draft-v2-filter-btn">All</button>
                         <button type="button" className="draft-v2-filter-btn">Watchlist (0)</button>
                         <button type="button" className="draft-v2-filter-btn">All Tags</button>
+                        <button
+                            type="button"
+                            className={`draft-v2-filter-btn ${injuryOnly ? 'active' : ''}`}
+                            onClick={() => setInjuryOnly((prev) => !prev)}
+                        >
+                            Injured Only
+                        </button>
                         {comparePlayers.length > 0 ? (
                             <button
                                 type="button"
@@ -463,30 +582,37 @@ const DraftRoomScreen = () => {
                                 <tr>
                                     <td colSpan={TABLE_HEADERS.length + 1} className="draft-v2-empty-row">{playersError}</td>
                                 </tr>
-                            ) : players.length === 0 ? (
+                            ) : displayedPlayers.length === 0 ? (
                                 <tr>
                                     <td colSpan={TABLE_HEADERS.length + 1} className="draft-v2-empty-row">
-                                        No players found. Make sure the player source is available for the current mode.
+                                        {injuryOnly
+                                            ? 'No injured players match the current view.'
+                                            : 'No players found. Make sure the player source is available for the current mode.'}
                                     </td>
                                 </tr>
                             ) : (
-                                players.map((player) => (
+                                displayedPlayers.map((player) => (
                                     <tr key={getPlayerId(player)} className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}>
                                         <td>{player.playerName}</td>
                                         <td>{getPlayerTeamLabel(player)}</td>
                                         <td>{player.position}</td>
-                                        <td>{formatStat(player.fpts)}</td>
-                                        <td>--</td>
+                                        <td>
+                                            <span className={`draft-v2-status-badge ${isInjuredStatus(player) ? 'injured' : 'active'}`}>
+                                                {getStatusLabel(player)}
+                                            </span>
+                                        </td>
+                                        <td>{getPlayerValuation(player)}</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
                                         <td>{formatStat(player.hr)}</td>
                                         <td>{formatStat(player.rbi)}</td>
                                         <td>{formatStat(player.r)}</td>
                                         <td>{formatStat(player.sb)}</td>
                                         <td>{player.avg != null ? Number(player.avg).toFixed(3) : '--'}</td>
-                                        <td>--</td>
-                                        <td>--</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['w', 'wins', 'W']))}</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['sv', 'saves', 'SV']))}</td>
                                         <td>{formatStat(player.k)}</td>
-                                        <td>--</td>
-                                        <td>--</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['era', 'ERA']))}</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['whip', 'WHIP']))}</td>
                                         <td className="draft-v2-td-compare">
                                             <button
                                                 type="button"
@@ -566,7 +692,7 @@ const DraftRoomScreen = () => {
                                             <span>{getPlayerTeamLabel(player)} • {player.position}</span>
                                         </div>
                                         <div className="draft-v2-player-suggestion-value">
-                                            ${Math.round(player.fpts || 0)}
+                                            {getPlayerValuation(player)}
                                         </div>
                                     </button>
                                 ))}
@@ -592,6 +718,7 @@ const DraftRoomScreen = () => {
                     <label className="draft-v2-field">
                         <span>Winning Price ($)</span>
                         <input type="number" min="1" placeholder="e.g., 37" value={entryPrice} onChange={(event) => setEntryPrice(event.target.value)} />
+                        {priceError ? <span className="draft-v2-field-error">{priceError}</span> : null}
                     </label>
                     <label className="draft-v2-field full">
                         <span>Notes (Optional)</span>
@@ -604,19 +731,20 @@ const DraftRoomScreen = () => {
                     </label>
                 </div>
                 {entryError ? <p className="draft-v2-entry-error">{entryError}</p> : null}
+                {entrySuccess ? <p className="draft-v2-entry-success">{entrySuccess}</p> : null}
                 <div className="draft-v2-auction-actions">
                     <button
                         type="button"
                         className="draft-v2-auction-btn"
                         onClick={handleRecordPurchase}
-                        disabled={entrySubmitting || !entryPlayerId || !entryPrice}
+                        disabled={entrySubmitting || !entryPlayerId || !entryPrice || Boolean(priceError)}
                     >
                         {entrySubmitting ? 'Recording...' : 'Record Purchase'}
                     </button>
                 </div>
             </article>
 
-            <article className="draft-v2-module-card">
+            <article className="draft-v2-module-card full">
                 <h3>Draft Results Log</h3>
                 <div className="draft-v2-table-wrap">
                     <table>
@@ -628,12 +756,13 @@ const DraftRoomScreen = () => {
                                 <th>Won By</th>
                                 <th>Price</th>
                                 <th>Notes</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {(draftSession?.draftHistory || []).length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="draft-v2-empty-row">
+                                    <td colSpan={7} className="draft-v2-empty-row">
                                         No picks logged yet. Enter each completed draft result here during the live draft.
                                     </td>
                                 </tr>
@@ -643,9 +772,61 @@ const DraftRoomScreen = () => {
                                         <td>{entry.nominationOrder}</td>
                                         <td>{entry.playerName}</td>
                                         <td>--</td>
-                                        <td>{entry.teamId}</td>
-                                        <td>${entry.price}</td>
+                                        <td>
+                                            {editingPurchaseId === entry.purchaseId ? (
+                                                <select value={editingWonBy} onChange={(e) => setEditingWonBy(e.target.value)}>
+                                                    {teamOptions.map((team) => (
+                                                        <option key={team.teamId} value={team.teamId}>{team.label}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                getTeamName(draftSession.teams.find((t) => t.teamId === entry.teamId))
+                                            )}
+                                        </td>
+                                        <td>
+                                            {editingPurchaseId === entry.purchaseId ? (
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={editingPrice}
+                                                    onChange={(e) => setEditingPrice(e.target.value)}
+                                                    style={{ width: '60px' }}
+                                                />
+                                            ) : (
+                                                `$${entry.price}`
+                                            )}
+                                        </td>
                                         <td>--</td>
+                                        <td>
+                                            {editingPurchaseId === entry.purchaseId ? (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="draft-v2-filter-btn"
+                                                        disabled={editSubmitting}
+                                                        onClick={() => handleSaveEdit(entry.purchaseId)}
+                                                    >Save</button>
+                                                    <button
+                                                        type="button"
+                                                        className="draft-v2-filter-btn"
+                                                        onClick={handleCancelEdit}
+                                                    >Cancel</button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="draft-v2-filter-btn"
+                                                        onClick={() => handleUndoRowPurchase(entry.purchaseId)}
+                                                    >Undo</button>
+                                                    <button
+                                                        type="button"
+                                                        className="draft-v2-filter-btn"
+                                                        onClick={() => handleStartEdit(entry)}
+                                                    >Edit</button>
+                                                </>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -751,6 +932,26 @@ const DraftRoomScreen = () => {
     }
 
     const rosterPositions = rosterPlanner.length > 0 ? rosterPlanner.map((entry) => entry.slot) : DEFAULT_ROSTER_POSITIONS;
+
+    const selectedTeam = draftSession?.teams?.find((t) => t.teamId === entryWonBy) ?? null;
+    const selectedTeamOpenSlots = (() => {
+        if (!selectedTeam) return null;
+        const rosterSlots = draftSession?.leagueSettings?.rosterSlots || {};
+        const totalSlots = Object.values(rosterSlots).reduce((sum, v) => sum + Number(v || 0), 0);
+        const filled = Object.values(selectedTeam.filledRosterSlots || {}).reduce((sum, v) => sum + Number(v || 0), 0);
+        return Math.max(totalSlots - filled, 0);
+    })();
+    const maxBid = selectedTeam && selectedTeamOpenSlots > 0
+        ? Math.max(selectedTeam.budgetRemaining - (selectedTeamOpenSlots - 1), 1)
+        : null;
+    const priceError = (() => {
+        if (!entryPrice) return '';
+        const parsed = Number(entryPrice);
+        if (!Number.isInteger(parsed) || parsed < 1) return 'Price must be a whole number of at least $1.';
+        if (maxBid != null && parsed > maxBid) return `Price exceeds max bid of $${maxBid}.`;
+        return '';
+    })();
+
     const draftTitle = draftSession?.name || 'Fantasy Baseball League';
     const draftSubtitle = draftSession
         ? `${draftSession.status === 'active' ? 'Active draft session' : 'Draft setup preview'} for league ${leagueId}.`
@@ -776,7 +977,13 @@ const DraftRoomScreen = () => {
                     <span className={`league-status ${draftSession?.status === 'active' ? 'active' : 'inactive'}`}>
                         {draftSession?.status === 'active' ? 'Active' : 'Classic'}
                     </span>
-                    <button type="button" className="draft-v2-icon-btn" aria-label="Undo">⟲</button>
+                    <button
+                        type="button"
+                        className="draft-v2-icon-btn"
+                        aria-label="Undo"
+                        disabled={!draftSession?.draftHistory?.length}
+                        onClick={handleUndoLastPurchase}
+                    >⟲</button>
                     <button type="button" className="draft-v2-icon-btn" aria-label="Export">⬇︎</button>
                 </div>
             </header>

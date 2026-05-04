@@ -1,86 +1,127 @@
 ## Overview
 
-DraftIQ is a fantasy baseball draft application (commissioners, players, live auction draft room). See **PLAN.md** for features, remaining work, and how player data (CSV projections) is used.
+DraftIQ is a fantasy baseball auction draft application. Users create leagues, configure draft settings, and run auction drafts with real-time budget and roster tracking.
 
-### AWS deployment
+See [`docs/PLAN.md`](docs/PLAN.md) for features and remaining work, and [`docs/PLAYER-DATA-API.md`](docs/PLAYER-DATA-API.md) for the licensed player data integration.
 
-Use the step-by-step AWS guide in `docs/AWS_DEPLOYMENT.md`.
+---
 
-### Run the app
+### Run the app locally
 
-1. **Install and env**
-   - `cd server && npm install` then create `server/.env` with `MONGODB_CONNECT` and `JWT_SECRET`.
-   - `cd client && npm install`.
+1. **Install dependencies**
+   ```bash
+   cd server && npm install
+   cd client && npm install
+   ```
 
-2. **Import player projections (once)**
-   - Copy `projections-NL.csv` into `server/data/` or pass its path:
-   - `node server/scripts/import-projections.js`
-   - Or: `node server/scripts/import-projections.js /path/to/projections-NL.csv`
+2. **Configure the server** — create `server/.env`:
+   ```env
+   MONGODB_CONNECT=mongodb://127.0.0.1:27017/draftiq
+   JWT_SECRET=your-secret
+   PORT=4000
+   CORS_ORIGINS=http://localhost:3000
+   ```
 
-3. **Start server and client**
-   - Terminal 1: `cd server && npm start`
-   - Terminal 2: `cd client && npm start`
-   - Open http://localhost:3000, sign in, join a league, open Draft Room → **Players** tab to see the pool.
+3. **Import player projections (once, for local dev without the licensed API)**
+   ```bash
+   node server/scripts/import-projections.js
+   ```
 
-### Deploy frontend to Vercel
+4. **Start**
+   ```bash
+   # Terminal 1
+   cd server && npm start
 
-1. Create a Vercel project with **Root Directory** set to `client`.
-2. Add environment variable `REACT_APP_API_BASE_URL` set to your deployed DraftIQ backend URL (example: `https://four16-minimum-viable-product-backend.onrender.com`).
-3. Deploy and attach your custom domain to this frontend project.
-4. After frontend deploy, set backend `CORS_ORIGINS` to include your frontend URL (plus `http://localhost:3000` for local dev) and redeploy backend.
+   # Terminal 2
+   cd client && npm start
+   ```
+   Open http://localhost:3000.
 
-In this setup, the frontend calls your backend directly using `REACT_APP_API_BASE_URL`.
+---
 
-### Full-stack deployment (what users need)
+### Run the tests
 
-To give users full functionality from one web domain:
+**Server** (Vitest, uses mongodb-memory-server — no real DB needed):
+```bash
+cd server
+npm test
+```
 
-1. Deploy **DraftIQ backend** (`server`) to a Node host (Render/Railway/Fly/another Vercel project).
-2. Configure backend env vars:
-   - `MONGODB_CONNECT` (Atlas URI)
-   - `JWT_SECRET`
-   - `CORS_ORIGINS` (include your frontend domain and `http://localhost:3000` for local dev)
-   - `PLAYER_API_URL=https://player-data-api.vercel.app` (licensed player API URL)
-   - `PLAYER_API_KEY=...` (if required by licensed API)
-3. Deploy **frontend** (`client`) to Vercel and set `REACT_APP_API_BASE_URL` to your backend URL.
+**Client** (Jest via react-scripts):
+```bash
+cd client
+CI=true npm test
+```
 
-Flow at runtime:
-- User browser -> frontend domain (Vercel static app)
-- Frontend direct requests -> DraftIQ backend (`/auth`, `/leagues`, `/players`)
-- DraftIQ backend -> MongoDB Atlas + licensed Player Data API (`PLAYER_API_URL`)
+---
 
-`https://player-data-api.vercel.app` is only for licensed player data integration, not for `/auth` or `/leagues`.
+### CI/CD (GitHub Actions)
+
+Every push to `main` runs the full test suite. Deployment only happens if all tests pass.
+
+| Workflow | File | Trigger |
+|---|---|---|
+| CI — Automated Tests | `.github/workflows/auto-testing.yml` | push or PR to `main` |
+| CD — Deploy | `.github/workflows/deploy.yml` | CI passes on `main` |
+
+**Deploys to:**
+- **Vercel** — frontend (`client/`)
+- **Render** — backend (`server/`)
+
+Vercel's Git integration is disconnected and Render's auto-deploy is disabled. GitHub Actions is the only deploy path, so broken code cannot reach production.
+
+**Required GitHub secrets:**
+
+| Secret | Where to get it |
+|---|---|
+| `VERCEL_TOKEN` | vercel.com → Account Settings → Tokens |
+| `VERCEL_ORG_ID` | vercel.com → Account Settings → your User ID |
+| `VERCEL_PROJECT_ID` | Vercel project → Settings → General → Project ID |
+| `RENDER_DEPLOY_HOOK_URL` | Render → service → Settings → Deploy Hook |
+
+---
 
 ### Licensed Player Data API (optional)
 
-To use the external **licensed Player Data API** (pull + push) instead of local MongoDB player data:
+To use the external player data API instead of local MongoDB projections, add to `server/.env`:
 
-1. Run the licensed API (e.g. at `http://localhost:4001`) and note its license key.
-2. In **server/.env** add:
-   ```env
-   PLAYER_API_URL=http://localhost:4001
-   PLAYER_API_KEY=your-secret-key
-   ```
-   (Use the same value as `API_LICENSE_KEY` in the API’s `.env` — e.g. `your-secret-key` if that’s what the API uses.)
-3. Restart the draft kit server. It will:
-   - **Pull**: Proxy `GET /players` to the licensed API (player pool comes from the API).
-   - **Push**: When a user opens the draft room, the app calls `POST /players/usage`; the draft kit backend forwards this to the API’s `POST /usage`.
-4. If `PLAYER_API_URL` is not set, the draft kit keeps using local MongoDB player data (and push is no-op).
+```env
+PLAYER_API_URL=https://player-data-api.vercel.app
+PLAYER_API_KEY=your-key
+```
 
-### How to test (licensed API + draft kit)
+When configured, the backend calls:
+- `GET /players` — searchable player list
+- `GET /players/:playerId` — single player lookup
+- `GET /api/v1/players/pool` — full player pool for draft session availability
+- `POST /api/v1/players/valuations` — z-score auction dollar values based on league settings
+- `POST /usage` — usage event tracking
 
-1. **Start the licensed API** (in the API repo): e.g. `npm start` so it runs at `http://localhost:4001`. Leave it running.
-2. **Set draft kit env**: In `server/.env` you must have `PLAYER_API_URL=http://localhost:4001` and `PLAYER_API_KEY=your-secret-key`. Restart the draft kit server after changing `.env`.
-3. **Start the draft kit**: Terminal 1: `cd server && npm start` (port 4000). Terminal 2: `cd client && npm start` (port 3000).
-4. **Test pull (players from API)**  
-   - Open http://localhost:3000, sign in, go to a league, click **Join Draft Room**.  
-   - Open the **Players** tab. You should see the player list coming from the licensed API (same data as the API’s stand-in list). If you see players and a count (e.g. “20 Players”), pull is working.
-5. **Test push (usage to API)**  
-   - With the draft room open, the app sends a usage event when the draft room loads. In the **licensed API** server logs (or whatever it uses to record `POST /usage`), you should see a request with body like `{ "event": "draft_room_open", "timestamp": "...", "metadata": {} }`. If the API logs or stores that, push is working.
-6. **Quick API check (optional)**  
-   - In a terminal:  
-     `curl -s -H "X-API-Key: your-secret-key" http://localhost:4001/players?limit=5`  
-   - You should get JSON with `success: true` and a `players` array.  
-   - Then:  
-     `curl -s -X POST -H "X-API-Key: your-secret-key" -H "Content-Type: application/json" -d '{"event":"test","timestamp":"2026-03-07T12:00:00Z"}' http://localhost:4001/usage`  
-   - You should get a success response. If both work, the draft kit will work as long as env and servers are correct.
+See [`docs/PLAYER-DATA-API.md`](docs/PLAYER-DATA-API.md) for full setup and testing instructions.
+
+---
+
+### Environment variables
+
+**Server (`server/.env`)**
+
+| Variable | Required | Description |
+|---|---|---|
+| `MONGODB_CONNECT` | Yes | MongoDB connection string |
+| `JWT_SECRET` | Yes | Secret for signing JWT tokens |
+| `PORT` | No | Server port (default: 4000) |
+| `CORS_ORIGINS` | No | Comma-separated allowed origins (default: `http://localhost:3000`) |
+| `PLAYER_API_URL` | No | Licensed player data API base URL |
+| `PLAYER_API_KEY` | No | Licensed player data API key |
+
+**Client (`.env` or Vercel env)**
+
+| Variable | Description |
+|---|---|
+| `REACT_APP_API_BASE_URL` | Backend base URL — sets all API routes at once |
+| `REACT_APP_API_URL` | Auth API base (overrides `REACT_APP_API_BASE_URL/auth`) |
+| `REACT_APP_LEAGUES_API_URL` | Leagues API base |
+| `REACT_APP_PLAYERS_API_URL` | Players API base |
+| `REACT_APP_DRAFT_SESSIONS_API_URL` | Draft sessions API base |
+
+For same-domain Vercel proxy deployments, no `REACT_APP_*` vars are needed — the client proxies all API requests through Vercel rewrites.

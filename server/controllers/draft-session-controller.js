@@ -375,6 +375,69 @@ const recordPurchase = async (req, res) => {
     }
 };
 
+const undoPurchase = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const { draftSessionId, purchaseId } = req.params;
+
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const result = await draftService.undoPurchase(draftSessionId, purchaseId);
+        if (!result.success) {
+            return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        }
+
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('undoPurchase error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to undo purchase.' });
+    }
+};
+
+const editPurchase = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const { draftSessionId, purchaseId } = req.params;
+        const { newPrice, newTeamId } = req.body || {};
+
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const result = await draftService.editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId });
+        if (!result.success) {
+            return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        }
+
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('editPurchase error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to edit purchase.' });
+    }
+};
+
 /**
  * US-3.3: Proxy the Player Data API pool through a session-scoped endpoint.
  *
@@ -497,10 +560,93 @@ const getSessionPlayers = async (req, res) => {
     }
 };
 
+const PITCHER_SLOT_KEYS = new Set(['SP', 'RP', 'P']);
+const BENCH_SLOT_KEYS = new Set(['BENCH', 'BN']);
+
+function computeRosterSlotCounts(rosterSlots = {}) {
+    let hitterSlotsPerTeam = 0;
+    let pitcherSlotsPerTeam = 0;
+    for (const [pos, count] of Object.entries(rosterSlots)) {
+        const n = Number(count || 0);
+        const key = pos.toUpperCase();
+        if (PITCHER_SLOT_KEYS.has(key)) {
+            pitcherSlotsPerTeam += n;
+        } else if (!BENCH_SLOT_KEYS.has(key)) {
+            hitterSlotsPerTeam += n;
+        }
+    }
+    return { hitterSlotsPerTeam, pitcherSlotsPerTeam };
+}
+
+/**
+ * GET /:draftSessionId/valuations
+ * Calls POST /api/v1/players/valuations on the licensed Player Data API using
+ * the session's league settings and available player list. Returns the
+ * valuations array so the client can build a { playerId -> dollarValue } map.
+ *
+ * Returns 200 with empty valuations if the licensed API is not configured.
+ */
+const getSessionValuations = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const session = await DraftSession.findOne({ draftSessionId: req.params.draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        if (!licensedApi.hasConfig()) {
+            return res.status(200).json({ success: true, valuations: [] });
+        }
+
+        const rosterSlots = toPlainObject(session.leagueSettings?.rosterSlots || {});
+        const { hitterSlotsPerTeam, pitcherSlotsPerTeam } = computeRosterSlotCounts(rosterSlots);
+
+        const leagueSettings = {
+            numTeams: session.leagueSettings?.numberOfTeams || DEFAULT_NUM_TEAMS,
+            budget: session.leagueSettings?.salaryCap || DEFAULT_SALARY_CAP,
+            hitterBudgetPct: 0.675,
+            hitterSlotsPerTeam,
+            pitcherSlotsPerTeam,
+            statSeason: 2025
+        };
+
+        const draftState = session.availablePlayerIds?.length > 0
+            ? { availablePlayerIds: session.availablePlayerIds }
+            : {};
+
+        const data = await licensedApi.postValuations(leagueSettings, draftState);
+        return res.status(200).json({
+            success: true,
+            valuations: data?.valuations || []
+        });
+    } catch (err) {
+        console.error('getSessionValuations error:', err);
+        return res.status(err.status || 500).json({
+            success: false,
+            errorMessage: 'Unable to load valuations.',
+            upstreamStatus: err.status || null,
+            upstreamUrl: err.url || null,
+            upstreamBody: err.upstream || null
+        });
+    }
+};
+
 module.exports = {
     createDraftSession,
     getDraftSession,
     updateDraftSession,
     recordPurchase,
+    undoPurchase,
+    editPurchase,
     getSessionPlayers,
+    getSessionValuations,
 };

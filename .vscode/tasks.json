@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Test: Server",
+      "type": "shell",
+      "command": "npm test",
+      "options": {
+        "cwd": "${workspaceFolder}/server"
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Client",
+      "type": "shell",
+      "command": "CI=true npm test",
+      "options": {
+        "cwd": "${workspaceFolder}/client"
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: All",
+      "dependsOn": ["Test: Server", "Test: Client"],
+      "dependsOrder": "parallel",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
