@@ -152,6 +152,12 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
 
     const playerIdStr = String(playerId);
 
+    // US-7.1: distinguish "already purchased" from generic "not available" so the
+    // UI can render an actionable message and tests can assert the specific case.
+    if (session.purchasedPlayerIds && session.purchasedPlayerIds.includes(playerIdStr)) {
+        return { success: false, errorMessage: 'Player has already been purchased in this draft session.' };
+    }
+
     if (!session.availablePlayerIds.includes(playerIdStr)) {
         return { success: false, errorMessage: 'Player is not available.' };
     }

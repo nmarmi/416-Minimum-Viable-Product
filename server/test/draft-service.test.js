@@ -102,7 +102,32 @@ describe('draftService.recordPurchase', () => {
         expect(result.errorMessage).toMatch(/not available/i);
     });
 
-    test('price exceeds max bid (budget minus reserves) -> failure', async () => {
+    test('US-7.1: duplicate purchase of same playerId -> failure with specific message', async () => {
+        const session = await createSession();
+
+        const first = await draftService.recordPurchase(session.draftSessionId, {
+            playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 10
+        });
+        expect(first.success).toBe(true);
+
+        // Same player, second purchase attempt — should be flagged as already purchased.
+        const dup = await draftService.recordPurchase(session.draftSessionId, {
+            playerId: 'p1', playerName: 'Player One', teamId: 'team2', price: 15
+        });
+        expect(dup.success).toBe(false);
+        expect(dup.errorMessage).toMatch(/already.*purchased/i);
+
+        // No state change: team2 still has full budget, p1 still on team1.
+        const after = await DraftSession.findOne({ draftSessionId: session.draftSessionId });
+        const team1 = after.teams.find((t) => t.teamId === 'team1');
+        const team2 = after.teams.find((t) => t.teamId === 'team2');
+        expect(team1.purchasedPlayers).toHaveLength(1);
+        expect(team2.purchasedPlayers).toHaveLength(0);
+        expect(team2.budgetRemaining).toBe(260);
+        expect(after.draftHistory).toHaveLength(1);
+    });
+
+    test('US-7.2: price exceeds max bid (budgetRemaining − (openSlots − 1)) -> failure with insufficient-budget message', async () => {
         const session = await createSession({
             teams: [{
                 teamId: 'team1',
@@ -127,7 +152,63 @@ describe('draftService.recordPurchase', () => {
         });
 
         expect(result.success).toBe(false);
-        expect(result.errorMessage).toMatch(/budget/i);
+        expect(result.errorMessage).toMatch(/insufficient.*budget/i);
+
+        // No state change: budget intact, player still available, no history entry.
+        const after = await DraftSession.findOne({ draftSessionId: session.draftSessionId });
+        const team1 = after.teams.find((t) => t.teamId === 'team1');
+        expect(team1.budgetRemaining).toBe(5);
+        expect(team1.purchasedPlayers).toHaveLength(0);
+        expect(after.availablePlayerIds).toContain('p1');
+        expect(after.draftHistory).toHaveLength(0);
+    });
+
+    test('US-7.2: price equal to max bid succeeds (boundary case)', async () => {
+        // Total roster slots in default fixture = C:1 + OF:2 + SP:1 + BENCH:1 = 5.
+        // budget = 5, openSlots = 5 → maxBid = 5 − (5 − 1) = 1.
+        const session = await createSession({
+            teams: [{
+                teamId: 'team1',
+                teamName: 'Team One',
+                budgetRemaining: 5,
+                purchasedPlayers: [],
+                filledRosterSlots: new Map([['C', 0], ['OF', 0], ['SP', 0], ['BENCH', 0]])
+            }, {
+                teamId: 'team2',
+                teamName: 'Team Two',
+                budgetRemaining: 260,
+                purchasedPlayers: [],
+                filledRosterSlots: new Map([['C', 0], ['OF', 0], ['SP', 0], ['BENCH', 0]])
+            }]
+        });
+
+        const result = await draftService.recordPurchase(session.draftSessionId, {
+            playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 1
+        });
+        expect(result.success).toBe(true);
+
+        // Bumping to 2 (maxBid + 1) must reject.
+        await DraftSession.deleteMany({});
+        const session2 = await createSession({
+            teams: [{
+                teamId: 'team1',
+                teamName: 'Team One',
+                budgetRemaining: 5,
+                purchasedPlayers: [],
+                filledRosterSlots: new Map([['C', 0], ['OF', 0], ['SP', 0], ['BENCH', 0]])
+            }, {
+                teamId: 'team2',
+                teamName: 'Team Two',
+                budgetRemaining: 260,
+                purchasedPlayers: [],
+                filledRosterSlots: new Map([['C', 0], ['OF', 0], ['SP', 0], ['BENCH', 0]])
+            }]
+        });
+        const overrun = await draftService.recordPurchase(session2.draftSessionId, {
+            playerId: 'p1', playerName: 'Player One', teamId: 'team1', price: 2
+        });
+        expect(overrun.success).toBe(false);
+        expect(overrun.errorMessage).toMatch(/insufficient.*budget/i);
     });
 
     test('roster is full -> failure', async () => {

@@ -563,6 +563,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - UI shows the error inline
 - No state change occurs
 
+** COMPLETED** (`draft-service.recordPurchase` now checks `purchasedPlayerIds` first and returns the specific message `Player has already been purchased in this draft session.` — distinct from the generic "not available" path. Controller maps service `errorMessage` → HTTP 400; client renders inline via `setEntryError`. `tests/draft-service.test.js` adds an explicit duplicate-purchase test that asserts the message AND verifies no state change: team1 still owns the player, team2's budget is intact, no extra history entry.)
+
 ### US-7.2: Prevent budget overrun
 **As a** drafter, **I want** the system to reject a purchase if the team cannot afford it, **so that** budgets remain valid.
 
@@ -570,6 +572,8 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Server validates `price <= team.budgetRemaining - (openSlots - 1)`
 - Returns 400 with "Insufficient budget" if violated
 - UI shows the error inline
+
+** COMPLETED** (`draft-service.recordPurchase` computes `maxBid = budgetRemaining − (openSlots − 1)` and returns `Team has insufficient budget.` when `price > maxBid`. Controller returns 400; client renders inline. `tests/draft-service.test.js` covers (a) overrun rejection with no-state-change assertions (budget intact, player still in `availablePlayerIds`, history empty) and (b) the boundary case at exactly `maxBid` succeeding while `maxBid + 1` rejects.)
 
 ### US-7.3: Prevent roster overflow
 **As a** drafter, **I want** the system to reject a purchase if the team's roster is full, **so that** no team exceeds their roster size.
