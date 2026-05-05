@@ -684,6 +684,7 @@ const DraftRoomScreen = () => {
                                 <th>Player</th>
                                 <th>Team</th>
                                 <th><GlossaryTerm term="Position eligibility">Pos</GlossaryTerm></th>
+                                <th>Injury Status</th>
                                 <th><GlossaryTerm term="Value">Value</GlossaryTerm></th>
                                 <th><GlossaryTerm term="ADP">ADP</GlossaryTerm></th>
                                 <th>HR</th>
@@ -721,13 +722,12 @@ const DraftRoomScreen = () => {
                                     <tr key={getPlayerId(player)} className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}>
                                         <td>{getPlayerName(player)}</td>
                                         <td>{getPlayerTeamLabel(player)}</td>
-                                        <td>{player.position}</td>
+                                        <td>{getPlayerPosition(player)}</td>
                                         <td>
                                             <span className={`draft-v2-status-badge ${isInjuredStatus(player) ? 'injured' : 'active'}`}>
                                                 {getStatusLabel(player)}
                                             </span>
                                         </td>
-                                        <td>{getPlayerPosition(player)}</td>
                                         <td>{getPlayerValuation(player)}</td>
                                         <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
                                         <td>{formatStat(player.hr)}</td>
