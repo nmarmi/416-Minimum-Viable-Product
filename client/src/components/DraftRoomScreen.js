@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
-import { getSessionValuations} from '../draft-sessions/requests';
+import { getSessionValuations, getSessionRecommendations } from '../draft-sessions/requests';
 import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
@@ -101,6 +101,7 @@ const DraftRoomScreen = () => {
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
+    const [recommendations, setRecommendations] = useState([]);
     const [positionFilter, setPositionFilter] = useState('ALL');
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
 
@@ -229,6 +230,15 @@ const DraftRoomScreen = () => {
                     }
                 }
                 setValuationsMap(map);
+            }
+        }).catch(() => {});
+    }, [draftSessionId]);
+
+    useEffect(() => {
+        if (!draftSessionId) return;
+        getSessionRecommendations(draftSessionId).then((res) => {
+            if (res.status === 200 && res.data?.success) {
+                setRecommendations(res.data.recommendations || []);
             }
         }).catch(() => {});
     }, [draftSessionId]);
@@ -1389,7 +1399,22 @@ const DraftRoomScreen = () => {
 
                     <article className="draft-v2-card">
                         <h2>Recommendations</h2>
-                        <div className="draft-v2-empty-box">Recommendations will appear after player pool data loads.</div>
+                        {recommendations.length === 0 ? (
+                            <div className="draft-v2-empty-box">Recommendations will appear after player pool data loads.</div>
+                        ) : (
+                            <ul className="draft-v2-checklist">
+                                {recommendations.slice(0, 5).map((rec) => {
+                                    const match = players.find((p) => getPlayerId(p) === rec.playerId);
+                                    const name = match ? getPlayerName(match) : rec.playerId;
+                                    return (
+                                        <li key={rec.playerId}>
+                                            <strong>{name}</strong> — Bid ${rec.recommendedBid}
+                                            {rec.reason ? <span className="draft-v2-auction-muted"> ({rec.reason})</span> : null}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
                     </article>
                 </aside>
 

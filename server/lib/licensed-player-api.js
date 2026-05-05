@@ -166,6 +166,48 @@ async function postValuations(leagueSettings = {}, draftState = {}) {
 }
 
 /**
+ * POST /api/v1/players/recommendations — compares projected dollar values
+ * against market prices and returns players worth bidding on (sorted by surplus).
+ * @param {Object} leagueSettings - { budget, rosterSlots }
+ * @param {Object} draftState - optionally { availablePlayerIds, marketPrices }
+ * @param {string|null} teamId
+ * @returns {Promise<{ success: boolean, recommendations: Array } | null>}
+ */
+async function postRecommendations(leagueSettings = {}, draftState = {}, teamId = null) {
+    if (!hasConfig()) return null;
+    const body = { leagueSettings, draftState };
+    if (teamId) body.teamId = teamId;
+    const url = `${baseUrl.replace(/\/$/, '')}/api/v1/players/recommendations`;
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(body)
+        });
+        const raw = await res.text();
+        let data = {};
+        try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
+        if (!res.ok) {
+            const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
+            err.status = res.status;
+            err.url = url;
+            err.upstream = data;
+            err.raw = raw;
+            throw err;
+        }
+        return data;
+    } catch (err) {
+        console.error('Licensed API postRecommendations error:', {
+            message: err.message,
+            status: err.status,
+            url: err.url,
+            upstream: err.upstream
+        });
+        throw err;
+    }
+}
+
+/**
  * Push: POST /usage to the licensed API.
  * @param {Object} payload - { event, timestamp, metadata }
  * @returns {Promise<{ success: boolean } | null>}
@@ -201,5 +243,6 @@ module.exports = {
     getPlayer,
     getPlayerPool,
     postValuations,
+    postRecommendations,
     postUsage
 };

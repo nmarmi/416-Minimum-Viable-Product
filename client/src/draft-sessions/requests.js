@@ -53,6 +53,7 @@ export const getDraftSession = async (draftSessionId) => request(`/${draftSessio
 export const updateDraftSession = async (draftSessionId, payload) => request(`/${draftSessionId}`, "PUT", payload);
 export const startDraft = async (draftSessionId) => request(`/${draftSessionId}/start`, "POST");
 export const getSessionValuations = async (draftSessionId) => request(`/${draftSessionId}/valuations`, "GET");
+export const getSessionRecommendations = async (draftSessionId) => request(`/${draftSessionId}/recommendations`, "GET");
 export const getSessionPlayers = async (draftSessionId, params = {}) => {
     const q = new URLSearchParams();
     if (params.status) q.set('status', params.status);
@@ -74,6 +75,7 @@ const draftSessionsApi = {
     updateDraftSession,
     startDraft,
     getSessionValuations,
+    getSessionRecommendations,
     getSessionPlayers,
     recordPurchase,
     undoPurchase,

@@ -581,6 +581,66 @@ const startDraft = async (req, res) => {
     }
 };
 
+/**
+ * GET /:draftSessionId/recommendations
+ * Calls POST /api/v1/players/recommendations on the licensed Player Data API using
+ * the session's available player pool and league settings. Returns recommendations
+ * sorted by value surplus so the client can render the sidebar bid guidance.
+ *
+ * Returns 200 with empty recommendations if the licensed API is not configured.
+ */
+const getSessionRecommendations = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const session = await DraftSession.findOne({ draftSessionId: req.params.draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        if (!licensedApi.hasConfig()) {
+            return res.status(200).json({ success: true, recommendations: [] });
+        }
+
+        const rosterSlots = toPlainObject(session.leagueSettings?.rosterSlots || {});
+        const totalRosterSlots = Object.values(rosterSlots).reduce((s, n) => s + Number(n || 0), 0);
+
+        const leagueSettings = {
+            budget: session.leagueSettings?.salaryCap || DEFAULT_SALARY_CAP,
+            rosterSlots: totalRosterSlots
+        };
+
+        const draftState = session.availablePlayerIds?.length > 0
+            ? { availablePlayerIds: session.availablePlayerIds }
+            : {};
+
+        const teamId = session.myTeamId || null;
+
+        const data = await licensedApi.postRecommendations(leagueSettings, draftState, teamId);
+        return res.status(200).json({
+            success: true,
+            recommendations: data?.recommendations || []
+        });
+    } catch (err) {
+        console.error('getSessionRecommendations error:', err);
+        return res.status(err.status || 500).json({
+            success: false,
+            errorMessage: 'Unable to load recommendations.',
+            upstreamStatus: err.status || null,
+            upstreamUrl: err.url || null,
+            upstreamBody: err.upstream || null
+        });
+    }
+};
+
 module.exports = {
     createDraftSession,
     getDraftSession,
@@ -591,4 +651,5 @@ module.exports = {
     editPurchase,
     getSessionPlayers,
     getSessionValuations,
+    getSessionRecommendations,
 };
