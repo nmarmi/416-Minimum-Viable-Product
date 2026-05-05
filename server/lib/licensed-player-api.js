@@ -214,7 +214,7 @@ async function postRecommendations(leagueSettings = {}, draftState = {}, teamId 
  */
 async function postUsage(payload) {
     if (!hasConfig()) return null;
-    const url = `${baseUrl.replace(/\/$/, '')}/usage`;
+    const url = `${baseUrl.replace(/\/$/, '')}/api/v1/usage`;
     const body = {
         event: payload.event || 'unknown',
         timestamp: payload.timestamp || new Date().toISOString(),
