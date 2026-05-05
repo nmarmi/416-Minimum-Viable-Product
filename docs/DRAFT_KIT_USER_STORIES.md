@@ -10,6 +10,82 @@ The Player Data API repo owns player data, seed datasets, valuations, and recomm
 
 ---
 
+## Rubric Coverage
+
+This section maps every line in the project rubric (`416-S26-Final Project-System Testing - Project Requirements.csv`) to the user story (existing or new) that satisfies it. Rubric items with no Draft Kit-side work are marked **(API)** and live in the Player Data API repo's user stories file.
+
+### Draft Kit Accounts (10 pts)
+| Rubric line | Pts | Story |
+|---|---:|---|
+| Account Creation & Login Mechanisms | 2 | US-16.1 |
+| Account Password/Login Reset/Retrieval | 2 | US-16.2 |
+| User can create draft for given year | 2 | US-15.1 |
+| User can create multiple drafts | 2 | US-1.1, US-0.3 (1 league = 1 draft, multiple leagues per user) |
+| User can access multiple drafts | 2 | US-9.3 |
+| User can access drafts from current and past years | 2 | US-15.2 |
+| Can create new draft using completed draft from previous year | 2 | US-15.3 |
+
+### Draft Kit Prep (20 pts)
+| Rubric line | Pts | Story |
+|---|---:|---|
+| Setup Draft using AL-only / NL-only / all MLB | 2 | US-17.1 |
+| Custom number of Fantasy Teams | 2 | US-1.2 |
+| Custom Fantasy Team names | 2 | US-1.7 |
+| Custom Stats Selection for League | 2 | US-17.2 |
+| Custom Hitter and Pitcher Positions for League | 2 | US-17.3 |
+| Pre-draft rosters with Contract and $ values | 2 | US-18.1 |
+| Move player to another position within team | 2 | US-18.2 |
+| Position eligibility enforcement | 2 | US-18.3 |
+| Enter minor league rosters | 2 | US-19.1 |
+| Minor league players not eligible for draft | 2 | US-19.2 |
+| Move minor league players between teams | 2 | US-19.3 |
+| Enter Player Notes before/during draft | 1 | US-20.1 |
+| Edit Player Notes before/during draft | 1 | US-20.2 |
+
+### Draft Day (20 pts)
+| Rubric line | Pts | Story |
+|---|---:|---|
+| Ordered Draft History with full detail | 2 | US-6.4 |
+| Filtering Players List by Position | 2 | US-6.1 |
+| Filtering/Searching Players List by Name | 2 | US-6.1 |
+| Sorting Players List by $ | 2 | US-22.1 |
+| Sorting Players List by Stats | 2 | US-22.2 |
+| Move player to new position | 2 | US-22.3 |
+| Any players moved between teams | 2 | US-18.4 (covers pre-draft + during-draft via US-5.4) |
+| Player Details — Stats, Age, Injury, Depth, Transactions | 2 | US-21.1 |
+| Fantasy Team Tabular Comparison | 2 | US-23.1 |
+| Fantasy Team Comparison sortable by Rank/$ | 2 | US-23.2 |
+| Can View MLB Team Depth Charts | 2 | US-24.1 |
+| Undo/Redo for all draft Editing | 2 | Undo: US-5.1/5.2; Redo: US-22.4 |
+
+### Player API → Draft Kit Push Notification (10 pts)
+| Rubric line | Pts | Story |
+|---|---:|---|
+| Mechanism to Force New Notification-worthy info via Player API | 5 | **(API)** Epic 13 |
+| Draft Kit show updated pushed state | 2 | US-25.1 |
+| Draft Kit employs notification system to alert user | 2 | US-25.2 |
+| Player Details — Depth Chart | 1 | US-21.1 |
+| Player Details — Transactions/Contract | 1 | US-21.1 |
+| Player Details — Injury/News | 1 | US-21.1 |
+
+### Taxi Draft (10 pts)
+| Rubric line | Pts | Story |
+|---|---:|---|
+| Taxi Draft Order can be specified | 1 | US-26.1 |
+| Taxi Draft Order can be changed | 1 | US-26.2 |
+| Players entered in Taxi Rosters in any order | 4 | US-26.3 |
+| Players easily found for Taxi entry | 2 | US-26.4 |
+| Players entered are removed from eligible list | 4 | US-26.5 |
+| Taxi Draft Rosters can be edited | 2 | US-26.6 |
+
+### Player API Licensing (10 pts) and Player API Valuations (10 pts)
+Both fall under the Player Data API repo. See its `PLAYER_DATA_API_USER_STORIES.md#rubric-coverage` for the mapping.
+
+### User Interface (10 pts)
+Quality assessment — covered by Epic 10 (US-10.1 to 10.5) plus the layout/feedback/branding decisions in Epics 6, 9, and 21–25.
+
+---
+
 ## Execution Order
 
 Work is sequenced so each layer builds on the previous one with no blocked work.
@@ -957,6 +1033,353 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ---
 
+## Epic 15: Year-Aware Drafts (Rubric: Draft Kit Accounts)
+
+> **Rubric mapping:** "User can create draft for given year" (2pt), "User can access drafts from current and past years" (2pt), "Can create new draft using completed draft from previous year" (2pt) — 6pt total.
+
+### US-15.1: Associate every draft with a season year
+**As a** drafter, **I want** every draft session tagged with a `seasonYear`, **so that** I can keep multiple years of drafts and look back at past results.
+
+**Acceptance criteria:**
+- `DraftSession.leagueSettings.seasonYear` (integer, e.g. 2026) added to the Mongoose schema; default is the current calendar year
+- Setup screen exposes a year input alongside `numberOfTeams`, defaults to the current year, accepts any integer ≥ 2000
+- `serializeSession` includes `seasonYear` in the response
+- `tests/draft-service.test.js` asserts the field round-trips through create → update → fetch
+
+### US-15.2: Filter home-screen drafts by year
+**As a** drafter, **I want** the home screen to group leagues by season year and let me filter to a specific year, **so that** my history doesn't get cluttered as years go by.
+
+**Acceptance criteria:**
+- `PlayerHomeScreen` shows a year selector chip row populated from the distinct years across the user's leagues
+- Selecting a year filters the league list; "All years" remains the default
+- Section headers display the year for each group when "All years" is active
+- Empty state per year reads "No drafts in <year> yet"
+
+### US-15.3: Clone a completed draft from a previous year
+**As a** drafter, **I want** to start a new year's draft pre-populated from a completed prior-year draft (same teams, same league settings, same keepers), **so that** league setup is one click instead of a dozen.
+
+**Acceptance criteria:**
+- New endpoint `POST /leagues/:leagueId/clone` accepts `{ targetYear, sourceLeagueId? }` and creates a fresh league + draft session for `targetYear`
+- Cloned `leagueSettings` (teams count, salary cap, roster slots, scoring, draft type, custom positions/stats) carry over
+- Cloned `teams[]` carry over team names; budgets reset to `salaryCap`; `purchasedPlayers[]` is empty by default
+- If the source draft has keepers (US-18.1), they migrate to the new draft (player + price + contract length, decremented by 1 year)
+- New draft starts in `setup` status — owner reviews, then runs `POST /start` as usual
+- UI: "Use Last Year" button on each league card invokes this when the league has a completed prior-year draft
+
+---
+
+## Epic 16: Account Auth Hardening (Rubric: Draft Kit Accounts)
+
+> **Rubric mapping:** "Account Creation & Login Mechanisms" (2pt), "Account Password/Login Reset/Retrieval" (2pt) — 4pt total.
+
+### US-16.1: Document and verify the existing register/login/logout flow
+**As a** new drafter, **I want** account creation, login, and logout to work end-to-end, **so that** my drafts are persisted to my account.
+
+**Acceptance criteria:**
+- `RegisterScreen` collects `email + userName + password` and calls `POST /auth/register`; success redirects to `/home`
+- `LoginScreen` calls `POST /auth/login`; sets cookie-based JWT; success redirects to `/home`
+- `GET /auth/loggedIn` is the source of truth for "is the user signed in" and runs on every protected screen mount
+- Logout clears the cookie + auth context state
+- Integration test `tests/auth-routes.test.js` asserts the full flow: register → loggedIn:true → logout → loggedIn:false
+
+### US-16.2: Password reset / retrieval flow
+**As a** drafter who forgot my password, **I want** to reset it via my email, **so that** I'm not locked out of my drafts.
+
+**Acceptance criteria:**
+- `ForgotPasswordScreen` collects an email and calls `POST /auth/forgot-password`
+- Server generates a single-use, time-limited reset token (15 minute TTL) and either emails it (production) or returns it directly in dev mode for testing
+- New `ResetPasswordScreen` accepts the token + a new password; calls `POST /auth/reset-password`; on success redirects to `/login`
+- Tokens are invalidated after use; expired tokens return `400` with `code: "TOKEN_EXPIRED"`
+- Integration test exercises the full path: forgot → token issued → reset → can log in with the new password
+
+---
+
+## Epic 17: League Configuration Extensions (Rubric: Draft Kit Prep)
+
+> **Rubric mapping:** "Setup Draft using AL-only / NL-only / all MLB" (2pt), "Custom Stats Selection for League" (2pt), "Custom Hitter and Pitcher Positions for League" (2pt) — 6pt total.
+
+### US-17.1: League scope (AL-only / NL-only / MLB)
+**As a** drafter, **I want** to choose whether my league is American League–only, National League–only, or all-MLB, **so that** the player pool is scoped correctly.
+
+**Acceptance criteria:**
+- `leagueSettings.leagueScope` field — enum: `'MLB' | 'AL' | 'NL'` (default `'MLB'`)
+- Setup screen renders a 3-button toggle for the scope
+- When the draft starts, `availablePlayerIds` is filtered by MLB league before persisting (the Player Data API's `/players/pool` accepts a `league` query param — Draft Kit forwards `leagueScope`)
+- Mid-draft scope changes are blocked (status must be `setup`)
+
+### US-17.2: Custom stats selection for league
+**As a** drafter, **I want** to pick which stats my league uses (e.g. for 5×5 Roto, swap OBP for AVG), **so that** valuations match my league's scoring.
+
+**Acceptance criteria:**
+- `leagueSettings.statCategories` — `{ hitting: string[], pitching: string[] }` overriding the `scoringType` preset
+- Setup screen exposes a stat-category picker per side (multi-select) with the preset shown as the starting point
+- Cross-repo contract: the picker's selections flow into `leagueSettings` and the Player Data API's `/valuations` endpoint accepts the override (per the API's US-5.3 normalize step)
+- Default behavior unchanged when `statCategories` is unset (presets apply)
+
+### US-17.3: Custom hitter & pitcher positions for league
+**As a** drafter, **I want** to define which positions count as hitters vs pitchers (e.g. add MI, CI, IF, NA), **so that** my league's roster slots aren't limited to the default set.
+
+**Acceptance criteria:**
+- `leagueSettings.positionCatalog` — `{ hitter: string[], pitcher: string[] }`; defaults to the existing C/1B/2B/3B/SS/OF/UTIL + SP/RP/P set
+- Setup screen lets the owner add or remove position keys before draft start; mid-draft changes blocked
+- The roster-slots editor in setup is driven by `positionCatalog` so adding "MI" adds a row to the slot grid
+- Player eligibility check (US-18.3) consumes `positionCatalog` so a player listed at "MI" is matchable
+
+---
+
+## Epic 18: Pre-Draft Rosters & Keepers (Rubric: Draft Kit Prep)
+
+> **Rubric mapping:** "User can enter pre-draft rosters with Contract and $ values" (2pt), "User can easily move player to another position within team" (2pt), "Kit only allows players to be moved to positions they are eligible for" (2pt), "Any players can be moved from one team to another" (2pt) — 8pt total.
+
+### US-18.1: Enter pre-draft rosters with contract and price
+**As a** drafter, **I want** to record keepers per team — player, price, contract years remaining — before the draft starts, **so that** budgets and slots are pre-debited at draft time.
+
+**Acceptance criteria:**
+- New "Keepers" tab on `DraftSessionSetupScreen` (only visible while status is `setup`)
+- For each team, the owner can add multiple keepers via player-search autocomplete + numeric price + numeric contract-years
+- Saving keepers writes to `team.keepers[] = [{ playerId, playerName, price, contractYears, positionAssigned }]` on the session
+- When the draft starts, every keeper is converted into a `purchasedPlayer` entry (debits budget, fills the slot, adds a draft-history entry with `nominationOrder: 0` and `isKeeper: true`)
+- Validation: keepers can't exceed team budget or roster size
+
+### US-18.2: Move a rostered player to another position within the same team
+**As a** drafter, **I want** to drag (or pick from a dropdown) a player from one of my position slots into another slot they're eligible for, **so that** I can optimize my lineup as picks come in.
+
+**Acceptance criteria:**
+- Each row in the My Roster tab and Teams tab exposes a "Move" action listing the eligible positions
+- Picking a target slot calls `PUT /draft-sessions/:id/purchases/:purchaseId/position` with `{ positionFilled }`
+- Server-side validation: target position must be in the player's eligibility list; target slot must have an opening
+- `team.filledRosterSlots` is updated atomically (decrement old, increment new)
+
+### US-18.3: Position eligibility enforcement
+**As a** drafter, **I want** the system to reject moves to positions a player isn't eligible for, **so that** rosters stay legal.
+
+**Acceptance criteria:**
+- Player metadata includes `positions[]` (already in PlayerStub) representing eligibility
+- The position dropdown in US-18.2 only shows eligible positions plus UTIL/BENCH (configurable via `leagueSettings.positionCatalog`)
+- Server returns `400 { code: "POSITION_INELIGIBLE" }` if a malicious client requests an ineligible slot
+- Test asserts: a 1B-only player cannot be moved to SS
+
+### US-18.4: Move any player between teams (pre-draft and during-draft)
+**As a** drafter, **I want** to move any player from one team to another at any point — keepers before the draft, recorded purchases during the draft — **so that** roster mistakes are easy to fix.
+
+**Acceptance criteria:**
+- Pre-draft (setup status): the keeper rows can have their team reassigned; budget on both teams updates
+- During draft (active status): already covered by US-5.4 (edit purchase to change team)
+- Reuses the validation from US-7.2/US-7.3 (destination team must have budget + open slot)
+
+---
+
+## Epic 19: Minor League Rosters (Rubric: Draft Kit Prep)
+
+> **Rubric mapping:** "User can enter minor league player rosters" (2pt), "Minor league player not eligible for draft" (2pt), "Minor league players can be moved from one team to another" (2pt) — 6pt total.
+
+### US-19.1: Enter minor league rosters per team
+**As a** drafter in a dynasty league, **I want** to keep a separate minor league roster per team, **so that** prospects don't sit in the auction pool.
+
+**Acceptance criteria:**
+- `team.minorLeaguePlayers[] = [{ playerId, playerName, contractYears }]` on the session
+- "Minors" sub-section in the Keepers tab — separate from major-league keepers, no price field
+- Hard cap configurable via `leagueSettings.minorLeagueSlots` (default 6)
+
+### US-19.2: Minor league players are excluded from the auction pool
+**As a** drafter, **I want** any player on any team's minor league roster filtered out of the available player list, **so that** they can't be re-drafted.
+
+**Acceptance criteria:**
+- When the draft starts, `availablePlayerIds` is built by removing every player listed in any team's `minorLeaguePlayers[]` (in addition to the existing keeper exclusion)
+- Players tab autocomplete + table both honor the exclusion
+- Test asserts: a player on team1's minor roster does not appear in `availablePlayerIds`
+
+### US-19.3: Move minor league players between teams
+**As a** drafter, **I want** to move minor league players from one team to another (trade simulation), **so that** the dynasty league moves stay reflected in the kit.
+
+**Acceptance criteria:**
+- "Move" action on each minor league row, opening a team picker
+- `PUT /draft-sessions/:id/minors/:playerId` with `{ teamId }` reassigns
+- Validation: destination team must have a free minor league slot
+
+---
+
+## Epic 20: Player Notes (Rubric: Draft Kit Prep)
+
+> **Rubric mapping:** "User can enter Player Notes before or during draft" (1pt), "User can edit Player Notes before or during draft" (1pt) — 2pt total.
+
+### US-20.1: Enter player notes pre-draft and during draft
+**As a** drafter, **I want** to attach a free-text note to any player, **so that** I remember my own intel ("UCL surgery summer '25", "Manager hates him") at the moment of the bid.
+
+**Acceptance criteria:**
+- `DraftSession.playerNotes` — `{ [playerId]: { text, updatedAt } }` map
+- Each row in the Players tab and Player Detail panel exposes an "Add note" affordance
+- Notes persist via `PUT /draft-sessions/:id/notes/:playerId` with `{ text }`
+- The note icon in the table fills with color when a note exists for that player
+
+### US-20.2: Edit and delete player notes
+**As a** drafter, **I want** to edit or clear an existing note, **so that** stale intel doesn't trip me up.
+
+**Acceptance criteria:**
+- Same endpoint accepts `text: ""` to delete the entry
+- UI: clicking an existing note opens an inline editor with Save / Cancel / Delete
+- Deletion removes the key from `playerNotes` so the icon goes back to its empty state
+
+---
+
+## Epic 21: Player Details Panel (Rubric: Draft Day + Push)
+
+> **Rubric mapping:** "Player Details — Stats, Age, Injury Status, Depth Chart, Transactions" (2pt) plus "Player Details — Depth Chart" (1pt), "Player Details — Transactions/Contract" (1pt), "Player Details — Injury/News" (1pt) from the Push category — 5pt total.
+
+### US-21.1: Single-player details surface
+**As a** drafter, **I want** to click any player and see their full picture in one panel, **so that** I'm not tab-switching mid-bid.
+
+**Acceptance criteria:**
+- New `PlayerDetailModal` opens on row click in any player table
+- Sections rendered, top to bottom: identity (name, MLB team, positions, age — `dataAsOf`), projected stats (hitting + pitching where applicable), recent transactions list, depth-chart rank within team, injury status with date if non-active, attached note (US-20)
+- Data sourced from `GET /api/v1/players/:playerId` on the Player Data API (Draft Kit proxies through `/draft-sessions/:id/players/:playerId` to keep the API key server-side)
+- Loading + error states; close on Esc / overlay click
+
+---
+
+## Epic 22: Draft Day Sort, Move & Redo (Rubric: Draft Day)
+
+> **Rubric mapping:** "Sorting Players List by $" (2pt), "Sorting Players List by Stats" (2pt), "Move player to new position" (2pt), "Undo/Redo for all draft Editing" — Redo half (1pt) — 7pt total.
+
+### US-22.1: Sort the player list by $ value
+**As a** drafter, **I want** the Players tab table sortable by projected $ value (asc/desc), **so that** I can scan high-value targets fast.
+
+**Acceptance criteria:**
+- Column headers "$ Value" and (when valuations load) "Surplus" are clickable; click toggles asc → desc → off
+- Active sort indicator in the header
+- Default sort: $ Value descending after valuations load
+
+### US-22.2: Sort the player list by stats
+**As a** drafter, **I want** to sort by HR, RBI, AVG, ERA, WHIP, K, etc., **so that** I can drill into category-specific scouting.
+
+**Acceptance criteria:**
+- Every numeric stat column header is clickable; same tri-state toggle as US-22.1
+- Sort persists across position filter / search changes; clicking a different column resets to descending
+- Empty/null stat values sort last regardless of direction
+
+### US-22.3: Move a recorded purchase to a new position
+**As a** drafter, **I want** to change the slot a purchased player occupies (e.g. an OF/UTIL eligible player from OF → UTIL), **so that** my filled slots reflect my actual lineup.
+
+**Acceptance criteria:**
+- Implementation reuses US-18.2 endpoint for active status
+- Edit modal in the Draft History row exposes a "Position" dropdown alongside "Team" and "Price"
+
+### US-22.4: Redo for all draft editing
+**As a** drafter, **I want** a Redo affordance that re-applies the most recent undo, **so that** an accidental Undo click is one tap to recover from.
+
+**Acceptance criteria:**
+- Server tracks an `undoStack[]` per session — each undo pushes the reversed event onto it
+- New endpoint `POST /draft-sessions/:id/redo` re-applies the top of the stack
+- Any successful new mutation (record, undo, edit) clears the stack
+- Header gains a "↻ Redo" icon; disabled when stack is empty
+- Same applies symmetrically: edits and undos can be redone
+
+---
+
+## Epic 23: Fantasy Team Comparison (Rubric: Draft Day)
+
+> **Rubric mapping:** "Fantasy Team Tabular Comparison" (2pt), "Fantasy Team Tabular Comparison — Sortable by Estimated Rankings/Money/etc." (2pt) — 4pt total.
+
+### US-23.1: Side-by-side team comparison view
+**As a** drafter, **I want** a single screen comparing every fantasy team across budget, slots filled, total spend, projected category totals, **so that** I can see who's winning the auction.
+
+**Acceptance criteria:**
+- New "Compare" tab in the draft room, distinct from the existing per-team Teams tab
+- Table: rows = teams, columns = `Spent | Remaining | Slots | Projected HR | Projected SB | … | Total Projected $`
+- Stat columns derived from each team's purchased players' projected stats (Player Data API `/valuations`)
+- Updates live as purchases land
+
+### US-23.2: Sortable comparison table
+**As a** drafter, **I want** to sort the comparison by any column (rank, money, projected category total), **so that** I can see who leads in any single dimension.
+
+**Acceptance criteria:**
+- Every header is clickable; tri-state asc → desc → off
+- Highlight my team's row regardless of sort
+- Default sort: Total Projected $ descending
+
+---
+
+## Epic 24: MLB Depth Charts View (Rubric: Draft Day)
+
+> **Rubric mapping:** "Can View MLB Team Depth Charts" (2pt) — 2pt.
+
+### US-24.1: View MLB team depth charts
+**As a** drafter, **I want** a screen showing every MLB team's depth chart (already ingested per Player Data API US-4.3), **so that** I can scout playing time without leaving the kit.
+
+**Acceptance criteria:**
+- New "MLB Depth" route accessible from the draft room nav
+- Drop-down picks one of the 30 MLB teams; default = my team-of-interest from a per-user setting
+- Lays out players grouped by `depthChartPosition` and ordered by `depthChartRank`
+- Highlights players already on a fantasy team (with team name) and marks my team's holdings distinctly
+- Data sourced from `GET /api/v1/players?team=<abbr>` filtered + sorted client-side
+
+---
+
+## Epic 25: Push Notification Client (Rubric: Player API → Draft Kit Push)
+
+> **Rubric mapping:** "Draft Kit show updated pushed state" (2pt), "Draft Kit employs notification system to alert user of pushed state" (2pt) — 4pt total. (The Player Data API counterpart is its new Epic 13.)
+
+### US-25.1: Receive and apply pushed updates
+**As a** drafter, **I want** the kit to apply server-pushed updates (an injury just landed, a transaction happened) without me clicking refresh, **so that** my view is always current.
+
+**Acceptance criteria:**
+- Client subscribes to a Server-Sent Events stream `GET /draft-sessions/:id/events` (Draft Kit server proxies the Player Data API's push channel — see API US-13.2)
+- Event types: `player.injury`, `player.transaction`, `player.depthChart`
+- On event, the affected player's row in every visible table re-renders with the new status; the player detail panel updates if open
+- Connection auto-reconnects with exponential backoff on disconnect
+
+### US-25.2: Toast feed for pushed events
+**As a** drafter, **I want** a non-blocking toast/notification when something newsworthy lands during my draft, **so that** I notice the change.
+
+**Acceptance criteria:**
+- Each pushed event renders a toast: "Aaron Judge → IL-10 (Hamstring)" / "Mookie Betts traded to LAD"
+- Toasts auto-dismiss after 8 seconds; clicking opens the player detail panel
+- Notification feed icon in the header opens a dismissible panel listing the last 50 events for the session
+- User preference toggle (per-account) to mute toasts but keep the feed populated
+
+---
+
+## Epic 26: Taxi Draft (Rubric: Taxi Draft)
+
+> **Rubric mapping:** all six rubric lines under "Taxi Draft" (10pt total).
+
+> Taxi Draft = a separate, ordered draft for minor-league / supplemental rosters that runs after the main auction. Distinct from Epic 19 (entering existing minor league players); this is the *act of drafting* into those slots.
+
+### US-26.1: Specify the taxi draft order
+**Acceptance criteria:**
+- `DraftSession.taxiDraftOrder: string[]` — array of `teamId` in pick order
+- Setup screen Taxi tab exposes a drag-to-reorder list of teams; defaults to the team creation order
+- Persisted via `PUT /draft-sessions/:id/taxi/order`
+
+### US-26.2: Edit the taxi draft order before/during taxi
+**Acceptance criteria:**
+- Same endpoint accepts updated order at any time before the taxi draft enters `completed`
+- UI confirms reorders that change "next pick" mid-round
+
+### US-26.3: Enter players into taxi rosters in any order
+**Acceptance criteria:**
+- New `POST /draft-sessions/:id/taxi/picks` with `{ teamId, playerId }` records a taxi pick
+- Picks don't have to follow `taxiDraftOrder` strictly — kit warns if out-of-order but allows the override (real-room flexibility)
+- Picks debit the team's `minorLeaguePlayers[]` and increment a `taxiNominationOrder` counter
+
+### US-26.4: Find players for taxi entry
+**Acceptance criteria:**
+- Taxi entry form has the same autocomplete as the main draft entry form (US-4.1)
+- Suggestions filter to players NOT in any team's main or minor league roster
+- Optional "Prospects only" toggle filters by `mlbStatus === 'minors'`
+
+### US-26.5: Taxi-entered players are removed from main draft eligibility
+**Acceptance criteria:**
+- After a taxi pick, the player is added to `team.minorLeaguePlayers[]` and removed from the main draft's `availablePlayerIds` (per US-19.2 mechanics)
+- Reversing a taxi pick restores availability
+
+### US-26.6: Edit taxi rosters
+**Acceptance criteria:**
+- Each taxi pick has Undo + Edit (move to another team / replace player) actions
+- Undo restores availability and decrements `taxiNominationOrder`
+
+---
+
 ## Domain Model Reference
 
 ### DraftSession
@@ -1030,4 +1453,17 @@ Authoritative definitions live in the Player Data API's US-5.3 / US-5.4 / US-5.5
 | M4: External Data (consumer) | 12 | 3 |
 | M5: Valuation Engine | 13 | 4 |
 | M5: End-to-End Validation | 14 | 3 |
-| **Total** | | **78** |
+| **Rubric Parity (added from project rubric)** | | |
+| Year-aware drafts | 15 | 3 |
+| Account auth hardening | 16 | 2 |
+| League configuration extensions | 17 | 3 |
+| Pre-draft rosters & keepers | 18 | 4 |
+| Minor league rosters | 19 | 3 |
+| Player notes | 20 | 2 |
+| Player details panel | 21 | 1 |
+| Draft day sort/move/redo | 22 | 4 |
+| Fantasy team comparison | 23 | 2 |
+| MLB depth charts view | 24 | 1 |
+| Push notification client | 25 | 2 |
+| Taxi draft | 26 | 6 |
+| **Total** | | **111** |
