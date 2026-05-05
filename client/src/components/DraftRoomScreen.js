@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { getPlayers, postUsage } from '../players/requests';
-import { getSessionValuations, getSessionPlayers } from '../draft-sessions/requests';
+import { getSessionValuations} from '../draft-sessions/requests';
 import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
