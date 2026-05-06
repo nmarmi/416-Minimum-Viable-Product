@@ -1614,16 +1614,28 @@ body {
     border-radius: 999px;
     font-size: 0.9rem;
     font-weight: 600;
-    border: 1px solid #e1e1e1;
+    border: 1px solid currentColor;
     background: #ffffff;
 }
 
-.league-status.active {
-    color: #4da85f;
+.league-status.setup {
+    color: #2563eb;
+    background: #eff6ff;
 }
 
-.league-status.inactive {
-    color: #d66b6b;
+.league-status.active {
+    color: #16833a;
+    background: #ecfdf3;
+}
+
+.league-status.paused {
+    color: #a16207;
+    background: #fffbeb;
+}
+
+.league-status.completed {
+    color: #4b5563;
+    background: #f3f4f6;
 }
 
 /* Draft Room V2 mock layout */

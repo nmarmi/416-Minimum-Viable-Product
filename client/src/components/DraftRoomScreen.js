@@ -11,8 +11,19 @@ const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP
 const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
 const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Injury', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
+const DRAFT_STATUS_META = {
+    setup: { label: 'Setup', className: 'setup' },
+    active: { label: 'Active', className: 'active' },
+    paused: { label: 'Paused', className: 'paused' },
+    completed: { label: 'Completed', className: 'completed' },
+};
 
 const formatStat = (val) => (val != null && Number.isFinite(val) ? (Number(val) === val && val < 1 && val > 0 ? val.toFixed(3) : String(Math.round(val))) : '--');
+
+const getDraftStatusMeta = (status) => {
+    const normalizedStatus = String(status || 'setup').toLowerCase();
+    return DRAFT_STATUS_META[normalizedStatus] || { label: 'Unknown', className: 'completed' };
+};
 
 const playerNameStartsWithSearch = (playerName, searchTerm) => {
     const normalizedName = String(playerName || '').trim().toLowerCase();
@@ -1260,8 +1271,9 @@ const DraftRoomScreen = () => {
     })();
 
     const draftTitle = draftSession?.name || 'Fantasy Baseball League';
+    const draftStatus = getDraftStatusMeta(draftSession?.status);
     const draftSubtitle = draftSession
-        ? `${draftSession.status === 'active' ? 'Active draft session' : 'Draft setup preview'} for league ${leagueId}.`
+        ? `${draftStatus.label} draft session for league ${leagueId}.`
         : 'Welcome back. Draft room data will appear once API integration is enabled.';
 
     // US-6.5: sidebar metrics bind to `myTeam` (explicit or fallback).
@@ -1299,8 +1311,8 @@ const DraftRoomScreen = () => {
                 </div>
 
                 <div className="draft-v2-header-actions">
-                    <span className={`league-status ${draftSession?.status === 'active' ? 'active' : 'inactive'}`}>
-                        {draftSession?.status === 'active' ? 'Active' : 'Classic'}
+                    <span className={`league-status ${draftStatus.className}`}>
+                        {draftStatus.label}
                     </span>
                     <button
                         type="button"
