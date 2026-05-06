@@ -109,6 +109,9 @@ const DraftRoomScreen = () => {
     const [editingOriginal, setEditingOriginal] = useState(null);
     const [editSubmitting, setEditSubmitting] = useState(false);
     const [editError, setEditError] = useState('');
+    const [pendingUndo, setPendingUndo] = useState(null);
+    const [undoSubmitting, setUndoSubmitting] = useState(false);
+    const [undoError, setUndoError] = useState('');
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
@@ -498,26 +501,46 @@ const DraftRoomScreen = () => {
         await store.setMyTeam(draftSessionId, teamId);
     };
 
-    // US-5.2: confirm before undo so an accidental click doesn't rewind state.
-    const confirmAndUndo = async (entry) => {
+    const openUndoDialog = (entry) => {
         if (!entry) return;
         const teamName = getTeamName(draftSession?.teams?.find((t) => t.teamId === entry.teamId));
-        const ok = typeof window !== 'undefined' && typeof window.confirm === 'function'
-            ? window.confirm(`Undo ${entry.playerName} to ${teamName} for $${entry.price}?`)
-            : true;
-        if (!ok) return;
-        await store.undoPurchase(draftSessionId, entry.purchaseId);
+        setPendingUndo({
+            purchaseId: entry.purchaseId,
+            playerName: entry.playerName,
+            teamName,
+            price: entry.price,
+        });
+        setUndoError('');
+    };
+
+    const handleCancelUndo = () => {
+        if (undoSubmitting) return;
+        setPendingUndo(null);
+        setUndoError('');
+    };
+
+    const handleConfirmUndo = async () => {
+        if (!pendingUndo) return;
+        setUndoSubmitting(true);
+        setUndoError('');
+        const res = await store.undoPurchase(draftSessionId, pendingUndo.purchaseId);
+        setUndoSubmitting(false);
+        if (res?.status === 200 && res.data?.success) {
+            setPendingUndo(null);
+        } else {
+            setUndoError(res?.data?.errorMessage || 'Unable to undo this purchase.');
+        }
     };
 
     const handleUndoLastPurchase = async () => {
         const history = draftSession?.draftHistory || [];
         if (!history.length) return;
-        await confirmAndUndo(history[history.length - 1]);
+        openUndoDialog(history[history.length - 1]);
     };
 
     const handleUndoRowPurchase = async (purchaseId) => {
         const entry = (draftSession?.draftHistory || []).find((h) => h.purchaseId === purchaseId);
-        await confirmAndUndo(entry);
+        openUndoDialog(entry);
     };
 
     const handleStartEdit = (entry) => {
@@ -1454,6 +1477,41 @@ const DraftRoomScreen = () => {
                     players={comparePlayers}
                     onClose={() => setShowCompareModal(false)}
                 />
+            ) : null}
+            {pendingUndo ? (
+                <div
+                    className="undo-confirm-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="undo-confirm-title"
+                    onClick={(event) => event.target === event.currentTarget && handleCancelUndo()}
+                >
+                    <section className="undo-confirm-card">
+                        <h2 id="undo-confirm-title">Confirm Undo</h2>
+                        <p>
+                            Are you sure you want to undo <strong>{pendingUndo.playerName}</strong> to <strong>{pendingUndo.teamName}</strong> for <strong>${pendingUndo.price}</strong>?
+                        </p>
+                        {undoError ? <p className="undo-confirm-error">{undoError}</p> : null}
+                        <div className="undo-confirm-actions">
+                            <button
+                                type="button"
+                                className="undo-confirm-cancel"
+                                onClick={handleCancelUndo}
+                                disabled={undoSubmitting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="undo-confirm-submit"
+                                onClick={handleConfirmUndo}
+                                disabled={undoSubmitting}
+                            >
+                                {undoSubmitting ? 'Undoing...' : 'Confirm'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
             ) : null}
         </main>
     );
