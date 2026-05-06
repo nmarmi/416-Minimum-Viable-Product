@@ -1738,16 +1738,17 @@ body {
 
 .draft-v2-tabs {
   margin-top: 12px;
-  width: min(980px, 100%);
+  width: 100%;
   background: #dfe0e4;
   border-radius: 999px;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   padding: 2px;
 }
 
 .draft-v2-tab {
   height: 30px;
+  min-width: 0;
   border: none;
   background: transparent;
   color: #22242a;
