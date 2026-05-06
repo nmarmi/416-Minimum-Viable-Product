@@ -607,38 +607,40 @@ const DraftRoomScreen = () => {
             <div className="draft-v2-module-grid two-col">
                 <article className="draft-v2-module-card">
                     <h3>Player Search & Filters</h3>
-                    <label className="draft-v2-search-wrap draft-v2-live-search-wrap">
-                        <span className="draft-v2-search-icon">⌕</span>
-                        <input
-                            type="text"
-                            placeholder="Search players by name"
-                            value={playerSearch}
-                            onChange={handlePlayerSearchChange}
-                            onKeyDown={handlePlayerSearchKeyDown}
-                            onFocus={() => playerSuggestions.length > 0 && setShowPlayerSuggestions(true)}
-                            onBlur={() => setTimeout(() => setShowPlayerSuggestions(false), 150)}
-                            autoComplete="off"
-                        />
+                    <div className="draft-v2-search-actions">
+                        <label className="draft-v2-search-wrap draft-v2-live-search-wrap">
+                            <span className="draft-v2-search-icon">⌕</span>
+                            <input
+                                type="text"
+                                placeholder="Search players by name"
+                                value={playerSearch}
+                                onChange={handlePlayerSearchChange}
+                                onKeyDown={handlePlayerSearchKeyDown}
+                                onFocus={() => playerSuggestions.length > 0 && setShowPlayerSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowPlayerSuggestions(false), 150)}
+                                autoComplete="off"
+                            />
 
-                        {showPlayerSuggestions && playerSuggestions.length > 0 ? (
-                            <div className="draft-v2-live-search-menu">
-                                {playerSuggestions.map((player, index) => (
-                                    <button
-                                        key={getPlayerId(player)}
-                                        type="button"
-                                        className={`draft-v2-live-search-item ${index === highlightedPlayerIndex ? 'active' : ''}`}
-                                        onMouseDown={() => handleSelectPlayerSuggestion(player)}
-                                    >
-                                        <div className="draft-v2-live-search-item-main">
-                                            <strong>{getPlayerName(player)}</strong>
-                                            <span>{getPlayerTeamLabel(player)} • {getPlayerPosition(player)}</span>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : null}
-                    </label>
-                    <button type="button" className="draft-v2-filter-btn" onClick={loadPlayers}>Search</button>
+                            {showPlayerSuggestions && playerSuggestions.length > 0 ? (
+                                <div className="draft-v2-live-search-menu">
+                                    {playerSuggestions.map((player, index) => (
+                                        <button
+                                            key={getPlayerId(player)}
+                                            type="button"
+                                            className={`draft-v2-live-search-item ${index === highlightedPlayerIndex ? 'active' : ''}`}
+                                            onMouseDown={() => handleSelectPlayerSuggestion(player)}
+                                        >
+                                            <div className="draft-v2-live-search-item-main">
+                                                <strong>{getPlayerName(player)}</strong>
+                                                <span>{getPlayerTeamLabel(player)} • {getPlayerPosition(player)}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </label>
+                        <button type="button" className="draft-v2-filter-btn draft-v2-search-submit" onClick={loadPlayers}>Search</button>
+                    </div>
                     <div className="draft-v2-filter-row">
                         {availablePositions.map((pos) => (
                             <button
