@@ -2638,6 +2638,80 @@ body {
   background: #b42318;
 }
 
+/* ----- Undo confirmation modal ----- */
+.undo-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(15, 23, 42, 0.48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.undo-confirm-card {
+  width: min(440px, 100%);
+  background: #ffffff;
+  border: 1px solid #d8dee9;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.24);
+  padding: 22px;
+}
+
+.undo-confirm-card h2 {
+  margin: 0;
+  color: #1f2533;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.undo-confirm-card p {
+  margin: 12px 0 0;
+  color: #4b5565;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.undo-confirm-error {
+  color: #b42318 !important;
+  font-weight: 600;
+}
+
+.undo-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.undo-confirm-cancel,
+.undo-confirm-submit {
+  height: 40px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.undo-confirm-cancel {
+  border: 1px solid #cfd6e2;
+  background: #f8fafc;
+  color: #303746;
+}
+
+.undo-confirm-submit {
+  border: 1px solid #23252a;
+  background: #23252a;
+  color: #ffffff;
+}
+
+.undo-confirm-cancel:disabled,
+.undo-confirm-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ----- Draft room: compare column & bar ----- */
 .draft-v2-th-compare,
 .draft-v2-td-compare {
