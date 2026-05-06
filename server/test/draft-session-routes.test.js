@@ -78,6 +78,92 @@ async function seedActiveSessionWithPurchase() {
     return session;
 }
 
+// ── GET /draft-sessions — US-8.8 ─────────────────────────────────────────────
+
+describe('GET /draft-sessions (US-8.8 getMyDraftSessions)', () => {
+    test('no auth -> 401', async () => {
+        const res = await request(app).get('/draft-sessions');
+        expect(res.status).toBe(401);
+    });
+
+    test('authenticated user with no sessions -> empty array', async () => {
+        const res = await request(app).get('/draft-sessions').set('Cookie', ownerCookie());
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.draftSessions).toEqual([]);
+    });
+
+    test('returns only sessions belonging to the requesting user', async () => {
+        // OWNER_ID session
+        await DraftSession.create({
+            draftSessionId: 'session-owner-1',
+            leagueId: LEAGUE_ID,
+            createdBy: new mongoose.Types.ObjectId(OWNER_ID),
+            status: 'setup',
+            leagueSettings: { numberOfTeams: 10, salaryCap: 260, rosterSlots: {}, scoringType: '5x5 Roto', draftType: 'AUCTION' },
+        });
+        // OTHER_ID session — must not appear in owner's response
+        await DraftSession.create({
+            draftSessionId: 'session-other-1',
+            leagueId: LEAGUE_ID,
+            createdBy: new mongoose.Types.ObjectId(OTHER_ID),
+            status: 'active',
+            leagueSettings: { numberOfTeams: 8, salaryCap: 200, rosterSlots: {}, scoringType: '5x5 Roto', draftType: 'AUCTION' },
+        });
+
+        const res = await request(app).get('/draft-sessions').set('Cookie', ownerCookie());
+        expect(res.status).toBe(200);
+        expect(res.body.draftSessions).toHaveLength(1);
+        expect(res.body.draftSessions[0].draftSessionId).toBe('session-owner-1');
+    });
+
+    test('response shape contains required fields', async () => {
+        await DraftSession.create({
+            draftSessionId: 'session-shape',
+            name: 'My League Draft',
+            leagueId: LEAGUE_ID,
+            createdBy: new mongoose.Types.ObjectId(OWNER_ID),
+            status: 'active',
+            leagueSettings: { numberOfTeams: 12, salaryCap: 260, rosterSlots: {}, scoringType: '5x5 Roto', draftType: 'AUCTION' },
+        });
+
+        const res = await request(app).get('/draft-sessions').set('Cookie', ownerCookie());
+        expect(res.status).toBe(200);
+        const s = res.body.draftSessions[0];
+        expect(s.draftSessionId).toBe('session-shape');
+        expect(s.name).toBe('My League Draft');
+        expect(s.status).toBe('active');
+        expect(s.createdAt).toBeDefined();
+        expect(s.numberOfTeams).toBe(12);
+    });
+
+    test('results sorted by createdAt descending', async () => {
+        const t1 = new Date('2024-01-01T00:00:00Z');
+        const t2 = new Date('2024-06-01T00:00:00Z');
+        await DraftSession.create({
+            draftSessionId: 'session-old',
+            leagueId: LEAGUE_ID,
+            createdBy: new mongoose.Types.ObjectId(OWNER_ID),
+            status: 'setup',
+            leagueSettings: { numberOfTeams: 10, salaryCap: 260, rosterSlots: {}, scoringType: '5x5 Roto', draftType: 'AUCTION' },
+            createdAt: t1,
+        });
+        await DraftSession.create({
+            draftSessionId: 'session-new',
+            leagueId: LEAGUE_ID,
+            createdBy: new mongoose.Types.ObjectId(OWNER_ID),
+            status: 'active',
+            leagueSettings: { numberOfTeams: 12, salaryCap: 260, rosterSlots: {}, scoringType: '5x5 Roto', draftType: 'AUCTION' },
+            createdAt: t2,
+        });
+
+        const res = await request(app).get('/draft-sessions').set('Cookie', ownerCookie());
+        expect(res.status).toBe(200);
+        expect(res.body.draftSessions[0].draftSessionId).toBe('session-new');
+        expect(res.body.draftSessions[1].draftSessionId).toBe('session-old');
+    });
+});
+
 // ── DELETE /draft-sessions/:id/purchases/:purchaseId — US-8.6 ────────────────
 
 describe('DELETE /draft-sessions/:id/purchases/:purchaseId (US-8.6 undoPurchase)', () => {

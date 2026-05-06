@@ -641,7 +641,32 @@ const getSessionRecommendations = async (req, res) => {
     }
 };
 
+const getMyDraftSessions = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const sessions = await db.getDraftSessionsForUser(userId);
+
+        const draftSessions = sessions.map(s => ({
+            draftSessionId: s.draftSessionId,
+            name: s.name ?? '',
+            status: s.status,
+            createdAt: s.createdAt,
+            numberOfTeams: s.leagueSettings?.numberOfTeams ?? 0,
+        }));
+
+        return res.status(200).json({ success: true, draftSessions });
+    } catch (err) {
+        console.error('getMyDraftSessions error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to load draft sessions.' });
+    }
+};
+
 module.exports = {
+    getMyDraftSessions,
     createDraftSession,
     getDraftSession,
     updateDraftSession,

@@ -92,6 +92,13 @@ class MongoDBManager extends DatabaseManager {
         return await DraftSession.findOne({ draftSessionId }).lean();
     }
 
+    async getDraftSessionsForUser(userId) {
+        return await DraftSession.find({ createdBy: userId })
+            .select('draftSessionId name status createdAt leagueSettings.numberOfTeams')
+            .sort({ createdAt: -1 })
+            .lean();
+    }
+
     async saveDraftSession(draftSession) {
         return await draftSession.save();
     }

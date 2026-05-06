@@ -128,7 +128,8 @@ const DraftSessionSchema = new Schema(
         createdBy: {
             type: Schema.Types.ObjectId,
             ref: 'User',
-            required: true
+            required: true,
+            index: true
         },
         status: {
             type: String,
