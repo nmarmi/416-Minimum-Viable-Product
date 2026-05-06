@@ -103,6 +103,7 @@ const DraftRoomScreen = () => {
     const [entrySubmitting, setEntrySubmitting] = useState(false);
     const [entryError, setEntryError] = useState('');
     const [entrySuccess, setEntrySuccess] = useState('');
+    const [toast, setToast] = useState(null);
     const [editingPurchaseId, setEditingPurchaseId] = useState('');
     const [editingPrice, setEditingPrice] = useState('');
     const [editingWonBy, setEditingWonBy] = useState('');
@@ -117,6 +118,16 @@ const DraftRoomScreen = () => {
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
 
     const draftSession = store.currentDraftSession;
+
+    const showToast = useCallback((type, message) => {
+        setToast({ type, message, id: Date.now() });
+    }, []);
+
+    useEffect(() => {
+        if (!toast) return undefined;
+        const timeoutId = setTimeout(() => setToast(null), 4000);
+        return () => clearTimeout(timeoutId);
+    }, [toast]);
 
     const teamOptions = useMemo(() => {
         if (!draftSession?.teams?.length) return FALLBACK_TEAMS.map((name) => ({ teamId: name, label: name }));
@@ -473,11 +484,14 @@ const DraftRoomScreen = () => {
         setEntrySubmitting(true);
         setEntryError('');
         setEntrySuccess('');
+        const purchasedPlayerName = entryPlayer;
+        const purchasedTeamName = getTeamName(draftSession?.teams?.find((t) => t.teamId === entryWonBy)) || entryWonBy;
+        const purchasedPrice = Number(entryPrice);
         const res = await store.recordPurchase(draftSessionId, {
             playerId: entryPlayerId,
             playerName: entryPlayer,
             teamId: entryWonBy,
-            price: Number(entryPrice),
+            price: purchasedPrice,
         });
         setEntrySubmitting(false);
         if (res.status === 200 && res.data?.success) {
@@ -486,9 +500,12 @@ const DraftRoomScreen = () => {
             setEntryPrice('');
             setEntryNotes('');
             setEntrySuccess('Purchase recorded.');
+            showToast('success', `${purchasedPlayerName} purchased by ${purchasedTeamName} for $${purchasedPrice}`);
             setTimeout(() => setEntrySuccess(''), 3000);
         } else {
-            setEntryError(res.data?.errorMessage || 'Failed to record purchase.');
+            const errorMessage = res.data?.errorMessage || 'Failed to record purchase.';
+            setEntryError(errorMessage);
+            showToast('error', errorMessage);
         }
     };
 
@@ -1448,6 +1465,11 @@ const DraftRoomScreen = () => {
                 </section>
             </section>
 
+            {toast ? (
+                <div className={`draft-toast ${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>
+                    {toast.message}
+                </div>
+            ) : null}
             {showGlossary ? <GlossaryModal onClose={() => setShowGlossary(false)} /> : null}
             {showCompareModal ? (
                 <PlayerCompareModal

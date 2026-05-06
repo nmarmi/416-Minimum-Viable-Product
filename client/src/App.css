@@ -2614,6 +2614,30 @@ body {
   background: #fff;
 }
 
+/* ----- Draft room toasts ----- */
+.draft-toast {
+  position: fixed;
+  top: 82px;
+  right: 22px;
+  z-index: 70;
+  width: min(420px, calc(100vw - 32px));
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.22);
+}
+
+.draft-toast.success {
+  background: #16833a;
+}
+
+.draft-toast.error {
+  background: #b42318;
+}
+
 /* ----- Draft room: compare column & bar ----- */
 .draft-v2-th-compare,
 .draft-v2-td-compare {
