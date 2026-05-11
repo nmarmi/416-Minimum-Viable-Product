@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "sync:players": "node scripts/sync-player-metadata.js",
     "test": "vitest"
   },
   "license": "MIT",

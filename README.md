@@ -97,6 +97,19 @@ When configured, the backend calls:
 - `POST /api/v1/players/valuations` — z-score auction dollar values based on league settings
 - `POST /usage` — usage event tracking
 
+To cache normalized player metadata in MongoDB's `PlayerStub` collection:
+
+```bash
+npm run sync:players --prefix server
+```
+
+For scheduled syncs, run the same script with `--watch` and optionally set
+`PLAYER_METADATA_SYNC_INTERVAL_MINUTES` (defaults to 360 minutes):
+
+```bash
+PLAYER_METADATA_SYNC_INTERVAL_MINUTES=360 npm run sync:players --prefix server -- --watch
+```
+
 See [`docs/PLAYER-DATA-API.md`](docs/PLAYER-DATA-API.md) for full setup and testing instructions.
 
 ---
@@ -113,6 +126,7 @@ See [`docs/PLAYER-DATA-API.md`](docs/PLAYER-DATA-API.md) for full setup and test
 | `CORS_ORIGINS` | No | Comma-separated allowed origins (default: `http://localhost:3000`) |
 | `PLAYER_API_URL` | No | Licensed player data API base URL |
 | `PLAYER_API_KEY` | No | Licensed player data API key |
+| `PLAYER_METADATA_SYNC_INTERVAL_MINUTES` | No | Interval for `sync:players -- --watch` (default: 360) |
 
 **Client (`.env` or Vercel env)**
 
