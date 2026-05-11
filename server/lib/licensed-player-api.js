@@ -2,6 +2,7 @@
  * Client for the licensed Player Data API.
  * Uses PLAYER_API_URL and PLAYER_API_KEY from env. If PLAYER_API_URL is not set, all methods return null.
  * Sends both X-API-Key and Authorization: Bearer so the API can use either.
+ * Set PLAYER_API_LEGACY=1 to fall back to unversioned paths for older API builds.
  */
 const baseUrl = process.env.PLAYER_API_URL || '';
 const apiKey = process.env.PLAYER_API_KEY || '';
@@ -18,10 +19,22 @@ function getHeaders() {
     };
 }
 
+// Returns path prefixed with /api/v1 unless PLAYER_API_LEGACY=1 is set.
+function apiPath(path) {
+    return process.env.PLAYER_API_LEGACY ? path : `/api/v1${path}`;
+}
+
+// Fire-and-forget health check on first import
+if (hasConfig()) {
+    const healthUrl = `${baseUrl.replace(/\/$/, '')}/api/v1/health`;
+    fetch(healthUrl, { method: 'GET', headers: getHeaders() })
+        .then(res => console.log(`[player-api] health ${res.ok ? 'ok' : `failed (${res.status})`} — ${healthUrl}`))
+        .catch(err => console.log(`[player-api] health check failed — ${healthUrl}: ${err.message}`));
+}
+
 /**
- * Pull: GET /players from the licensed API.
- * @param {Object} params - { search, team, position, limit, offset }
- * @returns {Promise<{ success: boolean, players: Array, total: number }>}
+ * GET /api/v1/players — list players with optional filtering.
+ * Falls back to /players when PLAYER_API_LEGACY=1.
  */
 async function getPlayers(params = {}) {
     if (!hasConfig()) return null;
@@ -32,12 +45,9 @@ async function getPlayers(params = {}) {
     if (params.limit != null) q.set('limit', params.limit);
     if (params.offset != null) q.set('offset', params.offset);
     const query = q.toString();
-    const url = `${baseUrl.replace(/\/$/, '')}/players${query ? `?${query}` : ''}`;
+    const url = `${baseUrl.replace(/\/$/, '')}${apiPath('/players')}${query ? `?${query}` : ''}`;
     try {
-        const res = await fetch(url, {
-            method: 'GET',
-            headers: getHeaders()
-        });
+        const res = await fetch(url, { method: 'GET', headers: getHeaders() });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
             throw new Error(data.error || data.errorMessage || `API ${res.status}`);
@@ -50,13 +60,12 @@ async function getPlayers(params = {}) {
 }
 
 /**
- * Fetch a single player by ID: GET /players/:playerId from the licensed API.
- * @param {string} playerId
- * @returns {Promise<Object|null>} player object or null if not found / API not configured
+ * GET /api/v1/players/:playerId — fetch a single player by ID.
+ * Falls back to /players/:id when PLAYER_API_LEGACY=1.
  */
 async function getPlayer(playerId) {
     if (!hasConfig()) return null;
-    const url = `${baseUrl.replace(/\/$/, '')}/players/${encodeURIComponent(playerId)}`;
+    const url = `${baseUrl.replace(/\/$/, '')}${apiPath('/players')}/${encodeURIComponent(playerId)}`;
     try {
         const res = await fetch(url, { method: 'GET', headers: getHeaders() });
         if (res.status === 404) return null;
@@ -72,11 +81,7 @@ async function getPlayer(playerId) {
 }
 
 /**
- * Pull: GET /api/v1/players/pool from the licensed API.
- * Returns the full player pool in `PlayerStub` shape plus `dataAsOf` / `staleWarnings`.
- * Supported filters (all optional): search, position(s), team, limit, offset.
- * @param {Object} params
- * @returns {Promise<{ success: boolean, players: Array, dataAsOf?: string, staleWarnings?: Array, apiVersion?: string } | null>}
+ * GET /api/v1/players/pool — full player pool in PlayerStub shape.
  */
 async function getPlayerPool(params = {}) {
     if (!hasConfig()) return null;
@@ -85,9 +90,6 @@ async function getPlayerPool(params = {}) {
     if (params.team) q.set('team', params.team);
     const position = params.position ?? params.positions;
     if (position) {
-        // Upstream /pool expects `position` (singular). If we get an
-        // array or comma-delimited list, take the first value and
-        // rely on local filtering in the caller for the rest.
         const value = Array.isArray(position) ? position[0] : String(position).split(',')[0].trim();
         if (value) q.set('position', value);
     }
@@ -96,10 +98,7 @@ async function getPlayerPool(params = {}) {
     const query = q.toString();
     const url = `${baseUrl.replace(/\/$/, '')}/api/v1/players/pool${query ? `?${query}` : ''}`;
     try {
-        const res = await fetch(url, {
-            method: 'GET',
-            headers: getHeaders()
-        });
+        const res = await fetch(url, { method: 'GET', headers: getHeaders() });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
             const err = new Error(data.error || data.errorMessage || `Player Data API responded with ${res.status}`);
@@ -115,44 +114,31 @@ async function getPlayerPool(params = {}) {
 }
 
 /**
- * POST /api/v1/players/valuations — runs the z-score auction dollar value
- * algorithm and returns dollarValue per player.
- * @param {Object} leagueSettings - { numTeams, budget, hitterBudgetPct, hitterSlotsPerTeam, pitcherSlotsPerTeam, statSeason }
- * @param {Object} draftState - optionally { availablePlayerIds: string[] }
- * @returns {Promise<{ success: boolean, valuations: Array } | null>}
+ * POST /api/v1/players/valuations — z-score auction dollar values.
+ * Falls back to /players/valuations when PLAYER_API_LEGACY=1.
  */
 async function postValuations(leagueSettings = {}, draftState = {}) {
     if (!hasConfig()) return null;
     const body = { leagueSettings, draftState };
-    const normalizedBase = baseUrl.replace(/\/$/, '');
-    const urls = [
-        `${normalizedBase}/players/valuations`,
-        `${normalizedBase}/api/v1/players/valuations`
-    ];
+    const url = `${baseUrl.replace(/\/$/, '')}${apiPath('/players/valuations')}`;
     try {
-        let lastError = null;
-
-        for (const url of urls) {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(body)
-            });
-            const raw = await res.text();
-            let data = {};
-            try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
-            if (res.ok) {
-                return data;
-            }
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(body)
+        });
+        const raw = await res.text();
+        let data = {};
+        try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
+        if (!res.ok) {
             const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
             err.status = res.status;
             err.url = url;
             err.upstream = data;
             err.raw = raw;
-            lastError = err;
+            throw err;
         }
-
-        throw lastError || new Error('Valuations request failed');
+        return data;
     } catch (err) {
         console.error('Licensed API postValuations error:', {
             message: err.message,
@@ -166,12 +152,7 @@ async function postValuations(leagueSettings = {}, draftState = {}) {
 }
 
 /**
- * POST /api/v1/players/recommendations — compares projected dollar values
- * against market prices and returns players worth bidding on (sorted by surplus).
- * @param {Object} leagueSettings - { budget, rosterSlots }
- * @param {Object} draftState - optionally { availablePlayerIds, marketPrices }
- * @param {string|null} teamId
- * @returns {Promise<{ success: boolean, recommendations: Array } | null>}
+ * POST /api/v1/players/recommendations — players worth bidding on, sorted by surplus.
  */
 async function postRecommendations(leagueSettings = {}, draftState = {}, teamId = null) {
     if (!hasConfig()) return null;
@@ -208,9 +189,48 @@ async function postRecommendations(leagueSettings = {}, draftState = {}, teamId 
 }
 
 /**
- * Push: POST /usage to the licensed API.
- * @param {Object} payload - { event, timestamp, metadata }
- * @returns {Promise<{ success: boolean } | null>}
+ * POST /api/v1/players/recommendations/nominations — recommend who to nominate next at auction.
+ * @param {Object} options
+ * @param {Object} options.leagueSettings
+ * @param {Object} options.draftState — full shape: { availablePlayerIds, purchasedPlayers, teamBudgets, filledRosterSlots }
+ * @param {string|null} options.teamId
+ */
+async function postNominations({ leagueSettings = {}, draftState = {}, teamId = null } = {}) {
+    if (!hasConfig()) return null;
+    const body = { leagueSettings, draftState };
+    if (teamId) body.teamId = teamId;
+    const url = `${baseUrl.replace(/\/$/, '')}/api/v1/players/recommendations/nominations`;
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(body)
+        });
+        const raw = await res.text();
+        let data = {};
+        try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
+        if (!res.ok) {
+            const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
+            err.status = res.status;
+            err.url = url;
+            err.upstream = data;
+            err.raw = raw;
+            throw err;
+        }
+        return data;
+    } catch (err) {
+        console.error('Licensed API postNominations error:', {
+            message: err.message,
+            status: err.status,
+            url: err.url,
+            upstream: err.upstream
+        });
+        throw err;
+    }
+}
+
+/**
+ * POST /api/v1/usage — log a usage event.
  */
 async function postUsage(payload) {
     if (!hasConfig()) return null;
@@ -237,12 +257,16 @@ async function postUsage(payload) {
     }
 }
 
+const getPlayerById = getPlayer;
+
 module.exports = {
     hasConfig,
     getPlayers,
     getPlayer,
+    getPlayerById,
     getPlayerPool,
     postValuations,
     postRecommendations,
+    postNominations,
     postUsage
 };
