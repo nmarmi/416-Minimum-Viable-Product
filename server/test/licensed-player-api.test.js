@@ -97,9 +97,9 @@ describe('licensed-player-api (versioned paths)', () => {
     });
 
     describe('postValuations', () => {
-        it('POSTs to /api/v1/players/valuations', async () => {
+        it('tries /api/v1/players/valuations first', async () => {
             const leagueSettings = { numTeams: 10, budget: 260 };
-            const draftState = { availablePlayerIds: ['mlb-1'] };
+            const draftState = { availablePlayerIds: ['mlb-1'], purchasedPlayers: [], teamBudgets: {}, filledRosterSlots: {} };
             await api.postValuations(leagueSettings, draftState);
             const [url, options] = mockFetch.mock.calls[0];
             expect(url).toBe(`${MOCK_URL}/api/v1/players/valuations`);
@@ -107,8 +107,19 @@ describe('licensed-player-api (versioned paths)', () => {
             expect(JSON.parse(options.body)).toEqual({ leagueSettings, draftState });
         });
 
-        it('throws on non-ok response', async () => {
-            mockFetch.mockResolvedValueOnce(mockErrorResponse(400, { error: 'Bad request', code: 'BAD_REQUEST' }));
+        it('falls back to /players/valuations when versioned path fails', async () => {
+            mockFetch
+                .mockResolvedValueOnce(mockErrorResponse(404, { error: 'Not found' }))
+                .mockResolvedValueOnce(mockOkResponse({ success: true, valuations: [] }));
+            await api.postValuations({}, {});
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(mockFetch.mock.calls[1][0]).toBe(`${MOCK_URL}/players/valuations`);
+        });
+
+        it('throws when both URLs fail', async () => {
+            mockFetch
+                .mockResolvedValueOnce(mockErrorResponse(404))
+                .mockResolvedValueOnce(mockErrorResponse(400, { error: 'Bad request', code: 'BAD_REQUEST' }));
             await expect(api.postValuations({}, {})).rejects.toThrow('Bad request');
         });
     });
@@ -207,10 +218,10 @@ describe('licensed-player-api with PLAYER_API_LEGACY=1', () => {
         expect(url).toBe(`${MOCK_URL}/players/mlb-123`);
     });
 
-    it('postValuations POSTs to unversioned /players/valuations', async () => {
+    it('postValuations POSTs to unversioned /players/valuations (single attempt)', async () => {
         await api.postValuations({}, {});
-        const [url] = mockFetch.mock.calls[0];
-        expect(url).toBe(`${MOCK_URL}/players/valuations`);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch.mock.calls[0][0]).toBe(`${MOCK_URL}/players/valuations`);
     });
 });
 

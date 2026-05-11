@@ -114,41 +114,50 @@ async function getPlayerPool(params = {}) {
 }
 
 /**
- * POST /api/v1/players/valuations — z-score auction dollar values.
- * Falls back to /players/valuations when PLAYER_API_LEGACY=1.
+ * POST /players/valuations — z-score auction dollar values.
+ * Tries /api/v1/players/valuations first, then falls back to the unversioned
+ * path while the Player Data API completes its versioned route migration.
+ * Set PLAYER_API_LEGACY=1 to skip straight to the unversioned path.
  */
 async function postValuations(leagueSettings = {}, draftState = {}) {
     if (!hasConfig()) return null;
     const body = { leagueSettings, draftState };
-    const url = `${baseUrl.replace(/\/$/, '')}${apiPath('/players/valuations')}`;
-    try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(body)
-        });
-        const raw = await res.text();
-        let data = {};
-        try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
-        if (!res.ok) {
+    const normalizedBase = baseUrl.replace(/\/$/, '');
+    const urls = process.env.PLAYER_API_LEGACY
+        ? [`${normalizedBase}/players/valuations`]
+        : [`${normalizedBase}/api/v1/players/valuations`, `${normalizedBase}/players/valuations`];
+
+    let lastError = null;
+    for (const url of urls) {
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(body)
+            });
+            const raw = await res.text();
+            let data = {};
+            try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
+            if (res.ok) return data;
             const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
             err.status = res.status;
             err.url = url;
             err.upstream = data;
             err.raw = raw;
-            throw err;
+            lastError = err;
+        } catch (err) {
+            lastError = err;
         }
-        return data;
-    } catch (err) {
-        console.error('Licensed API postValuations error:', {
-            message: err.message,
-            status: err.status,
-            url: err.url,
-            upstream: err.upstream,
-            raw: err.raw
-        });
-        throw err;
     }
+
+    console.error('Licensed API postValuations error:', {
+        message: lastError?.message,
+        status: lastError?.status,
+        url: lastError?.url,
+        upstream: lastError?.upstream,
+        raw: lastError?.raw
+    });
+    throw lastError || new Error('Valuations request failed');
 }
 
 /**

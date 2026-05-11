@@ -453,9 +453,9 @@ const getSessionValuations = async (req, res) => {
         }
 
         const leagueSettings = toPlayerApiLeagueSettings(session.leagueSettings, { forValuations: true });
-        const { availablePlayerIds } = toPlayerApiDraftState(session);
+        const draftState = toPlayerApiDraftState(session);
 
-        const data = await licensedApi.postValuations(leagueSettings, { availablePlayerIds });
+        const data = await licensedApi.postValuations(leagueSettings, draftState);
         return res.status(200).json({
             success: true,
             valuations: data?.valuations || []
