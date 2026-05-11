@@ -738,7 +738,7 @@ const DraftRoomScreen = () => {
                                 <th>Team</th>
                                 <th><GlossaryTerm term="Position eligibility">Pos</GlossaryTerm></th>
                                 <th>Injury Status</th>
-                                <th><GlossaryTerm term="Value">Value</GlossaryTerm></th>
+                                <th><GlossaryTerm term="Value">$ Value</GlossaryTerm></th>
                                 <th><GlossaryTerm term="ADP">ADP</GlossaryTerm></th>
                                 <th>HR</th>
                                 <th>RBI</th>

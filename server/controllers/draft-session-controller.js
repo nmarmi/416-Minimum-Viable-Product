@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const auth = require('../auth');
 const db = require('../db');
 const licensedApi = require('../lib/licensed-player-api');
+const { toPlayerApiLeagueSettings, toPlayerApiDraftState } = require('../lib/player-api-adapter');
 const DraftSession = require('../models/draft-session-model');
 const draftService = require('../services/draft-service');
 const {
@@ -421,23 +422,6 @@ const getSessionPlayers = async (req, res) => {
     }
 };
 
-const PITCHER_SLOT_KEYS = new Set(['SP', 'RP', 'P']);
-const BENCH_SLOT_KEYS = new Set(['BENCH', 'BN']);
-
-function computeRosterSlotCounts(rosterSlots = {}) {
-    let hitterSlotsPerTeam = 0;
-    let pitcherSlotsPerTeam = 0;
-    for (const [pos, count] of Object.entries(rosterSlots)) {
-        const n = Number(count || 0);
-        const key = pos.toUpperCase();
-        if (PITCHER_SLOT_KEYS.has(key)) {
-            pitcherSlotsPerTeam += n;
-        } else if (!BENCH_SLOT_KEYS.has(key)) {
-            hitterSlotsPerTeam += n;
-        }
-    }
-    return { hitterSlotsPerTeam, pitcherSlotsPerTeam };
-}
 
 /**
  * GET /:draftSessionId/valuations
@@ -468,21 +452,8 @@ const getSessionValuations = async (req, res) => {
             return res.status(200).json({ success: true, valuations: [] });
         }
 
-        const rosterSlots = toPlainObject(session.leagueSettings?.rosterSlots || {});
-        const { hitterSlotsPerTeam, pitcherSlotsPerTeam } = computeRosterSlotCounts(rosterSlots);
-
-        const leagueSettings = {
-            numTeams: session.leagueSettings?.numberOfTeams || DEFAULT_NUM_TEAMS,
-            budget: session.leagueSettings?.salaryCap || DEFAULT_SALARY_CAP,
-            hitterBudgetPct: 0.675,
-            hitterSlotsPerTeam,
-            pitcherSlotsPerTeam,
-            statSeason: 2025
-        };
-
-        const draftState = session.availablePlayerIds?.length > 0
-            ? { availablePlayerIds: session.availablePlayerIds }
-            : {};
+        const leagueSettings = toPlayerApiLeagueSettings(session.leagueSettings, { forValuations: true });
+        const draftState = toPlayerApiDraftState(session);
 
         const data = await licensedApi.postValuations(leagueSettings, draftState);
         return res.status(200).json({
@@ -610,18 +581,8 @@ const getSessionRecommendations = async (req, res) => {
             return res.status(200).json({ success: true, recommendations: [] });
         }
 
-        const rosterSlots = toPlainObject(session.leagueSettings?.rosterSlots || {});
-        const totalRosterSlots = Object.values(rosterSlots).reduce((s, n) => s + Number(n || 0), 0);
-
-        const leagueSettings = {
-            budget: session.leagueSettings?.salaryCap || DEFAULT_SALARY_CAP,
-            rosterSlots: totalRosterSlots
-        };
-
-        const draftState = session.availablePlayerIds?.length > 0
-            ? { availablePlayerIds: session.availablePlayerIds }
-            : {};
-
+        const leagueSettings = toPlayerApiLeagueSettings(session.leagueSettings, { forValuations: false });
+        const draftState = toPlayerApiDraftState(session);
         const teamId = session.myTeamId || null;
 
         const data = await licensedApi.postRecommendations(leagueSettings, draftState, teamId);
