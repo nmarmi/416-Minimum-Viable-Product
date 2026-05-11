@@ -453,9 +453,9 @@ const getSessionValuations = async (req, res) => {
         }
 
         const leagueSettings = toPlayerApiLeagueSettings(session.leagueSettings, { forValuations: true });
-        const draftState = toPlayerApiDraftState(session);
+        const { availablePlayerIds } = toPlayerApiDraftState(session);
 
-        const data = await licensedApi.postValuations(leagueSettings, draftState);
+        const data = await licensedApi.postValuations(leagueSettings, { availablePlayerIds });
         return res.status(200).json({
             success: true,
             valuations: data?.valuations || []
@@ -582,10 +582,10 @@ const getSessionRecommendations = async (req, res) => {
         }
 
         const leagueSettings = toPlayerApiLeagueSettings(session.leagueSettings, { forValuations: false });
-        const draftState = toPlayerApiDraftState(session);
+        const { availablePlayerIds } = toPlayerApiDraftState(session);
         const teamId = session.myTeamId || null;
 
-        const data = await licensedApi.postRecommendations(leagueSettings, draftState, teamId);
+        const data = await licensedApi.postRecommendations(leagueSettings, { availablePlayerIds }, teamId);
         return res.status(200).json({
             success: true,
             recommendations: data?.recommendations || []
