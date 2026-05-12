@@ -2274,6 +2274,17 @@ body {
   border-color: #d7dce5;
 }
 
+.draft-v2-depth-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #32415a;
+  background: #eef4ff;
+  border: 1px solid #cbdaf6;
+}
+
 .draft-v2-table-wrap th {
   background: #f8f9fb;
   font-size: 13px;
