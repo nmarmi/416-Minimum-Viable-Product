@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const auth = require('../auth');
 const db = require('../db');
 const licensedApi = require('../lib/licensed-player-api');
+const { PlayerDataApiError } = licensedApi;
 const { toPlayerApiLeagueSettings, toPlayerApiDraftState } = require('../lib/player-api-adapter');
 const DraftSession = require('../models/draft-session-model');
 const draftService = require('../services/draft-service');
@@ -465,6 +466,7 @@ const getSessionValuations = async (req, res) => {
         return res.status(err.status || 500).json({
             success: false,
             errorMessage: 'Unable to load valuations.',
+            ...(err instanceof PlayerDataApiError ? { errorCode: err.code, fieldErrors: err.fields } : {}),
             upstreamStatus: err.status || null,
             upstreamUrl: err.url || null,
             upstreamBody: err.upstream || null
@@ -595,6 +597,7 @@ const getSessionRecommendations = async (req, res) => {
         return res.status(err.status || 500).json({
             success: false,
             errorMessage: 'Unable to load recommendations.',
+            ...(err instanceof PlayerDataApiError ? { errorCode: err.code, fieldErrors: err.fields } : {}),
             upstreamStatus: err.status || null,
             upstreamUrl: err.url || null,
             upstreamBody: err.upstream || null

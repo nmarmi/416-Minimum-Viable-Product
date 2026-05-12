@@ -24,6 +24,16 @@ function apiPath(path) {
     return process.env.PLAYER_API_LEGACY ? path : `/api/v1${path}`;
 }
 
+class PlayerDataApiError extends Error {
+    constructor(message, { code = null, fields = null, status = null } = {}) {
+        super(message);
+        this.name = 'PlayerDataApiError';
+        this.code = code;
+        this.fields = fields;
+        this.status = status;
+    }
+}
+
 // Fire-and-forget health check on first import
 if (hasConfig()) {
     const healthUrl = `${baseUrl.replace(/\/$/, '')}/api/v1/health`;
@@ -50,7 +60,9 @@ async function getPlayers(params = {}) {
         const res = await fetch(url, { method: 'GET', headers: getHeaders() });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-            throw new Error(data.error || data.errorMessage || `API ${res.status}`);
+            throw new PlayerDataApiError(data.error || data.errorMessage || `API ${res.status}`, {
+                code: data.code || null, fields: data.fields || null, status: res.status
+            });
         }
         return data;
     } catch (err) {
@@ -71,7 +83,9 @@ async function getPlayer(playerId) {
         if (res.status === 404) return null;
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-            throw new Error(data.error || data.errorMessage || `API ${res.status}`);
+            throw new PlayerDataApiError(data.error || data.errorMessage || `API ${res.status}`, {
+                code: data.code || null, fields: data.fields || null, status: res.status
+            });
         }
         return data?.player ?? data ?? null;
     } catch (err) {
@@ -101,8 +115,9 @@ async function getPlayerPool(params = {}) {
         const res = await fetch(url, { method: 'GET', headers: getHeaders() });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-            const err = new Error(data.error || data.errorMessage || `Player Data API responded with ${res.status}`);
-            err.status = res.status;
+            const err = new PlayerDataApiError(data.error || data.errorMessage || `Player Data API responded with ${res.status}`, {
+                code: data.code || null, fields: data.fields || null, status: res.status
+            });
             err.upstream = data;
             throw err;
         }
@@ -139,8 +154,9 @@ async function postValuations(leagueSettings = {}, draftState = {}) {
             let data = {};
             try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
             if (res.ok) return data;
-            const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
-            err.status = res.status;
+            const err = new PlayerDataApiError(data.error || data.errorMessage || `API ${res.status}`, {
+                code: data.code || null, fields: data.fields || null, status: res.status
+            });
             err.url = url;
             err.upstream = data;
             err.raw = raw;
@@ -178,8 +194,9 @@ async function postRecommendations(leagueSettings = {}, draftState = {}, teamId 
         let data = {};
         try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
         if (!res.ok) {
-            const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
-            err.status = res.status;
+            const err = new PlayerDataApiError(data.error || data.errorMessage || `API ${res.status}`, {
+                code: data.code || null, fields: data.fields || null, status: res.status
+            });
             err.url = url;
             err.upstream = data;
             err.raw = raw;
@@ -219,8 +236,9 @@ async function postNominations({ leagueSettings = {}, draftState = {}, teamId = 
         let data = {};
         try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
         if (!res.ok) {
-            const err = new Error(data.error || data.errorMessage || `API ${res.status}`);
-            err.status = res.status;
+            const err = new PlayerDataApiError(data.error || data.errorMessage || `API ${res.status}`, {
+                code: data.code || null, fields: data.fields || null, status: res.status
+            });
             err.url = url;
             err.upstream = data;
             err.raw = raw;
@@ -269,6 +287,7 @@ async function postUsage(payload) {
 const getPlayerById = getPlayer;
 
 module.exports = {
+    PlayerDataApiError,
     hasConfig,
     getPlayers,
     getPlayer,
