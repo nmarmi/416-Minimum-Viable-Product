@@ -3029,6 +3029,111 @@ body {
   font-weight: 600;
 }
 
+/* ── Team picker chip ─────────────────────────────────────── */
+.draft-v2-team-chip {
+  position: relative;
+}
+
+.draft-v2-team-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1.5px solid #cfd2da;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.draft-v2-team-chip-btn.is-set {
+  border-color: #121533;
+  background: #121533;
+  color: #fff;
+}
+
+.draft-v2-team-chip-btn.is-unset {
+  color: #555;
+}
+
+.draft-v2-team-chip-btn:hover {
+  opacity: 0.85;
+}
+
+.draft-v2-team-chip-arrow {
+  font-size: 9px;
+  opacity: 0.65;
+}
+
+.draft-v2-team-chip-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.draft-v2-team-chip-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  min-width: 210px;
+  background: #fff;
+  border: 1px solid #dcdde1;
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.13);
+  padding: 6px 0;
+  list-style: none;
+  margin: 0;
+}
+
+.draft-v2-team-chip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.1s;
+}
+
+.draft-v2-team-chip-item:hover {
+  background: #f5f5f6;
+}
+
+.draft-v2-team-chip-item.active {
+  background: #eef0fb;
+  font-weight: 600;
+}
+
+.draft-v2-team-chip-item-name {
+  flex: 1;
+}
+
+.draft-v2-team-chip-item-budget {
+  color: #666;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-v2-team-chip-check {
+  color: #121533;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .draft-v2-team-chip-label {
+    display: none;
+  }
+  .draft-v2-team-chip-btn {
+    padding: 0 10px;
+  }
+}
+/* ── end team picker chip ─────────────────────────────────── */
+
 @media (max-width: 768px) {
   .draft-setup-header,
   .draft-setup-section-head {

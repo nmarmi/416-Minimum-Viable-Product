@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { getPlayers as getCatalogPlayers, postUsage } from '../players/requests';
 import { getSessionPlayers, getSessionValuations, getSessionRecommendations } from '../draft-sessions/requests';
@@ -164,6 +164,8 @@ const DraftRoomScreen = () => {
     const [playerSort, setPlayerSort] = useState('name'); // 'name' | 'status'
     const [startersOnly, setStartersOnly] = useState(false);
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
+    const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
+    const teamPickerRef = useRef(null);
 
     const draftSession = store.currentDraftSession;
     const availablePlayerIdsKey = useMemo(
@@ -180,6 +182,13 @@ const DraftRoomScreen = () => {
         const timeoutId = setTimeout(() => setToast(null), 4000);
         return () => clearTimeout(timeoutId);
     }, [toast]);
+
+    useEffect(() => {
+        if (!isTeamPickerOpen) return undefined;
+        const onDown = (e) => { if (!teamPickerRef.current?.contains(e.target)) setIsTeamPickerOpen(false); };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [isTeamPickerOpen]);
 
     const teamOptions = useMemo(() => {
         if (!draftSession?.teams?.length) return FALLBACK_TEAMS.map((name) => ({ teamId: name, label: name }));
@@ -586,10 +595,17 @@ const DraftRoomScreen = () => {
         }
     };
 
-    // US-6.5: mark a team as "My Team" — persists via store.setMyTeam.
+    // US-6.5: mark a team as "My Team" — persists via store.setMyTeam and refreshes recommendations.
     const handleSetMyTeam = async (teamId) => {
         if (!draftSessionId || !teamId) return;
-        await store.setMyTeam(draftSessionId, teamId);
+        const res = await store.setMyTeam(draftSessionId, teamId);
+        if (!res?.data?.success) {
+            showToast('error', res?.data?.errorMessage || 'Failed to update team selection.');
+            return;
+        }
+        getSessionRecommendations(draftSessionId).then((r) => {
+            if (r.status === 200 && r.data?.success) setRecommendations(r.data.recommendations || []);
+        }).catch(() => {});
     };
 
     const openUndoDialog = (entry) => {
@@ -1024,22 +1040,10 @@ const DraftRoomScreen = () => {
                 <article className="draft-v2-module-card">
                     <h3>My Team</h3>
                     {!isExplicit ? (
-                        <p className="draft-v2-auction-muted">No team marked yet — defaulting to <strong>{getTeamName(team)}</strong>. Pick yours below.</p>
+                        <p className="draft-v2-auction-muted">No team marked yet — defaulting to <strong>{getTeamName(team)}</strong>. Use the team picker in the top bar to set your team.</p>
                     ) : (
                         <p className="draft-v2-auction-muted">Tracking <strong>{getTeamName(team)}</strong> as your team.</p>
                     )}
-                    <div className="draft-v2-filter-row">
-                        {teams.map((t) => (
-                            <button
-                                key={t.teamId}
-                                type="button"
-                                className={`draft-v2-filter-btn ${draftSession?.myTeamId === t.teamId ? 'active' : ''}`}
-                                onClick={() => handleSetMyTeam(t.teamId)}
-                            >
-                                {getTeamName(t)}{draftSession?.myTeamId === t.teamId ? ' ✓' : ''}
-                            </button>
-                        ))}
-                    </div>
                 </article>
 
                 <article className="draft-v2-module-card">
@@ -1315,7 +1319,6 @@ const DraftRoomScreen = () => {
                                     <th>Budget Spent</th>
                                     <th>Slots Filled</th>
                                     <th>Max Bid</th>
-                                    <th>My Team</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1335,13 +1338,6 @@ const DraftRoomScreen = () => {
                                             <td>${spent}</td>
                                             <td>{filled} / {target || '--'}</td>
                                             <td>{team.budgetRemaining != null && spotsRemaining > 0 ? `$${Math.max(team.budgetRemaining - (spotsRemaining - 1), 1)}` : '--'}</td>
-                                            <td>
-                                                <button
-                                                    type="button"
-                                                    className={`draft-v2-filter-btn ${isMine ? 'active' : ''}`}
-                                                    onClick={() => handleSetMyTeam(team.teamId)}
-                                                >{isMine ? '✓ Mine' : 'Set as Mine'}</button>
-                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -1475,6 +1471,43 @@ const DraftRoomScreen = () => {
                 </div>
 
                 <div className="draft-v2-header-actions">
+                    {draftSession?.teams?.length > 0 && (
+                        <div className="draft-v2-team-chip" ref={teamPickerRef}>
+                            <button
+                                type="button"
+                                className={`draft-v2-team-chip-btn ${draftSession.myTeamId ? 'is-set' : 'is-unset'}`}
+                                onClick={() => setIsTeamPickerOpen((o) => !o)}
+                                aria-haspopup="listbox"
+                                aria-expanded={isTeamPickerOpen}
+                            >
+                                <span className="draft-v2-team-chip-icon">&#128100;</span>
+                                <span className="draft-v2-team-chip-label">
+                                    {draftSession.myTeamId ? getTeamName(myTeam) : 'Pick My Team'}
+                                </span>
+                                <span className="draft-v2-team-chip-arrow">{isTeamPickerOpen ? '▲' : '▼'}</span>
+                            </button>
+                            {isTeamPickerOpen && (
+                                <ul className="draft-v2-team-chip-dropdown" role="listbox">
+                                    {draftSession.teams.map((t) => {
+                                        const active = draftSession.myTeamId === t.teamId;
+                                        return (
+                                            <li
+                                                key={t.teamId}
+                                                role="option"
+                                                aria-selected={active}
+                                                className={`draft-v2-team-chip-item ${active ? 'active' : ''}`}
+                                                onClick={() => { handleSetMyTeam(t.teamId); setIsTeamPickerOpen(false); }}
+                                            >
+                                                <span className="draft-v2-team-chip-item-name">{getTeamName(t)}</span>
+                                                <span className="draft-v2-team-chip-item-budget">${t.budgetRemaining ?? '--'}</span>
+                                                {active && <span className="draft-v2-team-chip-check">&#10003;</span>}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
+                        </div>
+                    )}
                     <span className={`league-status ${draftStatus.className}`}>
                         {draftStatus.label}
                     </span>
