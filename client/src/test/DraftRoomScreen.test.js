@@ -57,6 +57,7 @@ describe('DraftRoomScreen player statuses', () => {
 
         await waitFor(() => expect(screen.getByText('Aaron Active')).toBeInTheDocument());
 
+        fireEvent.click(screen.getByRole('button', { name: /sort:/i }));
         fireEvent.click(screen.getByRole('button', { name: 'Status' }));
 
         const tableRows = within(screen.getByRole('table')).getAllByRole('row').slice(1);
@@ -81,7 +82,8 @@ describe('DraftRoomScreen player statuses', () => {
         expect(screen.getByText('AAA')).toHaveClass('draft-v2-depth-badge');
         expect(screen.getByText('OF-bench')).toHaveClass('draft-v2-depth-badge');
 
-        fireEvent.click(screen.getByRole('button', { name: /show only starters/i }));
+        fireEvent.click(screen.getByRole('button', { name: /filters/i }));
+        fireEvent.click(screen.getByRole('button', { name: /starters only/i }));
 
         expect(screen.getByText('Aaron Active')).toBeInTheDocument();
         expect(screen.getByText('Dylan Injured')).toBeInTheDocument();
