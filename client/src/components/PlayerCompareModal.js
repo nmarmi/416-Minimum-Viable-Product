@@ -9,12 +9,17 @@ const formatStat = (val) =>
 
 const formatAvg = (val) => (val != null ? Number(val).toFixed(3) : '--');
 const getTeamLabel = (player) => player?.mlbTeam || player?.team || '--';
+const getPlayerName = (player) => player?.playerName || player?.name || '--';
+const getPosition = (player) =>
+  player?.position ||
+  (Array.isArray(player?.positions) ? player.positions.join('/') : '') ||
+  '--';
 
 const STAT_ROWS = [
   { key: 'playerName', label: 'Player' },
   { key: 'team', label: 'Team' },
   { key: 'position', label: 'Pos' },
-  { key: 'fpts', label: 'Value (FPTS)', format: formatStat },
+  { key: '__dollarValue__', label: '$ Value' },
   { key: 'hr', label: 'HR', format: formatStat },
   { key: 'rbi', label: 'RBI', format: formatStat },
   { key: 'r', label: 'R', format: formatStat },
@@ -27,7 +32,7 @@ const STAT_ROWS = [
 /**
  * Modal that shows 2–4 players side-by-side for comparison (value, projections, position).
  */
-const PlayerCompareModal = ({ players = [], onClose }) => {
+const PlayerCompareModal = ({ players = [], onClose, getPlayerValuation }) => {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -64,9 +69,9 @@ const PlayerCompareModal = ({ players = [], onClose }) => {
               <tr>
                 <th className="compare-modal-label-col">Stat</th>
                 {players.map((p, i) => (
-                  <th key={p.id || p._id || `${p.playerName}-${i}`}>
-                    {p.playerName}
-                    <span className="compare-modal-sub">{getTeamLabel(p)} · {p.position}</span>
+                  <th key={p.id || p._id || `${getPlayerName(p)}-${i}`}>
+                    {getPlayerName(p)}
+                    <span className="compare-modal-sub">{getTeamLabel(p)} · {getPosition(p)}</span>
                   </th>
                 ))}
               </tr>
@@ -76,8 +81,18 @@ const PlayerCompareModal = ({ players = [], onClose }) => {
                 <tr key={key}>
                   <td className="compare-modal-label-col">{label}</td>
                   {players.map((p, i) => (
-                    <td key={p.id || p._id || `${p.playerName}-${i}`}>
-                      {format ? format(p[key]) : (key === 'team' ? getTeamLabel(p) : (p[key] ?? '--'))}
+                    <td key={p.id || p._id || `${getPlayerName(p)}-${i}`}>
+                      {key === '__dollarValue__'
+                        ? (getPlayerValuation ? getPlayerValuation(p) : '--')
+                        : format
+                        ? format(p[key])
+                        : key === 'team'
+                        ? getTeamLabel(p)
+                        : key === 'playerName'
+                        ? getPlayerName(p)
+                        : key === 'position'
+                        ? getPosition(p)
+                        : (p[key] ?? '--')}
                     </td>
                   ))}
                 </tr>

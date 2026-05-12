@@ -1653,6 +1653,7 @@ const DraftRoomScreen = () => {
                 <PlayerCompareModal
                     players={comparePlayers}
                     onClose={() => setShowCompareModal(false)}
+                    getPlayerValuation={getPlayerValuation}
                 />
             ) : null}
             {pendingUndo ? (
