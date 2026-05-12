@@ -17,7 +17,9 @@ async function request(path, method = "GET", body = null) {
         }
 
         const res = await fetch(`${BASE_URL}${path}`, options);
-        const data = await res.json().catch(() => ({}));
+        const data = await res.json().catch(() => ({
+            errorMessage: `Server error (${res.status}) — try restarting the server.`
+        }));
 
         return { status: res.status, data };
     } catch (err) {

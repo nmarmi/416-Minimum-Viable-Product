@@ -98,7 +98,7 @@ function AuthContextProvider(props) {
     const changePassword = async (currentPassword, newPassword, newPasswordVerify) => {
         const response = await authRequestSender.changePassword(currentPassword, newPassword, newPasswordVerify);
         if (response.status === 200) return { success: true };
-        return { success: false, errorMessage: response.data.errorMessage || "Unable to change password." };
+        return { success: false, errorMessage: response.data.errorMessage };
     };
 
     const deleteAccount = async () => {
@@ -108,7 +108,7 @@ function AuthContextProvider(props) {
             history.push("/");
             return { success: true };
         }
-        return { success: false, errorMessage: response.data.errorMessage || "Unable to delete account." };
+        return { success: false, errorMessage: response.data.errorMessage };
     };
 
     useEffect(() => {
