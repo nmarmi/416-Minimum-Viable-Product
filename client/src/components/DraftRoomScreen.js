@@ -160,7 +160,7 @@ const DraftRoomScreen = () => {
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
     const [recommendations, setRecommendations] = useState([]);
-    const [positionFilter, setPositionFilter] = useState('ALL');
+    const [positionFilter, setPositionFilter] = useState(new Set());
     const [playerSort, setPlayerSort] = useState('name'); // 'name' | 'status' | 'dollar'
     const [startersOnly, setStartersOnly] = useState(false);
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
@@ -275,10 +275,10 @@ const DraftRoomScreen = () => {
             list = list.filter((p) => availableSet.has(getPlayerId(p)));
         }
         // US-6.1: position filter.
-        if (positionFilter && positionFilter !== 'ALL') {
+        if (positionFilter.size > 0) {
             list = list.filter((p) => {
                 const raw = String(p?.position || p?.positions || '');
-                return raw.split(/[,/]/).map((s) => s.trim()).includes(positionFilter);
+                return raw.split(/[,/]/).map((s) => s.trim()).some((pos) => positionFilter.has(pos));
             });
         }
         if (injuryOnly) list = list.filter((p) => isInjuredStatus(p));
@@ -854,23 +854,27 @@ const DraftRoomScreen = () => {
                         <div className="draft-v2-dropdown" ref={filtersMenuRef}>
                             <button
                                 type="button"
-                                className={`draft-v2-filter-btn draft-v2-dropdown-trigger ${isFiltersMenuOpen || positionFilter !== 'ALL' || injuryOnly || startersOnly ? 'active' : ''}`}
+                                className={`draft-v2-filter-btn draft-v2-dropdown-trigger ${isFiltersMenuOpen || positionFilter.size > 0 || injuryOnly || startersOnly ? 'active' : ''}`}
                                 onClick={() => { setIsFiltersMenuOpen((prev) => !prev); setIsSortMenuOpen(false); }}
                             >
-                                Filters{(positionFilter !== 'ALL' || injuryOnly || startersOnly) ? ' •' : ''} ▾
+                                Filters{(positionFilter.size > 0 || injuryOnly || startersOnly) ? ' •' : ''} ▾
                             </button>
                             {isFiltersMenuOpen && (
                                 <div className="draft-v2-dropdown-menu draft-v2-filters-menu">
                                     <div className="draft-v2-dropdown-section-label">Position</div>
                                     <div className="draft-v2-dropdown-position-grid">
-                                        {availablePositions.map((pos) => (
+                                        {availablePositions.filter((pos) => pos !== 'ALL').map((pos) => (
                                             <button
                                                 key={pos}
                                                 type="button"
-                                                className={`draft-v2-dropdown-item draft-v2-dropdown-pos-btn ${positionFilter === pos ? 'active' : ''}`}
-                                                onClick={() => setPositionFilter(pos)}
+                                                className={`draft-v2-dropdown-item draft-v2-dropdown-pos-btn ${positionFilter.has(pos) ? 'active' : ''}`}
+                                                onClick={() => setPositionFilter((prev) => {
+                                                    const next = new Set(prev);
+                                                    if (next.has(pos)) next.delete(pos); else next.add(pos);
+                                                    return next;
+                                                })}
                                             >
-                                                {pos === 'ALL' ? 'All' : pos}
+                                                {pos}
                                             </button>
                                         ))}
                                     </div>
