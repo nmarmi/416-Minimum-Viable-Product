@@ -290,14 +290,16 @@ const DraftRoomScreen = () => {
                 const labelDiff = getStatusLabel(left).localeCompare(getStatusLabel(right));
                 if (labelDiff !== 0) return labelDiff;
             }
-            if (playerSort === 'dollar') {
+            if (playerSort === 'dollar' || playerSort === 'dollar-asc') {
                 const getVal = (p) => {
                     const id = getPlayerId(p);
                     const candidates = [id, p?.playerId, p?.mlbPersonId != null ? String(p.mlbPersonId) : null, p?.mlbId != null ? String(p.mlbId) : null, p?.playerName, p?.name].filter(Boolean);
                     for (const k of candidates) { if (valuationsMap[k] != null) return Number(valuationsMap[k]); }
                     return -Infinity;
                 };
-                const diff = getVal(right) - getVal(left);
+                const diff = playerSort === 'dollar-asc'
+                    ? getVal(left) - getVal(right)
+                    : getVal(right) - getVal(left);
                 if (diff !== 0) return diff;
             }
             return getPlayerName(left).localeCompare(getPlayerName(right));
@@ -825,7 +827,7 @@ const DraftRoomScreen = () => {
                                 className={`draft-v2-filter-btn draft-v2-dropdown-trigger ${isSortMenuOpen ? 'active' : ''}`}
                                 onClick={() => { setIsSortMenuOpen((prev) => !prev); setIsFiltersMenuOpen(false); }}
                             >
-                                Sort: {playerSort === 'name' ? 'Name' : playerSort === 'status' ? 'Status' : '$ Value'} ▾
+                                Sort: {playerSort === 'name' ? 'Name' : playerSort === 'status' ? 'Status' : playerSort === 'dollar' ? '$ Value (high → low)' : '$ Value (low → high)'} ▾
                             </button>
                             {isSortMenuOpen && (
                                 <div className="draft-v2-dropdown-menu">
@@ -833,6 +835,7 @@ const DraftRoomScreen = () => {
                                         { id: 'name', label: 'Name' },
                                         { id: 'status', label: 'Status' },
                                         { id: 'dollar', label: '$ Value (high → low)' },
+                                        { id: 'dollar-asc', label: '$ Value (low → high)' },
                                     ].map((opt) => (
                                         <button
                                             key={opt.id}
