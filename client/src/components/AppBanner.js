@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Link, useHistory, useLocation } from 'react-router-dom';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded';
@@ -10,6 +10,13 @@ export default function AppBanner() {
     const history = useHistory();
     const location = useLocation();
     const [showSettings, setShowSettings] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    useEffect(() => {
+        if (!toast) return undefined;
+        const id = setTimeout(() => setToast(null), 4000);
+        return () => clearTimeout(id);
+    }, [toast]);
     const inAuthRoute = (
         location.pathname === '/login' ||
         location.pathname === '/register'
@@ -61,7 +68,17 @@ export default function AppBanner() {
                 )}
             </nav>
         </header>
-        {showSettings && <AccountSettingsModal onClose={() => setShowSettings(false)} />}
+        {showSettings && (
+            <AccountSettingsModal
+                onClose={() => setShowSettings(false)}
+                onSuccess={(type, message) => setToast({ type, message })}
+            />
+        )}
+        {toast && (
+            <div className={`draft-toast ${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>
+                {toast.message}
+            </div>
+        )}
         </>
     );
 }
