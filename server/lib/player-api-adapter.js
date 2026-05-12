@@ -38,8 +38,7 @@ function toPlayerApiLeagueSettings(leagueSettings, { forValuations = true } = {}
             budget,
             hitterBudgetPct: 0.675,
             hitterSlotsPerTeam,
-            pitcherSlotsPerTeam,
-            statSeason: new Date().getFullYear()
+            pitcherSlotsPerTeam
         };
     }
 

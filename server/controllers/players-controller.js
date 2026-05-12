@@ -69,11 +69,11 @@ const postUsage = async (req, res) => {
         }
 
         const { event, timestamp, metadata } = req.body || {};
-        await licensedApi.postUsage({
+        licensedApi.postUsage({
             event: event || 'draft_room_open',
             timestamp: timestamp || new Date().toISOString(),
             metadata: metadata || {}
-        });
+        }).catch(err => console.error("postUsage error:", err.message));
 
         return res.status(200).json({ success: true, message: "Usage recorded." });
     } catch (err) {

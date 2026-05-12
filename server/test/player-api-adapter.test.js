@@ -9,7 +9,7 @@ const BASE_LEAGUE_SETTINGS = {
 };
 
 describe('toPlayerApiLeagueSettings', () => {
-    it('forValuations=true produces numTeams/budget/hitter+pitcher slots/statSeason', () => {
+    it('forValuations=true produces numTeams/budget/hitter+pitcher slots', () => {
         const result = toPlayerApiLeagueSettings(BASE_LEAGUE_SETTINGS, { forValuations: true });
         expect(result.numTeams).toBe(10);
         expect(result.budget).toBe(260);
@@ -17,7 +17,7 @@ describe('toPlayerApiLeagueSettings', () => {
         // C(2)+1B+2B+3B+SS+OF(5)+UTIL = 12 hitter slots; SP(5)+RP(3) = 8 pitcher slots
         expect(result.hitterSlotsPerTeam).toBe(12);
         expect(result.pitcherSlotsPerTeam).toBe(8);
-        expect(result.statSeason).toBe(new Date().getFullYear());
+        expect(result.statSeason).toBeUndefined();
     });
 
     it('forValuations=false produces budget and total rosterSlots count', () => {
