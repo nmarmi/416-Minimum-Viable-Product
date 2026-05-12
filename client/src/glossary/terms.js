@@ -25,7 +25,7 @@ export const GLOSSARY_TERMS = [
   },
   {
     term: 'Value',
-    definition: 'A player\'s projected contribution in your league\'s scoring system. Often shown as fantasy points (FPTS) or an auction dollar value ($) based on projections and league settings.',
+    definition: 'A player\'s projected contribution in your league\'s scoring system. In the draft room, the $ Value column shows auction dollar values computed by the Player Data API using a z-score above-replacement model. Values refresh automatically as the draft progresses and will show -- until the API responds.',
   },
   {
     term: 'ADP',
