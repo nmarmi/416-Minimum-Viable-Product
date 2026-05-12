@@ -47,6 +47,31 @@ describe('licensed-player-api (versioned paths)', () => {
         expect(api.getPlayerById).toBe(api.getPlayer);
     });
 
+    describe('PlayerDataApiError', () => {
+        it('is exported from the module', () => {
+            expect(api.PlayerDataApiError).toBeDefined();
+        });
+
+        it('carries code, fields, and status', async () => {
+            mockFetch.mockResolvedValueOnce(mockErrorResponse(400, {
+                error: 'Invalid body', code: 'BAD_REQUEST', fields: [{ field: 'budget', message: 'Required' }]
+            }));
+            let caught;
+            try { await api.getPlayers(); } catch (e) { caught = e; }
+            expect(caught).toBeInstanceOf(api.PlayerDataApiError);
+            expect(caught.code).toBe('BAD_REQUEST');
+            expect(caught.status).toBe(400);
+            expect(caught.fields).toEqual([{ field: 'budget', message: 'Required' }]);
+        });
+
+        it('postValuations throws PlayerDataApiError on API error', async () => {
+            mockFetch
+                .mockResolvedValueOnce(mockErrorResponse(400, { error: 'Bad', code: 'BAD_REQUEST', fields: [] }))
+                .mockResolvedValueOnce(mockErrorResponse(400, { error: 'Bad', code: 'BAD_REQUEST', fields: [] }));
+            await expect(api.postValuations({}, {})).rejects.toBeInstanceOf(api.PlayerDataApiError);
+        });
+    });
+
     describe('getPlayers', () => {
         it('calls /api/v1/players', async () => {
             await api.getPlayers();
