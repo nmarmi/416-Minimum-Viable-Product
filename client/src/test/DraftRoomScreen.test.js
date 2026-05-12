@@ -16,11 +16,10 @@ jest.mock('../draft-sessions/requests', () => ({
 }));
 
 const players = [
-    { playerId: 'active-1', name: 'Aaron Active', positions: ['OF'], mlbTeam: 'NYY', status: 'active', depthChartPosition: 'OF', depthChartRank: 1 },
-    { playerId: 'dtd-1', name: 'Bobby Day', positions: ['SS'], mlbTeam: 'BOS', status: 'DTD', depthChartPosition: 'SS', depthChartRank: 2 },
-    { playerId: 'dfa-1', name: 'Casey Waivers', positions: ['1B'], mlbTeam: 'SEA', status: 'DFA', depthChartPosition: 'AAA', depthChartRank: null },
-    { playerId: 'il-1', name: 'Dylan Injured', positions: ['SP'], mlbTeam: 'LAD', status: 'IL-10', depthChartPosition: 'SP', depthChartRank: 1 },
-    { playerId: 'bench-1', name: 'Eddie Bench', positions: ['OF'], mlbTeam: 'TEX', status: 'active', depthChartPosition: 'OF', depthChartRank: 'bench' },
+    { playerId: 'active-1', name: 'Aaron Active', positions: ['OF'], mlbTeam: 'NYY', status: 'active' },
+    { playerId: 'dtd-1', name: 'Bobby Day', positions: ['SS'], mlbTeam: 'BOS', status: 'DTD' },
+    { playerId: 'dfa-1', name: 'Casey Waivers', positions: ['1B'], mlbTeam: 'SEA', status: 'DFA' },
+    { playerId: 'il-1', name: 'Dylan Injured', positions: ['SP'], mlbTeam: 'LAD', status: 'IL-10' },
 ];
 
 describe('DraftRoomScreen player statuses', () => {
@@ -67,26 +66,6 @@ describe('DraftRoomScreen player statuses', () => {
             'Bobby DayDTD',
             'Casey WaiversDFA',
             'Aaron Active',
-            'Eddie Bench',
         ]);
-    });
-
-    test('renders depth-chart fields and filters to starters only', async () => {
-        renderWithProviders(<DraftRoomScreen />);
-
-        await waitFor(() => expect(screen.getByText('Aaron Active')).toBeInTheDocument());
-
-        expect(screen.getByText('OF1')).toHaveClass('draft-v2-depth-badge');
-        expect(screen.getByText('SP1')).toHaveClass('draft-v2-depth-badge');
-        expect(screen.getByText('AAA')).toHaveClass('draft-v2-depth-badge');
-        expect(screen.getByText('OF-bench')).toHaveClass('draft-v2-depth-badge');
-
-        fireEvent.click(screen.getByRole('button', { name: /show only starters/i }));
-
-        expect(screen.getByText('Aaron Active')).toBeInTheDocument();
-        expect(screen.getByText('Dylan Injured')).toBeInTheDocument();
-        expect(screen.queryByText('Bobby Day')).not.toBeInTheDocument();
-        expect(screen.queryByText('Casey Waivers')).not.toBeInTheDocument();
-        expect(screen.queryByText('Eddie Bench')).not.toBeInTheDocument();
     });
 });

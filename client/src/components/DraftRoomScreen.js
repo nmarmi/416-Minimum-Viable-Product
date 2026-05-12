@@ -86,14 +86,11 @@ const getPlayerPosition = (player) =>
 const getDepthChartLabel = (player) => {
     const position = String(player?.depthChartPosition || '').trim();
     const rank = player?.depthChartRank;
-    if (position && rank != null && rank !== '') {
-        return typeof rank === 'number' ? `${position}${rank}` : `${position}-${rank}`;
-    }
+    if (position && rank != null && rank !== '') return `${position}${rank}`;
     if (position) return position;
     if (rank != null && rank !== '') return `#${rank}`;
     return '--';
 };
-const isDepthChartStarter = (player) => player?.depthChartRank === 1;
 const formatDataAsOf = (value) => {
     if (!value) return '--';
     const date = new Date(value);
@@ -162,7 +159,6 @@ const DraftRoomScreen = () => {
     const [recommendations, setRecommendations] = useState([]);
     const [positionFilter, setPositionFilter] = useState('ALL');
     const [playerSort, setPlayerSort] = useState('name'); // 'name' | 'status'
-    const [startersOnly, setStartersOnly] = useState(false);
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
 
     const draftSession = store.currentDraftSession;
@@ -255,7 +251,6 @@ const DraftRoomScreen = () => {
             });
         }
         if (injuryOnly) list = list.filter((p) => isInjuredStatus(p));
-        if (startersOnly) list = list.filter((p) => isDepthChartStarter(p));
         list = [...list].sort((left, right) => {
             if (playerSort === 'status') {
                 const statusDiff = getStatusSortRank(left) - getStatusSortRank(right);
@@ -266,7 +261,7 @@ const DraftRoomScreen = () => {
             return getPlayerName(left).localeCompare(getPlayerName(right));
         });
         return list;
-    }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort]);
+    }, [players, injuryOnly, availableSet, positionFilter, playerSort]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -805,13 +800,6 @@ const DraftRoomScreen = () => {
                         >
                             Injured Only
                         </button>
-                        <button
-                            type="button"
-                            className={`draft-v2-filter-btn ${startersOnly ? 'active' : ''}`}
-                            onClick={() => setStartersOnly((prev) => !prev)}
-                        >
-                            Show only starters
-                        </button>
                         {comparePlayers.length > 0 ? (
                             <button
                                 type="button"
@@ -898,11 +886,7 @@ const DraftRoomScreen = () => {
                                         </td>
                                         <td>{getPlayerTeamLabel(player)}</td>
                                         <td>{getPlayerPosition(player)}</td>
-                                        <td>
-                                            <span className="draft-v2-depth-badge">
-                                                {getDepthChartLabel(player)}
-                                            </span>
-                                        </td>
+                                        <td>{getDepthChartLabel(player)}</td>
                                         <td>{getPlayerValuation(player)}</td>
                                         <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
                                         <td>{formatStat(player.hr)}</td>
