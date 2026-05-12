@@ -91,11 +91,14 @@ PLAYER_API_KEY=your-key
 ```
 
 When configured, the backend calls:
-- `GET /players` — searchable player list
-- `GET /players/:playerId` — single player lookup
+- `GET /api/v1/players` — searchable player list
+- `GET /api/v1/players/:playerId` — single player lookup
 - `GET /api/v1/players/pool` — full player pool for draft session availability
 - `POST /api/v1/players/valuations` — z-score auction dollar values based on league settings
-- `POST /usage` — usage event tracking
+- `POST /api/v1/players/recommendations` — bid recommendations sorted by value surplus
+- `POST /api/v1/usage` — usage event tracking
+
+Set `PLAYER_API_LEGACY=1` to fall back to unversioned paths when testing against older API builds.
 
 No local `PlayerStub` collection is required. Draft room player metadata is hydrated on demand from `GET /api/v1/players/pool`.
 
