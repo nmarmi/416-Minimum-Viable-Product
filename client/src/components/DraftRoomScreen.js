@@ -161,11 +161,15 @@ const DraftRoomScreen = () => {
     const [valuationsMap, setValuationsMap] = useState({});
     const [recommendations, setRecommendations] = useState([]);
     const [positionFilter, setPositionFilter] = useState('ALL');
-    const [playerSort, setPlayerSort] = useState('name'); // 'name' | 'status'
+    const [playerSort, setPlayerSort] = useState('name'); // 'name' | 'status' | 'dollar'
     const [startersOnly, setStartersOnly] = useState(false);
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
     const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
+    const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+    const [isFiltersMenuOpen, setIsFiltersMenuOpen] = useState(false);
     const teamPickerRef = useRef(null);
+    const sortMenuRef = useRef(null);
+    const filtersMenuRef = useRef(null);
 
     const draftSession = store.currentDraftSession;
     const availablePlayerIdsKey = useMemo(
@@ -189,6 +193,20 @@ const DraftRoomScreen = () => {
         document.addEventListener('mousedown', onDown);
         return () => document.removeEventListener('mousedown', onDown);
     }, [isTeamPickerOpen]);
+
+    useEffect(() => {
+        if (!isSortMenuOpen) return undefined;
+        const onDown = (e) => { if (!sortMenuRef.current?.contains(e.target)) setIsSortMenuOpen(false); };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [isSortMenuOpen]);
+
+    useEffect(() => {
+        if (!isFiltersMenuOpen) return undefined;
+        const onDown = (e) => { if (!filtersMenuRef.current?.contains(e.target)) setIsFiltersMenuOpen(false); };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [isFiltersMenuOpen]);
 
     const teamOptions = useMemo(() => {
         if (!draftSession?.teams?.length) return FALLBACK_TEAMS.map((name) => ({ teamId: name, label: name }));
@@ -272,10 +290,20 @@ const DraftRoomScreen = () => {
                 const labelDiff = getStatusLabel(left).localeCompare(getStatusLabel(right));
                 if (labelDiff !== 0) return labelDiff;
             }
+            if (playerSort === 'dollar') {
+                const getVal = (p) => {
+                    const id = getPlayerId(p);
+                    const candidates = [id, p?.playerId, p?.mlbPersonId != null ? String(p.mlbPersonId) : null, p?.mlbId != null ? String(p.mlbId) : null, p?.playerName, p?.name].filter(Boolean);
+                    for (const k of candidates) { if (valuationsMap[k] != null) return Number(valuationsMap[k]); }
+                    return -Infinity;
+                };
+                const diff = getVal(right) - getVal(left);
+                if (diff !== 0) return diff;
+            }
             return getPlayerName(left).localeCompare(getPlayerName(right));
         });
         return list;
-    }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort]);
+    }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort, valuationsMap]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -790,44 +818,80 @@ const DraftRoomScreen = () => {
                         {playerDataAsOf ? `Player data as of ${formatDataAsOf(playerDataAsOf)}.` : 'Player data refreshes from the live pool for this draft.'}
                     </p>
                     <div className="draft-v2-filter-row">
-                        <span className="draft-v2-auction-muted">Sort by:</span>
-                        {[
-                            { id: 'name', label: 'Name' },
-                            { id: 'status', label: 'Status' },
-                        ].map((opt) => (
+                        {/* Sort by dropdown */}
+                        <div className="draft-v2-dropdown" ref={sortMenuRef}>
                             <button
-                                key={opt.id}
                                 type="button"
-                                className={`draft-v2-filter-btn ${playerSort === opt.id ? 'active' : ''}`}
-                                onClick={() => setPlayerSort(opt.id)}
+                                className={`draft-v2-filter-btn draft-v2-dropdown-trigger ${isSortMenuOpen ? 'active' : ''}`}
+                                onClick={() => { setIsSortMenuOpen((prev) => !prev); setIsFiltersMenuOpen(false); }}
                             >
-                                {opt.label}
+                                Sort: {playerSort === 'name' ? 'Name' : playerSort === 'status' ? 'Status' : '$ Value'} ▾
                             </button>
-                        ))}
-                        {availablePositions.map((pos) => (
+                            {isSortMenuOpen && (
+                                <div className="draft-v2-dropdown-menu">
+                                    {[
+                                        { id: 'name', label: 'Name' },
+                                        { id: 'status', label: 'Status' },
+                                        { id: 'dollar', label: '$ Value (high → low)' },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            className={`draft-v2-dropdown-item ${playerSort === opt.id ? 'active' : ''}`}
+                                            onClick={() => { setPlayerSort(opt.id); setIsSortMenuOpen(false); }}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Filters dropdown */}
+                        <div className="draft-v2-dropdown" ref={filtersMenuRef}>
                             <button
-                                key={pos}
                                 type="button"
-                                className={`draft-v2-filter-btn ${positionFilter === pos ? 'active' : ''}`}
-                                onClick={() => setPositionFilter(pos)}
+                                className={`draft-v2-filter-btn draft-v2-dropdown-trigger ${isFiltersMenuOpen || positionFilter !== 'ALL' || injuryOnly || startersOnly ? 'active' : ''}`}
+                                onClick={() => { setIsFiltersMenuOpen((prev) => !prev); setIsSortMenuOpen(false); }}
                             >
-                                {pos === 'ALL' ? 'All Positions' : pos}
+                                Filters{(positionFilter !== 'ALL' || injuryOnly || startersOnly) ? ' •' : ''} ▾
                             </button>
-                        ))}
-                        <button
-                            type="button"
-                            className={`draft-v2-filter-btn ${injuryOnly ? 'active' : ''}`}
-                            onClick={() => setInjuryOnly((prev) => !prev)}
-                        >
-                            Injured Only
-                        </button>
-                        <button
-                            type="button"
-                            className={`draft-v2-filter-btn ${startersOnly ? 'active' : ''}`}
-                            onClick={() => setStartersOnly((prev) => !prev)}
-                        >
-                            Show only starters
-                        </button>
+                            {isFiltersMenuOpen && (
+                                <div className="draft-v2-dropdown-menu draft-v2-filters-menu">
+                                    <div className="draft-v2-dropdown-section-label">Position</div>
+                                    <div className="draft-v2-dropdown-position-grid">
+                                        {availablePositions.map((pos) => (
+                                            <button
+                                                key={pos}
+                                                type="button"
+                                                className={`draft-v2-dropdown-item draft-v2-dropdown-pos-btn ${positionFilter === pos ? 'active' : ''}`}
+                                                onClick={() => setPositionFilter(pos)}
+                                            >
+                                                {pos === 'ALL' ? 'All' : pos}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="draft-v2-dropdown-divider" />
+                                    <button
+                                        type="button"
+                                        className={`draft-v2-dropdown-item draft-v2-dropdown-toggle ${injuryOnly ? 'active' : ''}`}
+                                        onClick={() => setInjuryOnly((prev) => !prev)}
+                                    >
+                                        <span className="draft-v2-dropdown-check">{injuryOnly ? '✓' : ''}</span>
+                                        Injured Only
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`draft-v2-dropdown-item draft-v2-dropdown-toggle ${startersOnly ? 'active' : ''}`}
+                                        onClick={() => setStartersOnly((prev) => !prev)}
+                                    >
+                                        <span className="draft-v2-dropdown-check">{startersOnly ? '✓' : ''}</span>
+                                        Starters Only
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
                         {comparePlayers.length > 0 ? (
                             <button
                                 type="button"
