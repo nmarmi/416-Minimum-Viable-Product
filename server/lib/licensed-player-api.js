@@ -161,6 +161,7 @@ async function postValuations(leagueSettings = {}, draftState = {}) {
             err.upstream = data;
             err.raw = raw;
             lastError = err;
+            if (res.status !== 404) break; // only fall back when the versioned route doesn't exist yet
         } catch (err) {
             lastError = err;
         }

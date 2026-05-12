@@ -147,6 +147,12 @@ describe('licensed-player-api (versioned paths)', () => {
                 .mockResolvedValueOnce(mockErrorResponse(400, { error: 'Bad request', code: 'BAD_REQUEST' }));
             await expect(api.postValuations({}, {})).rejects.toThrow('Bad request');
         });
+
+        it('does not fall back when versioned path fails with a non-404 error', async () => {
+            mockFetch.mockResolvedValueOnce(mockErrorResponse(503, { error: 'Stats unavailable', code: 'STATS_UNAVAILABLE' }));
+            await expect(api.postValuations({}, {})).rejects.toMatchObject({ status: 503 });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('postRecommendations', () => {
