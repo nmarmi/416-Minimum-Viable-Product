@@ -4,6 +4,7 @@ const request = require('supertest');
 const createApp = require('./helpers/createApp');
 const auth = require('../auth');
 const db = require('../db');
+const licensedApi = require('../lib/licensed-player-api');
 const DraftSession = require('../models/draft-session-model');
 
 const app = createApp();
@@ -76,6 +77,30 @@ async function seedActiveSessionWithPurchase() {
         nominationOrder: 1,
     });
     return session;
+}
+
+async function seedSetupSession(overrides = {}) {
+    return await DraftSession.create({
+        draftSessionId: `setup-session-${Date.now()}`,
+        leagueId: LEAGUE_ID,
+        createdBy: new mongoose.Types.ObjectId(OWNER_ID),
+        status: 'setup',
+        leagueSettings: {
+            numberOfTeams: 2,
+            salaryCap: 260,
+            rosterSlots: { C: 1, OF: 1, SP: 1 },
+            scoringType: '5x5 Roto',
+            draftType: 'AUCTION',
+        },
+        teams: [
+            { teamId: 'team1', teamName: 'Team One', budgetRemaining: 0, purchasedPlayers: [], filledRosterSlots: {} },
+            { teamId: 'team2', teamName: 'Team Two', budgetRemaining: 0, purchasedPlayers: [], filledRosterSlots: {} },
+        ],
+        availablePlayerIds: [],
+        purchasedPlayerIds: [],
+        draftHistory: [],
+        ...overrides,
+    });
 }
 
 // ── GET /draft-sessions — US-8.8 ─────────────────────────────────────────────
@@ -161,6 +186,96 @@ describe('GET /draft-sessions (US-8.8 getMyDraftSessions)', () => {
         expect(res.status).toBe(200);
         expect(res.body.draftSessions[0].draftSessionId).toBe('session-new');
         expect(res.body.draftSessions[1].draftSessionId).toBe('session-old');
+    });
+});
+
+describe('US-12.1 player pool hydration', () => {
+    test('start draft pulls player IDs from GET /api/v1/players/pool', async () => {
+        const session = await seedSetupSession({ draftSessionId: 'setup-hydrate-start' });
+        vi.spyOn(licensedApi, 'hasConfig').mockReturnValue(true);
+        vi.spyOn(licensedApi, 'getPlayerPool').mockResolvedValue({
+            players: [
+                { playerId: 'mlb-1', name: 'Player One' },
+                { id: 'mlb-2', name: 'Player Two' },
+                { playerId: 'mlb-1', name: 'Duplicate Player One' },
+            ],
+            dataAsOf: '2026-05-11T00:00:00.000Z',
+        });
+
+        const res = await request(app)
+            .post(`/draft-sessions/${session.draftSessionId}/start`)
+            .set('Cookie', ownerCookie());
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(licensedApi.getPlayerPool).toHaveBeenCalledTimes(1);
+        expect(res.body.draftSession.status).toBe('active');
+        expect(res.body.draftSession.availablePlayerIds).toEqual(['mlb-1', 'mlb-2']);
+    });
+
+    test('session players re-fetch pool and pass through depth chart metadata plus dataAsOf', async () => {
+        await DraftSession.create({
+            draftSessionId: 'active-hydrate-players',
+            leagueId: LEAGUE_ID,
+            createdBy: new mongoose.Types.ObjectId(OWNER_ID),
+            status: 'active',
+            leagueSettings: { numberOfTeams: 2, salaryCap: 260, rosterSlots: { OF: 1 }, scoringType: '5x5 Roto', draftType: 'AUCTION' },
+            teams: [],
+            availablePlayerIds: ['mlb-1', 'mlb-2'],
+            purchasedPlayerIds: ['mlb-3'],
+            pooledAt: new Date('2026-05-11T01:00:00.000Z'),
+        });
+        vi.spyOn(licensedApi, 'hasConfig').mockReturnValue(true);
+        vi.spyOn(licensedApi, 'getPlayerPool').mockResolvedValue({
+            players: [
+                {
+                    playerId: 'mlb-1',
+                    name: 'Player One',
+                    positions: ['OF'],
+                    mlbTeam: 'NYM',
+                    status: 'starter',
+                    depthChartRank: 1,
+                    depthChartPosition: 'OF',
+                    hr: 31,
+                    rbi: 96,
+                    r: 88,
+                    sb: 12,
+                    avg: 0.284,
+                },
+                { playerId: 'mlb-2', name: 'Player Two', positions: ['SP'], mlbTeam: 'ATL', status: 'active' },
+                { playerId: 'mlb-3', name: 'Purchased Player', positions: ['C'], mlbTeam: 'LAD', status: 'active' },
+            ],
+            dataAsOf: '2026-05-11T00:00:00.000Z',
+            staleWarnings: ['depth chart is 2 days old'],
+        });
+
+        const res = await request(app)
+            .get('/draft-sessions/active-hydrate-players/players?status=available')
+            .set('Cookie', ownerCookie());
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(licensedApi.getPlayerPool).toHaveBeenCalledTimes(1);
+        expect(res.body.players).toHaveLength(2);
+        expect(res.body.players[0]).toMatchObject({
+            playerId: 'mlb-1',
+            name: 'Player One',
+            positions: ['OF'],
+            mlbTeam: 'NYM',
+            status: 'starter',
+            depthChartRank: 1,
+            depthChartPosition: 'OF',
+            dataAsOf: '2026-05-11T00:00:00.000Z',
+            isAvailable: true,
+            hr: 31,
+            rbi: 96,
+            r: 88,
+            sb: 12,
+            avg: 0.284,
+        });
+        expect(res.body.players.map((p) => p.playerId)).not.toContain('mlb-3');
+        expect(res.body.dataAsOf).toBe('2026-05-11T00:00:00.000Z');
+        expect(res.body.staleWarnings).toEqual(['depth chart is 2 days old']);
     });
 });
 

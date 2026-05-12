@@ -395,7 +395,7 @@ const getSessionPlayers = async (req, res) => {
         };
 
         const stubs = upstreamPlayers
-            .map(toPlayerStub)
+            .map((player) => toPlayerStub(player, dataAsOf))
             .filter((p) => p.playerId && intersect(p.playerId))
             .filter(matchesLocalFilters)
             .map((p) => ({ ...p, isAvailable: availableSet.has(p.playerId) }));
