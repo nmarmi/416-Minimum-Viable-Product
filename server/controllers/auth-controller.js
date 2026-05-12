@@ -223,10 +223,63 @@ registerUser = async (req, res) => {
     }
 }
 
+changePassword = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: "Unauthorized" });
+        }
+
+        const { currentPassword, newPassword, newPasswordVerify } = req.body;
+        if (!currentPassword || !newPassword || !newPasswordVerify) {
+            return res.status(400).json({ errorMessage: "Please fill in all fields." });
+        }
+        if (newPassword.length < 8) {
+            return res.status(400).json({ errorMessage: "New password must be at least 8 characters." });
+        }
+        if (newPassword !== newPasswordVerify) {
+            return res.status(400).json({ errorMessage: "New passwords do not match." });
+        }
+
+        const user = await db.getUserById(userId);
+        const passwordCorrect = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!passwordCorrect) {
+            return res.status(401).json({ errorMessage: "Current password is incorrect." });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(newPassword, salt);
+        await db.updateUser(userId, { passwordHash });
+
+        return res.status(200).json({ success: true });
+    } catch (err) {
+        console.error("changePassword error:", err);
+        return res.status(500).json({ success: false, errorMessage: "Error changing password." });
+    }
+}
+
+deleteAccount = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: "Unauthorized" });
+        }
+
+        await db.deleteUser(userId);
+
+        res.cookie("token", "", getCookieOptions({ expires: new Date(0) })).status(200).json({ success: true });
+    } catch (err) {
+        console.error("deleteAccount error:", err);
+        return res.status(500).json({ success: false, errorMessage: "Error deleting account." });
+    }
+}
+
 module.exports = {
     getLoggedIn,
     registerUser,
     loginUser,
     logoutUser,
-    updateUser
+    updateUser,
+    changePassword,
+    deleteAccount
 }

@@ -1,17 +1,18 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { Link, useHistory, useLocation } from 'react-router-dom';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded';
 import AuthContext from '../auth';
+import AccountSettingsModal from './AccountSettingsModal';
 
 export default function AppBanner() {
     const { auth } = useContext(AuthContext);
     const history = useHistory();
     const location = useLocation();
+    const [showSettings, setShowSettings] = useState(false);
     const inAuthRoute = (
         location.pathname === '/login' ||
-        location.pathname === '/register' ||
-        location.pathname === '/forgot-password'
+        location.pathname === '/register'
     );
 
     const handleLogout = async () => {
@@ -19,6 +20,7 @@ export default function AppBanner() {
     };
 
     return (
+        <>
         <header className="app-banner">
             <button className="link-button brand" type="button" onClick={() => history.push('/')}>
                 <span className="brand-mark">⌘</span>
@@ -27,13 +29,19 @@ export default function AppBanner() {
             <nav className="app-banner-nav">
                 {auth.loggedIn ? (
                     <>
-                        <span className="avatar-pill" aria-label="profile">
+                        <button
+                            className="avatar-pill avatar-pill-btn"
+                            type="button"
+                            onClick={() => setShowSettings(true)}
+                            aria-label="account settings"
+                            title="Account settings"
+                        >
                             <PersonOutlineRoundedIcon sx={{ fontSize: 30 }} />
-                        </span>
+                        </button>
                         <button className="link-button logout-icon-btn" type="button" onClick={handleLogout} aria-label="logout">
                             <LogoutRoundedIcon sx={{ fontSize: 24 }} />
                         </button>
-                        
+
                     </>
                 ) : (
                     <>
@@ -53,5 +61,7 @@ export default function AppBanner() {
                 )}
             </nav>
         </header>
+        {showSettings && <AccountSettingsModal onClose={() => setShowSettings(false)} />}
+        </>
     );
 }

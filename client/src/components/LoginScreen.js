@@ -1,11 +1,10 @@
 import { useContext } from 'react';
-import { Link, useHistory } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import AuthContext from '../auth';
 import MUIErrorModal from './MUIErrorModal';
 
 export default function LoginScreen() {
     const { auth } = useContext(AuthContext);
-    const history = useHistory();
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -40,10 +39,6 @@ export default function LoginScreen() {
                         required
                         className="login-input"
                     />
-
-                    <button className="forgot-password" type="button" onClick={() => history.push('/forgot-password')}>
-                        Forgot Password ?
-                    </button>
 
                     <button className="login-submit-btn" type="submit">
                         Sign In

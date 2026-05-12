@@ -47,11 +47,18 @@ export const registerUser = async (userName, email, password, passwordVerify) =>
     passwordVerify
 });
 
+export const changePassword = async (currentPassword, newPassword, newPasswordVerify) =>
+    request("/change-password", "PUT", { currentPassword, newPassword, newPasswordVerify });
+
+export const deleteAccount = async () => request("/account", "DELETE");
+
 const apis = {
     getLoggedIn,
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    changePassword,
+    deleteAccount
 };
 
 export default apis;

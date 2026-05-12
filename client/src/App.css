@@ -128,6 +128,16 @@ body {
   justify-content: center;
 }
 
+.avatar-pill-btn {
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.avatar-pill-btn:hover {
+  background: #5aa3e2;
+}
+
 .logout-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -3234,4 +3244,234 @@ body {
   .draft-setup-section-head {
     flex-direction: column;
   }
+}
+
+/* ----- Account Settings Modal ----- */
+.account-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.account-modal-card {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 28px 24px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+}
+
+.account-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.account-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+}
+
+.account-modal-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+
+.account-modal-close:hover {
+  background: #f0f0f0;
+}
+
+.account-modal-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.account-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  font-family: "Avenir Next";
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #f5f5f5;
+  color: #444;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.account-tab-btn.active {
+  background: #1a1a2e;
+  color: #fff;
+  border-color: #1a1a2e;
+}
+
+.account-tab-btn.danger.active {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+
+.account-tab-btn:not(.active):hover {
+  background: #eaeaea;
+}
+
+.account-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-modal-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-top: 8px;
+}
+
+.account-modal-input {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: "Avenir Next";
+  font-size: 14px;
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.account-modal-input:focus {
+  border-color: #4a6cf7;
+}
+
+.account-modal-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #c0392b;
+  font-weight: 500;
+}
+
+.account-modal-success {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #27ae60;
+  font-weight: 500;
+}
+
+.account-modal-submit {
+  margin-top: 14px;
+  padding: 11px;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: "Avenir Next";
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.account-modal-submit:hover {
+  background: #2d2d50;
+}
+
+.account-modal-delete-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.account-modal-delete-warning {
+  margin: 0;
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.account-modal-danger-btn {
+  padding: 10px 18px;
+  background: #c0392b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: "Avenir Next";
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  align-self: flex-start;
+}
+
+.account-modal-danger-btn:hover {
+  background: #a93226;
+}
+
+.account-modal-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.account-modal-confirm-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.account-modal-cancel-btn {
+  padding: 10px 16px;
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: "Avenir Next";
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.account-modal-cancel-btn:hover {
+  background: #e0e0e0;
+}
+
+/* ----- Forgot password feedback ----- */
+.forgot-error-msg {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #c0392b;
+  font-weight: 500;
+}
+
+.forgot-success-msg {
+  font-size: 14px;
+  color: #27ae60;
+  text-align: center;
+  line-height: 1.5;
+  margin: 0 0 18px;
 }

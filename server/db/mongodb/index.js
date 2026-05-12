@@ -45,6 +45,7 @@ class MongoDBManager extends DatabaseManager {
         const updateFields = {};
         if (data.userName) updateFields.userName = data.userName;
         if (data.avatar) updateFields.avatar = data.avatar;
+        if (data.passwordHash) updateFields.passwordHash = data.passwordHash;
         return await User.findByIdAndUpdate(
             userId,
             { $set: updateFields },

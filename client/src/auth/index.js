@@ -95,6 +95,22 @@ function AuthContextProvider(props) {
         history.push("/");
     };
 
+    const changePassword = async (currentPassword, newPassword, newPasswordVerify) => {
+        const response = await authRequestSender.changePassword(currentPassword, newPassword, newPasswordVerify);
+        if (response.status === 200) return { success: true };
+        return { success: false, errorMessage: response.data.errorMessage || "Unable to change password." };
+    };
+
+    const deleteAccount = async () => {
+        const response = await authRequestSender.deleteAccount();
+        if (response.status === 200) {
+            setAuthState({ user: null, loggedIn: false, loading: false, errorMessage: null });
+            history.push("/");
+            return { success: true };
+        }
+        return { success: false, errorMessage: response.data.errorMessage || "Unable to delete account." };
+    };
+
     useEffect(() => {
         getLoggedIn();
     }, []);
@@ -105,7 +121,9 @@ function AuthContextProvider(props) {
         getLoggedIn,
         loginUser,
         registerUser,
-        logoutUser
+        logoutUser,
+        changePassword,
+        deleteAccount
     };
 
     return (
