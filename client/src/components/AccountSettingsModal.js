@@ -30,12 +30,7 @@ export default function AccountSettingsModal({ onClose, onSuccess }) {
     const handleDeleteAccount = async () => {
         setError(null);
         const result = await auth.deleteAccount();
-        if (result.success) {
-            onSuccess('error', 'Account deleted.');
-            onClose();
-        } else {
-            setError(result.errorMessage);
-        }
+        if (!result.success) setError(result.errorMessage);
     };
 
     return (

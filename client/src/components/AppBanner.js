@@ -17,6 +17,13 @@ export default function AppBanner() {
         const id = setTimeout(() => setToast(null), 4000);
         return () => clearTimeout(id);
     }, [toast]);
+
+    useEffect(() => {
+        if (!auth.loggedIn && showSettings) {
+            setShowSettings(false);
+            setToast({ type: 'error', message: 'Account deleted.' });
+        }
+    }, [auth.loggedIn]);
     const inAuthRoute = (
         location.pathname === '/login' ||
         location.pathname === '/register'
