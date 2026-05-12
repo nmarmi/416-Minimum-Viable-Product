@@ -15,13 +15,34 @@ class PlayerPoolUnavailableError extends Error {
     }
 }
 
+const STAT_FIELDS = [
+    'adp', 'ADP',
+    'ab', 'r', 'h', 'single', 'double', 'triple',
+    'hr', 'rbi', 'bb', 'k', 'sb', 'cs',
+    'avg', 'obp', 'slg', 'fpts',
+    'w', 'wins', 'W',
+    'sv', 'saves', 'SV',
+    'era', 'ERA',
+    'whip', 'WHIP'
+];
+
+function copyDefinedFields(source, fields) {
+    const values = {};
+    for (const field of fields) {
+        if (source[field] != null) {
+            values[field] = source[field];
+        }
+    }
+    return values;
+}
+
 /**
  * Map an upstream Player Data API record to the `PlayerStub` shape the
  * Draft Kit UI consumes. Extra fields (depthChartRank/Position) are
  * included when available so US-12.3 can consume them without another
  * round trip.
  */
-function toPlayerStub(raw = {}) {
+function toPlayerStub(raw = {}, dataAsOf = null) {
     const positions = Array.isArray(raw.positions) && raw.positions.length > 0
         ? raw.positions
         : (raw.position ? [raw.position] : []);
@@ -33,7 +54,9 @@ function toPlayerStub(raw = {}) {
         mlbTeam: raw.mlbTeam || raw.team || null,
         status: raw.status || 'active',
         depthChartRank: raw.depthChartRank ?? null,
-        depthChartPosition: raw.depthChartPosition ?? null
+        depthChartPosition: raw.depthChartPosition ?? null,
+        dataAsOf: raw.dataAsOf || dataAsOf || null,
+        ...copyDefinedFields(raw, STAT_FIELDS)
     };
 }
 

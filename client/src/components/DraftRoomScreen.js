@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
-import { getPlayers, postUsage } from '../players/requests';
-import { getSessionValuations, getSessionRecommendations } from '../draft-sessions/requests';
+import { getPlayers as getCatalogPlayers, postUsage } from '../players/requests';
+import { getSessionPlayers, getSessionValuations, getSessionRecommendations } from '../draft-sessions/requests';
 import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
@@ -9,7 +9,7 @@ import PlayerCompareModal from './PlayerCompareModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
-const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Injury', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
+const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Status', 'Depth', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 const DRAFT_STATUS_META = {
     setup: { label: 'Setup', className: 'setup' },
@@ -53,11 +53,33 @@ const pickFirstDefined = (player, keys) => {
     }
     return null;
 };
-const getValuationValue = (valuation) => pickFirstDefined(valuation, ['dollarValue', 'value', 'valuation', 'auctionValue', 'dollars']);
+const getValuationValue = (valuation) => pickFirstDefined(valuation, [
+    'dollarValue',
+    'projectedValue',
+    'value',
+    'valuation',
+    'auctionValue',
+    'auctionDollarValue',
+    'dollars'
+]);
 const getPlayerPosition = (player) =>
     player.position ||
     (Array.isArray(player.positions) ? player.positions.join('/') : '') ||
     '';
+const getDepthChartLabel = (player) => {
+    const position = String(player?.depthChartPosition || '').trim();
+    const rank = player?.depthChartRank;
+    if (position && rank != null && rank !== '') return `${position}${rank}`;
+    if (position) return position;
+    if (rank != null && rank !== '') return `#${rank}`;
+    return '--';
+};
+const formatDataAsOf = (value) => {
+    if (!value) return '--';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
 
 const getPlayerId = (player) => player.playerId || player.id || player._id || `${getPlayerName(player)}-${getPlayerTeamLabel(player)}`;
 
@@ -87,6 +109,7 @@ const DraftRoomScreen = () => {
     const [playersTotal, setPlayersTotal] = useState(0);
     const [playersLoading, setPlayersLoading] = useState(false);
     const [playersError, setPlayersError] = useState('');
+    const [playerDataAsOf, setPlayerDataAsOf] = useState(null);
     const [injuryOnly, setInjuryOnly] = useState(false);
     const [playerSearch, setPlayerSearch] = useState('');
     const [playerSuggestions, setPlayerSuggestions] = useState([]);
@@ -121,6 +144,10 @@ const DraftRoomScreen = () => {
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
 
     const draftSession = store.currentDraftSession;
+    const availablePlayerIdsKey = useMemo(
+        () => (draftSession?.availablePlayerIds || []).join('|'),
+        [draftSession?.availablePlayerIds]
+    );
 
     const showToast = useCallback((type, message) => {
         setToast({ type, message, id: Date.now() });
@@ -182,6 +209,16 @@ const DraftRoomScreen = () => {
         return '--';
     }, [valuationsMap]);
 
+    const fetchPlayerRows = useCallback((params = {}) => {
+        if (draftSessionId) {
+            return getSessionPlayers(draftSessionId, {
+                status: 'available',
+                ...params
+            });
+        }
+        return getCatalogPlayers(params);
+    }, [draftSessionId]);
+
     const displayedPlayers = useMemo(() => {
         let list = players || [];
         // US-6.1: only show available (un-purchased) players in this view.
@@ -202,18 +239,21 @@ const DraftRoomScreen = () => {
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
         setPlayersError('');
-        const res = await getPlayers({ search: playerSearch.trim(), limit: 500 });
+        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 500 });
         setPlayersLoading(false);
         if (res.status === 200 && res.data?.success) {
             setPlayers(res.data.players || []);
             setPlayersTotal(res.data.total ?? 0);
+            setPlayerDataAsOf(res.data.dataAsOf || null);
             setPlayersError('');
+            return true;
         } else {
             setPlayersError(res.data?.errorMessage || 'Failed to load players.');
             setPlayers([]);
             setPlayersTotal(0);
+            return false;
         }
-    }, [playerSearch]);
+    }, [fetchPlayerRows, playerSearch]);
 
     useEffect(() => {
         if (!draftSessionId) {
@@ -257,7 +297,7 @@ const DraftRoomScreen = () => {
                 setValuationsMap(map);
             }
         }).catch(() => {});
-    }, [draftSessionId]);
+    }, [draftSessionId, availablePlayerIdsKey]);
 
     useEffect(() => {
         if (!draftSessionId) return;
@@ -307,7 +347,7 @@ const DraftRoomScreen = () => {
             return;
         }
 
-        const res = await getPlayers({ search: trimmed, limit: 8 });
+        const res = await fetchPlayerRows({ search: trimmed, limit: 8 });
         if (res.status === 200 && res.data?.success) {
             const matched = (res.data.players || [])
                 .filter((player) => isAvailable(player) && playerNameStartsWithSearch(getPlayerName(player), trimmed))
@@ -321,7 +361,7 @@ const DraftRoomScreen = () => {
             setShowEntrySuggestions(false);
             setEntryHighlightedIndex(-1);
         }
-    }, [players, availableSet]);
+    }, [players, availableSet, fetchPlayerRows]);
 
     const searchPlayerSuggestions = useCallback(async (searchTerm) => {
         const trimmed = String(searchTerm || '').trim();
@@ -345,7 +385,7 @@ const DraftRoomScreen = () => {
             return;
         }
 
-        const res = await getPlayers({ search: trimmed, limit: 8 });
+        const res = await fetchPlayerRows({ search: trimmed, limit: 8 });
         if (res.status === 200 && res.data?.success) {
             const matched = (res.data.players || [])
                 .filter((player) => getPlayerName(player).toLowerCase().includes(trimmed.toLowerCase()))
@@ -359,7 +399,7 @@ const DraftRoomScreen = () => {
             setShowPlayerSuggestions(false);
             setHighlightedPlayerIndex(-1);
         }
-    }, [players]);
+    }, [players, fetchPlayerRows]);
 
     const handleEntryPlayerChange = async (event) => {
         const value = event.target.value;
@@ -416,7 +456,7 @@ const DraftRoomScreen = () => {
 
         await searchPlayerSuggestions(value);
 
-        const res = await getPlayers({ search: trimmed, limit: 500 });
+        const res = await fetchPlayerRows({ search: trimmed, limit: 500 });
         if (res.status === 200 && res.data?.success) {
             const filteredPlayers = (res.data.players || [])
                 .filter((player) => playerNameStartsWithSearch(getPlayerName(player), trimmed))
@@ -424,6 +464,7 @@ const DraftRoomScreen = () => {
 
             setPlayers(filteredPlayers);
             setPlayersTotal(filteredPlayers.length);
+            setPlayerDataAsOf(res.data.dataAsOf || null);
             setPlayersError('');
         } else {
             setPlayers([]);
@@ -440,7 +481,7 @@ const DraftRoomScreen = () => {
         setShowPlayerSuggestions(false);
         setHighlightedPlayerIndex(-1);
 
-        const res = await getPlayers({ search: selectedName, limit: 500 });
+        const res = await fetchPlayerRows({ search: selectedName, limit: 500 });
         if (res.status === 200 && res.data?.success) {
             const matched = (res.data.players || [])
                 .filter((entry) => playerNameStartsWithSearch(getPlayerName(entry), selectedName))
@@ -448,6 +489,7 @@ const DraftRoomScreen = () => {
 
             setPlayers(matched);
             setPlayersTotal(matched.length);
+            setPlayerDataAsOf(res.data.dataAsOf || null);
             setPlayersError('');
         } else {
             setPlayers([]);
@@ -642,6 +684,13 @@ const DraftRoomScreen = () => {
 
     const isInCompare = (player) => comparePlayers.some((entry) => getPlayerId(entry) === getPlayerId(player));
 
+    const handleRefreshPlayerData = async () => {
+        const refreshed = await loadPlayers();
+        if (refreshed) {
+            showToast('success', 'Player data refreshed.');
+        }
+    };
+
     const renderPlayersTab = () => (
         <>
             <div className="draft-v2-module-grid two-col">
@@ -680,7 +729,18 @@ const DraftRoomScreen = () => {
                             ) : null}
                         </label>
                         <button type="button" className="draft-v2-filter-btn draft-v2-search-submit" onClick={loadPlayers}>Search</button>
+                        <button
+                            type="button"
+                            className="draft-v2-filter-btn draft-v2-search-submit"
+                            onClick={handleRefreshPlayerData}
+                            disabled={playersLoading}
+                        >
+                            {playersLoading ? 'Refreshing...' : 'Refresh player data'}
+                        </button>
                     </div>
+                    <p className="draft-v2-auction-muted">
+                        {playerDataAsOf ? `Player data as of ${formatDataAsOf(playerDataAsOf)}.` : 'Player data refreshes from the live pool for this draft.'}
+                    </p>
                     <div className="draft-v2-filter-row">
                         {availablePositions.map((pos) => (
                             <button
@@ -737,7 +797,8 @@ const DraftRoomScreen = () => {
                                 <th>Player</th>
                                 <th>Team</th>
                                 <th><GlossaryTerm term="Position eligibility">Pos</GlossaryTerm></th>
-                                <th>Injury Status</th>
+                                <th>Status</th>
+                                <th>Depth</th>
                                 <th><GlossaryTerm term="Value">$ Value</GlossaryTerm></th>
                                 <th><GlossaryTerm term="ADP">ADP</GlossaryTerm></th>
                                 <th>HR</th>
@@ -781,6 +842,7 @@ const DraftRoomScreen = () => {
                                                 {getStatusLabel(player)}
                                             </span>
                                         </td>
+                                        <td>{getDepthChartLabel(player)}</td>
                                         <td>{getPlayerValuation(player)}</td>
                                         <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
                                         <td>{formatStat(player.hr)}</td>
