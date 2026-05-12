@@ -65,9 +65,13 @@ function buildTeams(numberOfTeams, salaryCap, rosterSlots, existingTeams = []) {
         return {
             teamId,
             teamName: existingName || teamId,
-            budgetRemaining: resolvedSalaryCap,
+            budgetRemaining: existingTeam != null && existingTeam.budgetRemaining != null
+                ? Number(existingTeam.budgetRemaining)
+                : resolvedSalaryCap,
             purchasedPlayers: normalizePurchasedPlayers(existingTeam?.purchasedPlayers),
-            filledRosterSlots: buildFilledRosterSlots(rosterSlots)
+            filledRosterSlots: existingTeam?.filledRosterSlots != null
+                ? toPlainObject(existingTeam.filledRosterSlots)
+                : buildFilledRosterSlots(rosterSlots)
         };
     });
 }
