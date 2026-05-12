@@ -2241,6 +2241,12 @@ body {
   white-space: nowrap;
 }
 
+.draft-v2-player-name-with-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .draft-v2-status-badge {
   display: inline-block;
   border-radius: 999px;
@@ -2250,16 +2256,22 @@ body {
   border: 1px solid transparent;
 }
 
-.draft-v2-status-badge.active {
-  color: #1f8f4a;
-  background: #ecf9f0;
-  border-color: #bfeacb;
-}
-
-.draft-v2-status-badge.injured {
+.draft-v2-status-badge.il {
   color: #aa2e2e;
   background: #fff1f1;
   border-color: #f2c8c8;
+}
+
+.draft-v2-status-badge.dtd {
+  color: #8a5a00;
+  background: #fff8df;
+  border-color: #efd27a;
+}
+
+.draft-v2-status-badge.inactive {
+  color: #596172;
+  background: #f2f4f7;
+  border-color: #d7dce5;
 }
 
 .draft-v2-table-wrap th {

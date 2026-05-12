@@ -9,7 +9,7 @@ import PlayerCompareModal from './PlayerCompareModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
-const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Status', 'Depth', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
+const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Depth', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 const DRAFT_STATUS_META = {
     setup: { label: 'Setup', className: 'setup' },
@@ -45,7 +45,24 @@ const getStatusLabel = (player) => {
     if (!status) return 'UNKNOWN';
     return status.toLowerCase() === 'active' ? 'ACTIVE' : status.toUpperCase();
 };
-const isInjuredStatus = (player) => String(player?.status || '').trim().toLowerCase() !== 'active';
+const getStatusValue = (player) => String(player?.status || 'active').trim() || 'active';
+const getStatusCategory = (player) => {
+    const normalizedStatus = getStatusValue(player).toLowerCase();
+    if (normalizedStatus === 'active') return 'active';
+    if (normalizedStatus.startsWith('il-')) return 'il';
+    if (normalizedStatus === 'dtd') return 'dtd';
+    if (normalizedStatus === 'minors' || normalizedStatus === 'dfa') return 'inactive';
+    return 'inactive';
+};
+const shouldShowStatusBadge = (player) => getStatusCategory(player) !== 'active';
+const isInjuredStatus = (player) => shouldShowStatusBadge(player);
+const getStatusSortRank = (player) => {
+    const category = getStatusCategory(player);
+    if (category === 'il') return 0;
+    if (category === 'dtd') return 1;
+    if (category === 'inactive') return 2;
+    return 3;
+};
 const pickFirstDefined = (player, keys) => {
     for (let i = 0; i < keys.length; i += 1) {
         const value = player?.[keys[i]];
@@ -141,6 +158,7 @@ const DraftRoomScreen = () => {
     const [valuationsMap, setValuationsMap] = useState({});
     const [recommendations, setRecommendations] = useState([]);
     const [positionFilter, setPositionFilter] = useState('ALL');
+    const [playerSort, setPlayerSort] = useState('name'); // 'name' | 'status'
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
 
     const draftSession = store.currentDraftSession;
@@ -233,8 +251,17 @@ const DraftRoomScreen = () => {
             });
         }
         if (injuryOnly) list = list.filter((p) => isInjuredStatus(p));
+        list = [...list].sort((left, right) => {
+            if (playerSort === 'status') {
+                const statusDiff = getStatusSortRank(left) - getStatusSortRank(right);
+                if (statusDiff !== 0) return statusDiff;
+                const labelDiff = getStatusLabel(left).localeCompare(getStatusLabel(right));
+                if (labelDiff !== 0) return labelDiff;
+            }
+            return getPlayerName(left).localeCompare(getPlayerName(right));
+        });
         return list;
-    }, [players, injuryOnly, availableSet, positionFilter]);
+    }, [players, injuryOnly, availableSet, positionFilter, playerSort]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -742,6 +769,20 @@ const DraftRoomScreen = () => {
                         {playerDataAsOf ? `Player data as of ${formatDataAsOf(playerDataAsOf)}.` : 'Player data refreshes from the live pool for this draft.'}
                     </p>
                     <div className="draft-v2-filter-row">
+                        <span className="draft-v2-auction-muted">Sort by:</span>
+                        {[
+                            { id: 'name', label: 'Name' },
+                            { id: 'status', label: 'Status' },
+                        ].map((opt) => (
+                            <button
+                                key={opt.id}
+                                type="button"
+                                className={`draft-v2-filter-btn ${playerSort === opt.id ? 'active' : ''}`}
+                                onClick={() => setPlayerSort(opt.id)}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
                         {availablePositions.map((pos) => (
                             <button
                                 key={pos}
@@ -797,7 +838,6 @@ const DraftRoomScreen = () => {
                                 <th>Player</th>
                                 <th>Team</th>
                                 <th><GlossaryTerm term="Position eligibility">Pos</GlossaryTerm></th>
-                                <th>Status</th>
                                 <th>Depth</th>
                                 <th><GlossaryTerm term="Value">$ Value</GlossaryTerm></th>
                                 <th><GlossaryTerm term="ADP">ADP</GlossaryTerm></th>
@@ -834,14 +874,18 @@ const DraftRoomScreen = () => {
                             ) : (
                                 displayedPlayers.map((player) => (
                                     <tr key={getPlayerId(player)} className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}>
-                                        <td>{getPlayerName(player)}</td>
-                                        <td>{getPlayerTeamLabel(player)}</td>
-                                        <td>{getPlayerPosition(player)}</td>
                                         <td>
-                                            <span className={`draft-v2-status-badge ${isInjuredStatus(player) ? 'injured' : 'active'}`}>
-                                                {getStatusLabel(player)}
+                                            <span className="draft-v2-player-name-with-status">
+                                                <span>{getPlayerName(player)}</span>
+                                                {shouldShowStatusBadge(player) ? (
+                                                    <span className={`draft-v2-status-badge ${getStatusCategory(player)}`}>
+                                                        {getStatusLabel(player)}
+                                                    </span>
+                                                ) : null}
                                             </span>
                                         </td>
+                                        <td>{getPlayerTeamLabel(player)}</td>
+                                        <td>{getPlayerPosition(player)}</td>
                                         <td>{getDepthChartLabel(player)}</td>
                                         <td>{getPlayerValuation(player)}</td>
                                         <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
