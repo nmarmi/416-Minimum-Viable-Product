@@ -2840,6 +2840,16 @@ body {
   cursor: not-allowed;
 }
 
+/* ----- Draft room: sortable column headers ----- */
+.draft-v2-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.draft-v2-th-sortable:hover {
+  background: #eef0f7;
+}
+
 /* ----- Draft room: compare column & bar ----- */
 .draft-v2-th-compare,
 .draft-v2-td-compare {

@@ -161,7 +161,7 @@ const DraftRoomScreen = () => {
     const [valuationsMap, setValuationsMap] = useState({});
     const [recommendations, setRecommendations] = useState([]);
     const [positionFilter, setPositionFilter] = useState(new Set());
-    const [playerSort, setPlayerSort] = useState('name'); // 'name' | 'status' | 'dollar'
+    const [playerSort, setPlayerSort] = useState({ field: 'name', dir: 'asc' });
     const [startersOnly, setStartersOnly] = useState(false);
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
     const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
@@ -207,6 +207,19 @@ const DraftRoomScreen = () => {
         document.addEventListener('mousedown', onDown);
         return () => document.removeEventListener('mousedown', onDown);
     }, [isFiltersMenuOpen]);
+
+    // Natural sort direction for each stat field (first click)
+    const STAT_DEFAULT_DIR = { dollar: 'desc', adp: 'asc', hr: 'desc', rbi: 'desc', r: 'desc', sb: 'desc', avg: 'desc', w: 'desc', sv: 'desc', k: 'desc', era: 'asc', whip: 'asc' };
+    const handleColSort = (field) => {
+        setPlayerSort((prev) => {
+            if (prev.field === field) return { field, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
+            return { field, dir: STAT_DEFAULT_DIR[field] ?? 'asc' };
+        });
+    };
+    const sortIcon = (field) => {
+        if (playerSort.field !== field) return null;
+        return playerSort.dir === 'asc' ? ' ▲' : ' ▼';
+    };
 
     const teamOptions = useMemo(() => {
         if (!draftSession?.teams?.length) return FALLBACK_TEAMS.map((name) => ({ teamId: name, label: name }));
@@ -283,29 +296,51 @@ const DraftRoomScreen = () => {
         }
         if (injuryOnly) list = list.filter((p) => isInjuredStatus(p));
         if (startersOnly) list = list.filter((p) => isDepthChartStarter(p));
+        const getStatVal = (p, field) => {
+            if (field === 'dollar') {
+                const id = getPlayerId(p);
+                const candidates = [id, p?.playerId, p?.mlbPersonId != null ? String(p.mlbPersonId) : null, p?.mlbId != null ? String(p.mlbId) : null, p?.playerName, p?.name].filter(Boolean);
+                for (const k of candidates) { if (valuationsMap[k] != null) return Number(valuationsMap[k]); }
+                return null;
+            }
+            const statMap = {
+                adp: () => pickFirstDefined(p, ['adp', 'ADP']),
+                hr:  () => p?.hr,
+                rbi: () => p?.rbi,
+                r:   () => p?.r,
+                sb:  () => p?.sb,
+                avg: () => p?.avg,
+                w:   () => pickFirstDefined(p, ['w', 'wins', 'W']),
+                sv:  () => pickFirstDefined(p, ['sv', 'saves', 'SV']),
+                k:   () => p?.k,
+                era: () => pickFirstDefined(p, ['era', 'ERA']),
+                whip: () => pickFirstDefined(p, ['whip', 'WHIP']),
+            };
+            return statMap[field] ? statMap[field]() : null;
+        };
         list = [...list].sort((left, right) => {
-            if (playerSort === 'status') {
+            const { field, dir } = playerSort;
+            if (field === 'status') {
                 const statusDiff = getStatusSortRank(left) - getStatusSortRank(right);
                 if (statusDiff !== 0) return statusDiff;
                 const labelDiff = getStatusLabel(left).localeCompare(getStatusLabel(right));
                 if (labelDiff !== 0) return labelDiff;
-            }
-            if (playerSort === 'dollar' || playerSort === 'dollar-asc') {
-                const getVal = (p) => {
-                    const id = getPlayerId(p);
-                    const candidates = [id, p?.playerId, p?.mlbPersonId != null ? String(p.mlbPersonId) : null, p?.mlbId != null ? String(p.mlbId) : null, p?.playerName, p?.name].filter(Boolean);
-                    for (const k of candidates) { if (valuationsMap[k] != null) return Number(valuationsMap[k]); }
-                    return -Infinity;
-                };
-                const diff = playerSort === 'dollar-asc'
-                    ? getVal(left) - getVal(right)
-                    : getVal(right) - getVal(left);
-                if (diff !== 0) return diff;
+            } else if (field !== 'name') {
+                const lv = getStatVal(left, field);
+                const rv = getStatVal(right, field);
+                const ln = lv != null ? Number(lv) : null;
+                const rn = rv != null ? Number(rv) : null;
+                if (ln !== null || rn !== null) {
+                    if (ln === null) return 1;
+                    if (rn === null) return -1;
+                    const diff = dir === 'asc' ? ln - rn : rn - ln;
+                    if (diff !== 0) return diff;
+                }
             }
             return getPlayerName(left).localeCompare(getPlayerName(right));
         });
         return list;
-    }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort, valuationsMap]);
+    }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort.field, playerSort.dir, valuationsMap]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
@@ -827,21 +862,19 @@ const DraftRoomScreen = () => {
                                 className={`draft-v2-filter-btn draft-v2-dropdown-trigger ${isSortMenuOpen ? 'active' : ''}`}
                                 onClick={() => { setIsSortMenuOpen((prev) => !prev); setIsFiltersMenuOpen(false); }}
                             >
-                                Sort: {playerSort === 'name' ? 'Name' : playerSort === 'status' ? 'Status' : playerSort === 'dollar' ? '$ Value (high → low)' : '$ Value (low → high)'} ▾
+                                Sort: {playerSort.field === 'name' ? 'Name' : playerSort.field === 'status' ? 'Status' : `${playerSort.field.toUpperCase()} ${playerSort.dir === 'asc' ? '▲' : '▼'}`} ▾
                             </button>
                             {isSortMenuOpen && (
                                 <div className="draft-v2-dropdown-menu">
                                     {[
-                                        { id: 'name', label: 'Name' },
-                                        { id: 'status', label: 'Status' },
-                                        { id: 'dollar', label: '$ Value (high → low)' },
-                                        { id: 'dollar-asc', label: '$ Value (low → high)' },
+                                        { field: 'name', label: 'Name' },
+                                        { field: 'status', label: 'Status' },
                                     ].map((opt) => (
                                         <button
-                                            key={opt.id}
+                                            key={opt.field}
                                             type="button"
-                                            className={`draft-v2-dropdown-item ${playerSort === opt.id ? 'active' : ''}`}
-                                            onClick={() => { setPlayerSort(opt.id); setIsSortMenuOpen(false); }}
+                                            className={`draft-v2-dropdown-item ${playerSort.field === opt.field ? 'active' : ''}`}
+                                            onClick={() => { setPlayerSort({ field: opt.field, dir: 'asc' }); setIsSortMenuOpen(false); }}
                                         >
                                             {opt.label}
                                         </button>
@@ -938,18 +971,18 @@ const DraftRoomScreen = () => {
                                 <th>Team</th>
                                 <th><GlossaryTerm term="Position eligibility">Pos</GlossaryTerm></th>
                                 <th>Depth</th>
-                                <th><GlossaryTerm term="Value">$ Value</GlossaryTerm></th>
-                                <th><GlossaryTerm term="ADP">ADP</GlossaryTerm></th>
-                                <th>HR</th>
-                                <th>RBI</th>
-                                <th>R</th>
-                                <th>SB</th>
-                                <th>AVG</th>
-                                <th>W</th>
-                                <th>SV</th>
-                                <th>K</th>
-                                <th><GlossaryTerm term="ERA">ERA</GlossaryTerm></th>
-                                <th><GlossaryTerm term="WHIP">WHIP</GlossaryTerm></th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('dollar')}><GlossaryTerm term="Value">$ Value</GlossaryTerm>{sortIcon('dollar')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('adp')}><GlossaryTerm term="ADP">ADP</GlossaryTerm>{sortIcon('adp')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('hr')}>HR{sortIcon('hr')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('rbi')}>RBI{sortIcon('rbi')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('r')}>R{sortIcon('r')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('sb')}>SB{sortIcon('sb')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('avg')}>AVG{sortIcon('avg')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('w')}>W{sortIcon('w')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('sv')}>SV{sortIcon('sv')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('k')}>K{sortIcon('k')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('era')}><GlossaryTerm term="ERA">ERA</GlossaryTerm>{sortIcon('era')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('whip')}><GlossaryTerm term="WHIP">WHIP</GlossaryTerm>{sortIcon('whip')}</th>
                                 <th className="draft-v2-th-compare">Compare</th>
                             </tr>
                         </thead>
