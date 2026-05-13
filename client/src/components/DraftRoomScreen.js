@@ -340,7 +340,7 @@ const DraftRoomScreen = () => {
             return getPlayerName(left).localeCompare(getPlayerName(right));
         });
         return list;
-    }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort.field, playerSort.dir, valuationsMap]);
+    }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort, valuationsMap]);
 
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
