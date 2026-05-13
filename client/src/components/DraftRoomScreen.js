@@ -6,6 +6,7 @@ import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
 import PlayerCompareModal from './PlayerCompareModal';
+import PlayerInfoModal from './PlayerInfoModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
@@ -167,6 +168,9 @@ const DraftRoomScreen = () => {
     const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
     const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
     const [isFiltersMenuOpen, setIsFiltersMenuOpen] = useState(false);
+    const [selectedPlayer, setSelectedPlayer] = useState(null);
+    const [savingPlayerNote, setSavingPlayerNote] = useState(false);
+    const [editingNotes, setEditingNotes] = useState('');
     const teamPickerRef = useRef(null);
     const sortMenuRef = useRef(null);
     const filtersMenuRef = useRef(null);
@@ -517,11 +521,14 @@ const DraftRoomScreen = () => {
 
     const handleSelectEntryPlayer = (player) => {
         setEntryPlayer(getPlayerName(player));
-        setEntryPlayerId(getPlayerId(player));
+        const pid = getPlayerId(player);
+        setEntryPlayerId(pid);
         setEntryPlayerSearch(getPlayerName(player));
         setEntryPlayerSuggestions([]);
         setShowEntrySuggestions(false);
         setEntryHighlightedIndex(-1);
+        const existingNote = draftSession?.playerNotes?.[pid] || '';
+        setEntryNotes(existingNote);
     };
 
     const handleEntryPlayerKeyDown = (event) => {
@@ -643,6 +650,7 @@ const DraftRoomScreen = () => {
             playerName: entryPlayer,
             teamId: entryWonBy,
             price: purchasedPrice,
+            notes: entryNotes,
         });
         setEntrySubmitting(false);
         if (res.status === 200 && res.data?.success) {
@@ -719,6 +727,7 @@ const DraftRoomScreen = () => {
         setEditingPurchaseId(entry.purchaseId);
         setEditingPrice(String(entry.price));
         setEditingWonBy(entry.teamId);
+        setEditingNotes(entry.notes || '');
         setEditingOriginal(entry);
         setEditError('');
     };
@@ -727,6 +736,7 @@ const DraftRoomScreen = () => {
         setEditingPurchaseId('');
         setEditingPrice('');
         setEditingWonBy('');
+        setEditingNotes('');
         setEditingOriginal(null);
         setEditError('');
     };
@@ -775,7 +785,7 @@ const DraftRoomScreen = () => {
         }
 
         setEditSubmitting(true);
-        const res = await store.editPurchase(draftSessionId, purchaseId, { newPrice: parsedPrice, newTeamId: editingWonBy });
+        const res = await store.editPurchase(draftSessionId, purchaseId, { newPrice: parsedPrice, newTeamId: editingWonBy, newNotes: editingNotes });
         setEditSubmitting(false);
 
         if (res?.status === 200 && res.data?.success) {
@@ -783,6 +793,18 @@ const DraftRoomScreen = () => {
         } else {
             setEditError(res?.data?.errorMessage || 'Failed to save edit.');
         }
+    };
+
+    const handleSavePlayerNote = async (note) => {
+        if (!draftSessionId || !selectedPlayer) return { success: false };
+        setSavingPlayerNote(true);
+        const playerId = getPlayerId(selectedPlayer);
+        const res = await store.setPlayerNote(draftSessionId, playerId, note);
+        setSavingPlayerNote(false);
+        if (res.status === 200 && res.data?.success) {
+            return { success: true };
+        }
+        return { success: false, errorMessage: res.data?.errorMessage || 'Failed to save note.' };
     };
 
     const toggleCompare = (player) => {
@@ -1005,7 +1027,12 @@ const DraftRoomScreen = () => {
                                 </tr>
                             ) : (
                                 displayedPlayers.map((player) => (
-                                    <tr key={getPlayerId(player)} className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}>
+                                    <tr
+                                        key={getPlayerId(player)}
+                                        className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={(e) => { if (e.target.closest('button')) return; setSelectedPlayer(player); }}
+                                    >
                                         <td>
                                             <span className="draft-v2-player-name-with-status">
                                                 <span>{getPlayerName(player)}</span>
@@ -1357,7 +1384,19 @@ const DraftRoomScreen = () => {
                                                 `$${entry.price}`
                                             )}
                                         </td>
-                                        <td>--</td>
+                                        <td>
+                                            {editingPurchaseId === entry.purchaseId ? (
+                                                <input
+                                                    type="text"
+                                                    placeholder="Notes..."
+                                                    value={editingNotes}
+                                                    onChange={(e) => setEditingNotes(e.target.value)}
+                                                    style={{ width: '140px' }}
+                                                />
+                                            ) : (
+                                                entry.notes || '--'
+                                            )}
+                                        </td>
                                         <td>
                                             {editingPurchaseId === entry.purchaseId ? (
                                                 <>
@@ -1758,6 +1797,15 @@ const DraftRoomScreen = () => {
                     players={comparePlayers}
                     onClose={() => setShowCompareModal(false)}
                     getPlayerValuation={getPlayerValuation}
+                />
+            ) : null}
+            {selectedPlayer ? (
+                <PlayerInfoModal
+                    player={selectedPlayer}
+                    initialNote={draftSession?.playerNotes?.[getPlayerId(selectedPlayer)] || ''}
+                    onClose={() => setSelectedPlayer(null)}
+                    onSaveNote={handleSavePlayerNote}
+                    isSaving={savingPlayerNote}
                 />
             ) : null}
             {pendingUndo ? (

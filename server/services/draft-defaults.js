@@ -147,9 +147,11 @@ function serializeSession(session) {
             teamId: entry.teamId,
             price: entry.price,
             positionFilled: entry.positionFilled || null,
+            notes: entry.notes || '',
             timestamp: entry.timestamp,
             nominationOrder: entry.nominationOrder,
         })),
+        playerNotes: toPlainObject(plain.playerNotes),
     };
 }
 

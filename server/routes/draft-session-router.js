@@ -13,5 +13,6 @@ router.get('/:draftSessionId/recommendations', DraftSessionController.getSession
 router.post('/:draftSessionId/purchases', DraftSessionController.recordPurchase);
 router.delete('/:draftSessionId/purchases/:purchaseId', DraftSessionController.undoPurchase);
 router.put('/:draftSessionId/purchases/:purchaseId', DraftSessionController.editPurchase);
+router.put('/:draftSessionId/player-notes/:playerId', DraftSessionController.setPlayerNote);
 
 module.exports = router;

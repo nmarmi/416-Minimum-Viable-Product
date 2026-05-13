@@ -27,6 +27,7 @@ export const GlobalStoreActionType = {
     RECORD_PURCHASE: "RECORD_PURCHASE",
     UNDO_PURCHASE: "UNDO_PURCHASE",
     EDIT_PURCHASE: "EDIT_PURCHASE",
+    SET_PLAYER_NOTE: "SET_PLAYER_NOTE",
 };
 
 // WITH THIS WE'RE MAKING OUR GLOBAL DATA STORE
@@ -115,6 +116,13 @@ function GlobalStoreContextProvider(props) {
             }
             // UPDATE SESSION AFTER A PURCHASE IS EDITED
             case GlobalStoreActionType.EDIT_PURCHASE: {
+                return setStore({
+                    leagues: store.leagues,
+                    currentLeague: store.currentLeague,
+                    currentDraftSession: payload,
+                });
+            }
+            case GlobalStoreActionType.SET_PLAYER_NOTE: {
                 return setStore({
                     leagues: store.leagues,
                     currentLeague: store.currentLeague,
@@ -212,8 +220,8 @@ function GlobalStoreContextProvider(props) {
         return res;
     };
 
-    store.recordPurchase = async function (draftSessionId, { playerId, playerName, teamId, price }) {
-        const res = await draftSessionsRequestSender.recordPurchase(draftSessionId, { playerId, playerName, teamId, price });
+    store.recordPurchase = async function (draftSessionId, { playerId, playerName, teamId, price, notes }) {
+        const res = await draftSessionsRequestSender.recordPurchase(draftSessionId, { playerId, playerName, teamId, price, notes });
         if (res.status === 200 && res.data?.success) {
             storeReducer({
                 type: GlobalStoreActionType.RECORD_PURCHASE,
@@ -239,6 +247,17 @@ function GlobalStoreContextProvider(props) {
         if (res.status === 200 && res.data?.success) {
             storeReducer({
                 type: GlobalStoreActionType.EDIT_PURCHASE,
+                payload: res.data.draftSession,
+            });
+        }
+        return res;
+    };
+
+    store.setPlayerNote = async function (draftSessionId, playerId, note) {
+        const res = await draftSessionsRequestSender.setPlayerNote(draftSessionId, playerId, note);
+        if (res.status === 200 && res.data?.success) {
+            storeReducer({
+                type: GlobalStoreActionType.SET_PLAYER_NOTE,
                 payload: res.data.draftSession,
             });
         }

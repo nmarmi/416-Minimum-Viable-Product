@@ -202,7 +202,7 @@ const recordPurchase = async (req, res) => {
         }
 
         const { draftSessionId } = req.params;
-        const { playerId, playerName, teamId, price } = req.body || {};
+        const { playerId, playerName, teamId, price, notes } = req.body || {};
 
         if (!playerId || !teamId || price == null) {
             return res.status(400).json({ success: false, errorMessage: 'playerId, teamId, and price are required.' });
@@ -223,7 +223,7 @@ const recordPurchase = async (req, res) => {
             return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
         }
 
-        const result = await draftService.recordPurchase(draftSessionId, { playerId, playerName, teamId, price: parsedPrice });
+        const result = await draftService.recordPurchase(draftSessionId, { playerId, playerName, teamId, price: parsedPrice, notes });
         if (!result.success) {
             return res.status(400).json({ success: false, errorMessage: result.errorMessage });
         }
@@ -277,7 +277,7 @@ const editPurchase = async (req, res) => {
         }
 
         const { draftSessionId, purchaseId } = req.params;
-        const { newPrice, newTeamId } = req.body || {};
+        const { newPrice, newTeamId, newNotes } = req.body || {};
 
         const session = await DraftSession.findOne({ draftSessionId });
         if (!session) {
@@ -289,7 +289,7 @@ const editPurchase = async (req, res) => {
             return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
         }
 
-        const result = await draftService.editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId });
+        const result = await draftService.editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId, newNotes });
         if (!result.success) {
             return res.status(400).json({ success: false, errorMessage: result.errorMessage });
         }
@@ -629,6 +629,38 @@ const getMyDraftSessions = async (req, res) => {
     }
 };
 
+const setPlayerNote = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const { draftSessionId, playerId } = req.params;
+        const { note } = req.body || {};
+
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) {
+            return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+        }
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league) {
+            return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        }
+
+        const result = await draftService.setPlayerNote(draftSessionId, playerId, note);
+        if (!result.success) {
+            return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        }
+
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('setPlayerNote error:', err);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to save player note.' });
+    }
+};
+
 module.exports = {
     getMyDraftSessions,
     createDraftSession,
@@ -641,4 +673,5 @@ module.exports = {
     getSessionPlayers,
     getSessionValuations,
     getSessionRecommendations,
+    setPlayerNote,
 };

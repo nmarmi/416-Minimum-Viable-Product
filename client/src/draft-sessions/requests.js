@@ -68,6 +68,7 @@ export const getSessionPlayers = async (draftSessionId, params = {}) => {
 export const recordPurchase = async (draftSessionId, payload) => request(`/${draftSessionId}/purchases`, "POST", payload);
 export const undoPurchase = async (draftSessionId, purchaseId) => request(`/${draftSessionId}/purchases/${purchaseId}`, "DELETE");
 export const editPurchase = async (draftSessionId, purchaseId, payload) => request(`/${draftSessionId}/purchases/${purchaseId}`, "PUT", payload);
+export const setPlayerNote = async (draftSessionId, playerId, note) => request(`/${draftSessionId}/player-notes/${playerId}`, "PUT", { note });
 
 const draftSessionsApi = {
     createDraftSession,
@@ -80,6 +81,7 @@ const draftSessionsApi = {
     recordPurchase,
     undoPurchase,
     editPurchase,
+    setPlayerNote,
 };
 
 export default draftSessionsApi;

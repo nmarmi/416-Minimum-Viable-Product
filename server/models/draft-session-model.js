@@ -43,6 +43,10 @@ const DraftPurchaseSchema = new Schema(
             default: null,
             trim: true
         },
+        notes: {
+            type: String,
+            default: ''
+        },
         timestamp: {
             type: Date,
             default: Date.now
@@ -187,6 +191,11 @@ const DraftSessionSchema = new Schema(
         draftHistory: {
             type: [DraftPurchaseSchema],
             default: []
+        },
+        playerNotes: {
+            type: Map,
+            of: String,
+            default: {}
         }
     },
     { timestamps: true }

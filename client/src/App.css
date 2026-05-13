@@ -2740,6 +2740,75 @@ body {
   padding: 12px 20px 16px;
   border-top: 1px solid #e2e6ee;
   background: #fff;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ----- Player Info Modal ----- */
+.player-info-modal-card {
+  max-width: 520px;
+  width: 100%;
+}
+
+.player-info-modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.player-info-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 10px;
+}
+
+.player-info-stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f4f6fb;
+  border-radius: 8px;
+  padding: 8px 6px 6px;
+}
+
+.player-info-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.player-info-stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.player-info-notes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-info-notes-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+
+.player-info-notes-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
 }
 
 /* ----- Draft room toasts ----- */

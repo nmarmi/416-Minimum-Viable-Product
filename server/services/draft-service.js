@@ -145,7 +145,7 @@ async function initializeDraft(draftSessionId) {
  * capacity. On success, moves the player from available to purchased, debits
  * the team, appends to history, and bumps `nominationOrder`.
  */
-async function recordPurchase(draftSessionId, { playerId, playerName, teamId, price }) {
+async function recordPurchase(draftSessionId, { playerId, playerName, teamId, price, notes }) {
     const session = await DraftSession.findOne({ draftSessionId });
     if (!session) {
         return { success: false, errorMessage: 'Draft session not found.' };
@@ -210,6 +210,7 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
         teamId,
         price,
         positionFilled: slotKey,
+        notes: notes || '',
         nominationOrder: session.nominationOrder
     });
 
@@ -267,7 +268,7 @@ async function undoPurchase(draftSessionId, purchaseId) {
  * US-2.8: Edit an existing purchase — change price and/or team. Adjusts both
  * teams' budgets and roster slots as needed and validates the new values.
  */
-async function editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId } = {}) {
+async function editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId, newNotes } = {}) {
     const session = await DraftSession.findOne({ draftSessionId });
     if (!session) {
         return { success: false, errorMessage: 'Draft session not found.' };
@@ -355,6 +356,9 @@ async function editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId } 
     entry.teamId = targetTeamId;
     entry.price = finalPrice;
     entry.positionFilled = finalPositionFilled;
+    if (newNotes !== undefined) {
+        entry.notes = String(newNotes);
+    }
 
     session.markModified('teams');
     session.markModified('draftHistory');
@@ -395,9 +399,11 @@ function buildSnapshot(session) {
             teamId: entry.teamId,
             price: entry.price,
             positionFilled: entry.positionFilled || null,
+            notes: entry.notes || '',
             timestamp: entry.timestamp,
             nominationOrder: entry.nominationOrder
-        }))
+        })),
+        playerNotes: toPlainObject(plain.playerNotes)
     };
 }
 
@@ -409,11 +415,23 @@ async function getDraftSnapshot(draftSessionId) {
     return { success: true, session, snapshot: buildSnapshot(session) };
 }
 
+async function setPlayerNote(draftSessionId, playerId, note) {
+    const session = await DraftSession.findOne({ draftSessionId });
+    if (!session) {
+        return { success: false, errorMessage: 'Draft session not found.' };
+    }
+    session.playerNotes.set(String(playerId), String(note || ''));
+    session.markModified('playerNotes');
+    await session.save();
+    return { success: true, session, snapshot: buildSnapshot(session) };
+}
+
 module.exports = {
     initializeDraft,
     recordPurchase,
     undoPurchase,
     editPurchase,
     getDraftSnapshot,
+    setPlayerNote,
     buildSnapshot
 };
