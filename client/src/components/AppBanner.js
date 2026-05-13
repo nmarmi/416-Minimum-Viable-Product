@@ -23,7 +23,7 @@ export default function AppBanner() {
             setShowSettings(false);
             setToast({ type: 'error', message: 'Account deleted.' });
         }
-    }, [auth.loggedIn]);
+    }, [auth.loggedIn, showSettings]);
     const inAuthRoute = (
         location.pathname === '/login' ||
         location.pathname === '/register'
