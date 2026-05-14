@@ -2411,9 +2411,10 @@ body {
 .draft-v2-table-wrap th,
 .draft-v2-table-wrap td {
   border-bottom: 1px solid #edf0f6;
-  padding: 10px 8px;
+  padding: 13px 8px;
   text-align: left;
   white-space: nowrap;
+  line-height: 1.4;
 }
 
 .draft-v2-player-name-with-status {

@@ -19,7 +19,10 @@ const DRAFT_STATUS_META = {
     completed: { label: 'Completed', className: 'completed' },
 };
 
-const formatStat = (val) => (val != null && Number.isFinite(val) ? (Number(val) === val && val < 1 && val > 0 ? val.toFixed(3) : String(Math.round(val))) : '--');
+// Generic stat formatter: integers for counting stats, 3-decimal for sub-1 values (e.g. AVG)
+const formatStat = (val) => (val != null && Number.isFinite(val) ? (val > 0 && val < 1 ? val.toFixed(3) : String(Math.round(val))) : '--');
+// Rate stat formatter for ERA/WHIP: always 2 decimal places (e.g. 3.40, 1.15)
+const formatRate = (val) => (val != null && Number.isFinite(val) && val > 0 ? Number(val).toFixed(2) : '--');
 
 const getDraftStatusMeta = (status) => {
     const normalizedStatus = String(status || 'setup').toLowerCase();
@@ -37,7 +40,11 @@ const playerNameStartsWithSearch = (playerName, searchTerm) => {
         .some((part) => part.startsWith(normalizedSearch));
 };
 
-const getTeamName = (team) => team?.teamName || team?.teamId || 'Fantasy Team';
+const getTeamName = (team) => {
+    const raw = team?.teamName || team?.teamId || 'Fantasy Team';
+    // Prettify auto-generated IDs like "fantasy-team-3" → "Team 3"
+    return raw.replace(/^fantasy-team-(\d+)$/, 'Team $1');
+};
 
 const getPlayerName = (player) => player.playerName || player.name || '';
 const getPlayerTeamLabel = (player) => player?.mlbTeam || player?.team || '';
@@ -272,7 +279,8 @@ const DraftRoomScreen = () => {
                 break;
             }
         }
-        if (dollarVal != null) return `$${Math.round(dollarVal)}`;
+        // $0 means no stats data — show '--' since the minimum bid is always $1
+        if (dollarVal != null && dollarVal > 0) return `$${Math.round(dollarVal)}`;
         return '--';
     }, [valuationsMap]);
 
@@ -1064,8 +1072,8 @@ const DraftRoomScreen = () => {
                                         <td>{formatStat(pickFirstDefined(player, ['w', 'wins', 'W']))}</td>
                                         <td>{formatStat(pickFirstDefined(player, ['sv', 'saves', 'SV']))}</td>
                                         <td>{formatStat(player.k)}</td>
-                                        <td>{formatStat(pickFirstDefined(player, ['era', 'ERA']))}</td>
-                                        <td>{formatStat(pickFirstDefined(player, ['whip', 'WHIP']))}</td>
+                                        <td>{formatRate(pickFirstDefined(player, ['era', 'ERA']))}</td>
+                                        <td>{formatRate(pickFirstDefined(player, ['whip', 'WHIP']))}</td>
                                         <td className="draft-v2-td-compare">
                                             <button
                                                 type="button"
