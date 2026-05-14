@@ -165,3 +165,99 @@ describe('GET /auth/loggedIn', () => {
         expect(res.body.user.userName).toBe('testuser');
     });
 });
+
+describe('US-16.2 Password reset flow', () => {
+    const crypto = require('crypto');
+
+    function makeTokenHash(rawToken) {
+        return crypto.createHash('sha256').update(rawToken).digest('hex');
+    }
+
+    // ── forgot-password ──────────────────────────────────────────────────────
+
+    it('POST /auth/forgot-password — missing email returns 400', async () => {
+        const res = await request(app).post('/auth/forgot-password').send({});
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('MISSING_EMAIL');
+    });
+
+    it('POST /auth/forgot-password — unknown email returns 200 (no enumeration)', async () => {
+        const User = require('../models/user-model');
+        vi.spyOn(User, 'findOne').mockResolvedValue(null);
+        const res = await request(app)
+            .post('/auth/forgot-password')
+            .send({ email: 'nobody@nowhere.com' });
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        // Must NOT reveal whether the email exists
+        expect(res.body.token).toBeUndefined();
+    });
+
+    it('POST /auth/forgot-password — known email returns token in dev mode', async () => {
+        const User = require('../models/user-model');
+        const fakeUser = {
+            email: 'user@example.com',
+            resetTokenHash: null,
+            resetTokenExpiresAt: null,
+            save: vi.fn().mockResolvedValue(undefined),
+        };
+        vi.spyOn(User, 'findOne').mockResolvedValue(fakeUser);
+        const res = await request(app)
+            .post('/auth/forgot-password')
+            .send({ email: 'user@example.com' });
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        // NODE_ENV is not 'production' in test runner → raw token returned
+        expect(typeof res.body.token).toBe('string');
+        expect(res.body.token.length).toBeGreaterThan(20);
+        expect(fakeUser.save).toHaveBeenCalled();
+        expect(fakeUser.resetTokenHash).not.toBeNull();
+    });
+
+    // ── reset-password ───────────────────────────────────────────────────────
+
+    it('POST /auth/reset-password — missing fields returns 400', async () => {
+        const res = await request(app).post('/auth/reset-password').send({ token: 'tok' });
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('MISSING_FIELDS');
+    });
+
+    it('POST /auth/reset-password — weak password returns 400', async () => {
+        const res = await request(app)
+            .post('/auth/reset-password')
+            .send({ token: 'tok', newPassword: 'short' });
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('WEAK_PASSWORD');
+    });
+
+    it('POST /auth/reset-password — wrong token returns 400 TOKEN_EXPIRED', async () => {
+        const User = require('../models/user-model');
+        vi.spyOn(User, 'findOne').mockResolvedValue(null); // no matching user
+        const res = await request(app)
+            .post('/auth/reset-password')
+            .send({ token: 'wrong-token-xyz', newPassword: 'NewSecure99!' });
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('TOKEN_EXPIRED');
+    });
+
+    it('POST /auth/reset-password — valid token clears token and updates password', async () => {
+        const User = require('../models/user-model');
+        const rawToken = 'valid-raw-token-12345';
+        const fakeUser = {
+            resetTokenHash:      makeTokenHash(rawToken),
+            resetTokenExpiresAt: new Date(Date.now() + 60_000), // 1 min in future
+            passwordHash:        'old-hash',
+            save:                vi.fn().mockResolvedValue(undefined),
+        };
+        vi.spyOn(User, 'findOne').mockResolvedValue(fakeUser);
+        const res = await request(app)
+            .post('/auth/reset-password')
+            .send({ token: rawToken, newPassword: 'NewSecure99!' });
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(fakeUser.resetTokenHash).toBeNull();
+        expect(fakeUser.resetTokenExpiresAt).toBeNull();
+        expect(fakeUser.passwordHash).not.toBe('old-hash'); // was updated
+        expect(fakeUser.save).toHaveBeenCalled();
+    });
+});

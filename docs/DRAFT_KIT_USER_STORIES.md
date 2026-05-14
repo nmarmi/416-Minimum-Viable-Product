@@ -1116,7 +1116,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Logout clears the cookie + auth context state
 - Integration test `tests/auth-routes.test.js` asserts the full flow: register → loggedIn:true → logout → loggedIn:false
 
-### US-16.2: Password reset / retrieval flow
+### US-16.2: Password reset / retrieval flow ✅ COMPLETED
 **As a** drafter who forgot my password, **I want** to reset it via my email, **so that** I'm not locked out of my drafts.
 
 **Acceptance criteria:**

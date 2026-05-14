@@ -1159,6 +1159,31 @@ body {
   margin-top: 8px;
 }
 
+.forgot-subtitle {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 4px 0 12px;
+  text-align: center;
+}
+
+/* US-16.2: dev-mode token display */
+.forgot-dev-note {
+  color: #d97706;
+  font-size: 0.82rem;
+  margin: 8px 0 6px;
+  text-align: center;
+}
+.forgot-dev-token {
+  display: block;
+  word-break: break-all;
+  background: #1c1917;
+  color: #86efac;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  margin: 6px 0 16px;
+}
+
 .forgot-form {
   margin-top: 10px;
 }

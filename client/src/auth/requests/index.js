@@ -54,13 +54,19 @@ export const changePassword = async (currentPassword, newPassword, newPasswordVe
 
 export const deleteAccount = async () => request("/account", "DELETE");
 
+// US-16.2: password reset flow
+export const forgotPassword = async (email) => request("/forgot-password", "POST", { email });
+export const resetPassword  = async (token, newPassword) => request("/reset-password", "POST", { token, newPassword });
+
 const apis = {
     getLoggedIn,
     registerUser,
     loginUser,
     logoutUser,
     changePassword,
-    deleteAccount
+    deleteAccount,
+    forgotPassword,
+    resetPassword,
 };
 
 export default apis;

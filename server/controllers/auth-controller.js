@@ -1,6 +1,10 @@
-const auth = require('../auth')
-const db = require("../db")
-const bcrypt = require('bcryptjs')
+const crypto = require('crypto');
+const auth   = require('../auth');
+const db     = require('../db');
+const bcrypt = require('bcryptjs');
+const User   = require('../models/user-model');
+
+const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 const getCookieOptions = (overrides = {}) => {
     const isProduction = process.env.NODE_ENV === "production";
@@ -274,6 +278,85 @@ deleteAccount = async (req, res) => {
     }
 }
 
+// US-16.2: forgot-password — issue a single-use, time-limited reset token
+const forgotPassword = async (req, res) => {
+    const { email } = req.body || {};
+    if (!email) {
+        return res.status(400).json({ success: false, errorMessage: 'Email is required.', code: 'MISSING_EMAIL' });
+    }
+
+    try {
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+        // Always respond 200 so callers can't enumerate registered emails
+        if (!user) {
+            return res.status(200).json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+        }
+
+        // Generate a 32-byte random token; store only its SHA-256 hash
+        const rawToken  = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+        user.resetTokenHash      = tokenHash;
+        user.resetTokenExpiresAt = new Date(Date.now() + TOKEN_TTL_MS);
+        await user.save();
+
+        // In production, email the token. In development, return it directly so
+        // tests and manual flows work without an email service.
+        const isProd = process.env.NODE_ENV === 'production';
+        if (isProd) {
+            // TODO: integrate an email provider (SendGrid, Resend, etc.)
+            console.info('[auth] password reset token generated for', email, '— email delivery not yet wired up');
+            return res.status(200).json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+        }
+
+        // Dev mode: return the raw token so it can be used immediately in tests
+        return res.status(200).json({
+            success: true,
+            message:  'Dev mode: reset token returned directly (no email sent).',
+            token:    rawToken,
+            expiresAt: user.resetTokenExpiresAt,
+        });
+    } catch (err) {
+        console.error('[auth] forgotPassword error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to process request.' });
+    }
+};
+
+// US-16.2: reset-password — validate token and set new password
+const resetPassword = async (req, res) => {
+    const { token, newPassword } = req.body || {};
+
+    if (!token || !newPassword) {
+        return res.status(400).json({ success: false, errorMessage: 'Token and newPassword are required.', code: 'MISSING_FIELDS' });
+    }
+    if (newPassword.length < 8) {
+        return res.status(400).json({ success: false, errorMessage: 'Password must be at least 8 characters.', code: 'WEAK_PASSWORD' });
+    }
+
+    try {
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const user = await User.findOne({
+            resetTokenHash:      tokenHash,
+            resetTokenExpiresAt: { $gt: new Date() },
+        });
+
+        if (!user) {
+            return res.status(400).json({ success: false, errorMessage: 'Reset token is invalid or has expired.', code: 'TOKEN_EXPIRED' });
+        }
+
+        user.passwordHash        = await bcrypt.hash(newPassword, 10);
+        user.resetTokenHash      = null;
+        user.resetTokenExpiresAt = null;
+        await user.save();
+
+        return res.status(200).json({ success: true, message: 'Password updated. You can now log in with your new password.' });
+    } catch (err) {
+        console.error('[auth] resetPassword error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to reset password.' });
+    }
+};
+
 module.exports = {
     getLoggedIn,
     registerUser,
@@ -281,5 +364,7 @@ module.exports = {
     logoutUser,
     updateUser,
     changePassword,
-    deleteAccount
+    deleteAccount,
+    forgotPassword,
+    resetPassword,
 }

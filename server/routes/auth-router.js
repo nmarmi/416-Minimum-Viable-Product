@@ -9,5 +9,8 @@ router.get('/loggedIn', AuthController.getLoggedIn)
 router.put('/update', AuthController.updateUser)
 router.put('/change-password', AuthController.changePassword)
 router.delete('/account', AuthController.deleteAccount)
+// US-16.2: password reset flow
+router.post('/forgot-password', AuthController.forgotPassword)
+router.post('/reset-password', AuthController.resetPassword)
 
 module.exports = router
