@@ -3351,6 +3351,14 @@ body {
 }
 .draft-setup-keeper-empty { color: #a0aec0; font-size: 0.83rem; text-align: center; padding: 12px 0; }
 
+/* US-20.1: note indicator on player rows */
+.draft-v2-note-indicator {
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
 /* US-18.2: position-move dropdown in My Roster */
 .draft-v2-move-select {
   font-size: 0.78rem;

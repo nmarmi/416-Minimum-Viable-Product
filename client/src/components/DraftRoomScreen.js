@@ -1053,6 +1053,10 @@ const DraftRoomScreen = () => {
                                                         {getStatusLabel(player)}
                                                     </span>
                                                 ) : null}
+                                                {/* US-20.1: note indicator — filled when a note exists */}
+                                                {draftSession?.playerNotes?.[getPlayerId(player)] ? (
+                                                    <span className="draft-v2-note-indicator" title="Has note">📝</span>
+                                                ) : null}
                                             </span>
                                         </td>
                                         <td>{getPlayerTeamLabel(player)}</td>

@@ -477,7 +477,13 @@ async function setPlayerNote(draftSessionId, playerId, note) {
     if (!session) {
         return { success: false, errorMessage: 'Draft session not found.' };
     }
-    session.playerNotes.set(String(playerId), String(note || ''));
+    // US-20.2: empty string deletes the note entirely so the icon clears
+    const trimmed = String(note || '').trim();
+    if (trimmed) {
+        session.playerNotes.set(String(playerId), trimmed);
+    } else {
+        session.playerNotes.delete(String(playerId));
+    }
     session.markModified('playerNotes');
     await session.save();
     return { success: true, session, snapshot: buildSnapshot(session) };

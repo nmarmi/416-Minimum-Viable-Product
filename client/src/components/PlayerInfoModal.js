@@ -74,7 +74,7 @@ const PlayerInfoModal = ({ player, initialNote = '', onClose, onSaveNote, isSavi
     const handleSave = async () => {
         setSaveError('');
         setSaveSuccess(false);
-        const result = await onSaveNote(note);
+        const result = await onSaveNote(note.trim());
         if (result?.success === false) {
             setSaveError(result.errorMessage || 'Failed to save note.');
         } else {
@@ -147,6 +147,24 @@ const PlayerInfoModal = ({ player, initialNote = '', onClose, onSaveNote, isSavi
                             >
                                 {isSaving ? 'Saving...' : 'Save Note'}
                             </button>
+                            {/* US-20.2: clear/delete note — sends text:"" to the endpoint */}
+                            {note ? (
+                                <button
+                                    type="button"
+                                    className="draft-v2-filter-btn"
+                                    style={{ color: '#e53e3e' }}
+                                    disabled={isSaving}
+                                    onClick={async () => {
+                                        setNote('');
+                                        setSaveError('');
+                                        const result = await onSaveNote('');
+                                        if (!result.success) setSaveError(result.errorMessage || 'Failed to delete note.');
+                                        else setSaveSuccess(true);
+                                    }}
+                                >
+                                    Delete Note
+                                </button>
+                            ) : null}
                             <button type="button" className="draft-v2-filter-btn" onClick={onClose}>
                                 Close
                             </button>

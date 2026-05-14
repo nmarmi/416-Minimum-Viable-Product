@@ -1237,7 +1237,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "User can enter Player Notes before or during draft" (1pt), "User can edit Player Notes before or during draft" (1pt) — 2pt total.
 
-### US-20.1: Enter player notes pre-draft and during draft
+### US-20.1: Enter player notes pre-draft and during draft ✅ COMPLETED
 **As a** drafter, **I want** to attach a free-text note to any player, **so that** I remember my own intel ("UCL surgery summer '25", "Manager hates him") at the moment of the bid.
 
 **Acceptance criteria:**
@@ -1246,7 +1246,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Notes persist via `PUT /draft-sessions/:id/notes/:playerId` with `{ text }`
 - The note icon in the table fills with color when a note exists for that player
 
-### US-20.2: Edit and delete player notes
+### US-20.2: Edit and delete player notes ✅ COMPLETED
 **As a** drafter, **I want** to edit or clear an existing note, **so that** stale intel doesn't trip me up.
 
 **Acceptance criteria:**
