@@ -689,3 +689,98 @@ describe('US-17 League configuration extensions', () => {
         }
     });
 });
+
+describe('US-18 Keepers & Position Move', () => {
+    async function makeSession(overrides = {}) {
+        const DraftSession = require('../models/draft-session-model');
+        const sessionId = `keeper-test-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+        const rosterSlots = { C: 1, OF: 2, SP: 1, BENCH: 1 };
+        const session = await DraftSession.create({
+            draftSessionId: sessionId,
+            leagueId: new mongoose.Types.ObjectId(),
+            createdBy: new mongoose.Types.ObjectId(),
+            status: 'setup',
+            leagueSettings: { numberOfTeams: 2, salaryCap: 100, rosterSlots },
+            availablePlayerIds: ['mlb-1', 'mlb-2', 'mlb-3'],
+            teams: [
+                { teamId: 'fantasy-team-1', teamName: 'Team 1', budgetRemaining: 100,
+                  filledRosterSlots: new Map(), purchasedPlayers: [], keepers: [] },
+                { teamId: 'fantasy-team-2', teamName: 'Team 2', budgetRemaining: 100,
+                  filledRosterSlots: new Map(), purchasedPlayers: [], keepers: [] },
+            ],
+            ...overrides,
+        });
+        return { session, sessionId, rosterSlots };
+    }
+
+    it('US-18.1: keepers are converted to purchases on initializeDraft', async () => {
+        const { sessionId } = await makeSession({
+            teams: [
+                { teamId: 'fantasy-team-1', teamName: 'Team 1', budgetRemaining: 100,
+                  filledRosterSlots: new Map(), purchasedPlayers: [],
+                  keepers: [{ playerId: 'mlb-1', playerName: 'Keeper One', price: 20, contractYears: 2, positionAssigned: 'C' }] },
+                { teamId: 'fantasy-team-2', teamName: 'Team 2', budgetRemaining: 100,
+                  filledRosterSlots: new Map(), purchasedPlayers: [], keepers: [] },
+            ]
+        });
+
+        const result = await draftService.initializeDraft(sessionId);
+        expect(result.success).toBe(true);
+
+        const team1 = result.session.teams.find((t) => t.teamId === 'fantasy-team-1');
+        expect(team1.budgetRemaining).toBe(80); // 100 - 20
+        expect(team1.purchasedPlayers.some((p) => p.playerId === 'mlb-1')).toBe(true);
+
+        const keeperEntry = result.session.draftHistory.find((h) => h.playerId === 'mlb-1');
+        expect(keeperEntry).toBeTruthy();
+        expect(keeperEntry.isKeeper).toBe(true);
+        expect(keeperEntry.contractYears).toBe(2);
+        expect(keeperEntry.nominationOrder).toBe(0);
+        expect(result.session.purchasedPlayerIds).toContain('mlb-1');
+        // Keeper removed from available pool
+        expect(result.session.availablePlayerIds).not.toContain('mlb-1');
+    });
+
+    it('US-18.2/18.3: movePosition — valid move changes slot', async () => {
+        const { sessionId } = await makeSession({ status: 'setup' });
+        // Manually set up an active session with a purchase
+        const DraftSession = require('../models/draft-session-model');
+        const session = await DraftSession.findOne({ draftSessionId: sessionId });
+        session.status = 'active';
+        const purchaseId = 'purchase-test-123';
+        session.draftHistory.push({ purchaseId, playerId: 'mlb-2', playerName: 'Move Me', teamId: 'fantasy-team-1', price: 10, positionFilled: 'OF', nominationOrder: 1 });
+        session.teams[0].filledRosterSlots.set('OF', 1);
+        session.markModified('teams');
+        await session.save();
+
+        const result = await draftService.movePosition(sessionId, purchaseId, {
+            positionFilled: 'BENCH',
+            eligiblePositions: ['OF'],
+        });
+        expect(result.success).toBe(true);
+        const moved = result.session.draftHistory.find((h) => h.purchaseId === purchaseId);
+        expect(moved.positionFilled).toBe('BENCH');
+        // OF slot decremented back to 0
+        const filledOf = result.session.teams[0].filledRosterSlots.get('OF');
+        expect(filledOf).toBe(0);
+    });
+
+    it('US-18.3: movePosition rejects ineligible position', async () => {
+        const { sessionId } = await makeSession({ status: 'setup' });
+        const DraftSession = require('../models/draft-session-model');
+        const session = await DraftSession.findOne({ draftSessionId: sessionId });
+        session.status = 'active';
+        const purchaseId = 'purchase-ineligible-999';
+        session.draftHistory.push({ purchaseId, playerId: 'mlb-3', playerName: 'First Base Only', teamId: 'fantasy-team-1', price: 15, positionFilled: 'OF', nominationOrder: 2 });
+        session.markModified('teams');
+        await session.save();
+
+        // Player is OF-only, trying to move to SP
+        const result = await draftService.movePosition(sessionId, purchaseId, {
+            positionFilled: 'SP',
+            eligiblePositions: ['OF'],
+        });
+        expect(result.success).toBe(false);
+        expect(result.code).toBe('POSITION_INELIGIBLE');
+    });
+});

@@ -54,7 +54,10 @@ const DraftPurchaseSchema = new Schema(
         nominationOrder: {
             type: Number,
             required: true
-        }
+        },
+        // US-18.1: marks keeper-converted entries
+        isKeeper: { type: Boolean, default: false },
+        contractYears: { type: Number, default: null },
     },
     { _id: false }
 );
@@ -72,6 +75,18 @@ const TeamPurchasedPlayerSchema = new Schema(
             required: true,
             min: 1
         }
+    },
+    { _id: false }
+);
+
+// US-18.1: keeper entry stored pre-draft; converted to purchasedPlayer on start
+const KeeperSchema = new Schema(
+    {
+        playerId:         { type: String, required: true, trim: true },
+        playerName:       { type: String, required: true, trim: true },
+        price:            { type: Number, required: true, min: 1 },
+        contractYears:    { type: Number, default: 1, min: 0 },
+        positionAssigned: { type: String, default: null, trim: true },
     },
     { _id: false }
 );
@@ -101,7 +116,12 @@ const TeamSchema = new Schema(
             type: Map,
             of: Number,
             default: {}
-        }
+        },
+        // US-18.1: keepers — pre-draft, converted to purchases on draft start
+        keepers: {
+            type: [KeeperSchema],
+            default: []
+        },
     },
     { _id: false }
 );

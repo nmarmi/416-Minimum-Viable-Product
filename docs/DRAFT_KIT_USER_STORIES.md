@@ -1165,7 +1165,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "User can enter pre-draft rosters with Contract and $ values" (2pt), "User can easily move player to another position within team" (2pt), "Kit only allows players to be moved to positions they are eligible for" (2pt), "Any players can be moved from one team to another" (2pt) — 8pt total.
 
-### US-18.1: Enter pre-draft rosters with contract and price
+### US-18.1: Enter pre-draft rosters with contract ✅ COMPLETED and price
 **As a** drafter, **I want** to record keepers per team — player, price, contract years remaining — before the draft starts, **so that** budgets and slots are pre-debited at draft time.
 
 **Acceptance criteria:**
@@ -1175,7 +1175,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - When the draft starts, every keeper is converted into a `purchasedPlayer` entry (debits budget, fills the slot, adds a draft-history entry with `nominationOrder: 0` and `isKeeper: true`)
 - Validation: keepers can't exceed team budget or roster size
 
-### US-18.2: Move a rostered player to another position within the same team
+### US-18.2: Move a rostered player to another position ✅ COMPLETED within the same team
 **As a** drafter, **I want** to drag (or pick from a dropdown) a player from one of my position slots into another slot they're eligible for, **so that** I can optimize my lineup as picks come in.
 
 **Acceptance criteria:**
@@ -1184,7 +1184,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Server-side validation: target position must be in the player's eligibility list; target slot must have an opening
 - `team.filledRosterSlots` is updated atomically (decrement old, increment new)
 
-### US-18.3: Position eligibility enforcement
+### US-18.3: Position eligibility enforcement ✅ COMPLETED
 **As a** drafter, **I want** the system to reject moves to positions a player isn't eligible for, **so that** rosters stay legal.
 
 **Acceptance criteria:**
@@ -1193,7 +1193,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Server returns `400 { code: "POSITION_INELIGIBLE" }` if a malicious client requests an ineligible slot
 - Test asserts: a 1B-only player cannot be moved to SS
 
-### US-18.4: Move any player between teams (pre-draft and during-draft)
+### US-18.4: Move any player between teams ✅ COMPLETED (pre-draft and during-draft)
 **As a** drafter, **I want** to move any player from one team to another at any point — keepers before the draft, recorded purchases during the draft — **so that** roster mistakes are easy to fix.
 
 **Acceptance criteria:**

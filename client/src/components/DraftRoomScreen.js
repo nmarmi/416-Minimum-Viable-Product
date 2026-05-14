@@ -1223,7 +1223,7 @@ const DraftRoomScreen = () => {
                 </article>
 
                 <article className="draft-v2-module-card full">
-                    <h3>Purchased Players ({purchased.length})</h3>
+                    <h3>Rostered Players ({purchased.length})</h3>
                     {purchased.length === 0 ? (
                         <div className="draft-v2-empty-box">No rostered players yet.</div>
                     ) : (
@@ -1232,17 +1232,56 @@ const DraftRoomScreen = () => {
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Player ID</th>
+                                            <th>Player</th>
                                             <th>Price</th>
+                                            <th>Slot</th>
+                                            <th>Move</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {purchased.map((p) => (
-                                            <tr key={p.playerId}>
-                                                <td>{p.playerId}</td>
-                                                <td>${p.price}</td>
-                                            </tr>
-                                        ))}
+                                        {purchased.map((p) => {
+                                            const histEntry = (draftSession?.draftHistory || []).find((h) => h.playerId === p.playerId && h.teamId === team?.teamId);
+                                            const displayName = histEntry?.playerName || p.playerId;
+                                            const currentSlot = histEntry?.positionFilled || '—';
+                                            const purchaseId  = histEntry?.purchaseId;
+                                            const eligiblePos = Object.keys(rosterSlots).filter((pos) => pos !== 'BENCH');
+                                            return (
+                                                <tr key={p.playerId}>
+                                                    <td>
+                                                        {displayName}
+                                                        {histEntry?.isKeeper ? <span className="draft-v2-status-badge active" style={{ marginLeft: 6, fontSize: 10 }}>K</span> : null}
+                                                    </td>
+                                                    <td>${p.price}</td>
+                                                    <td>{currentSlot}</td>
+                                                    <td>
+                                                        {purchaseId ? (
+                                                            <select
+                                                                defaultValue=""
+                                                                className="draft-v2-move-select"
+                                                                onChange={async (e) => {
+                                                                    const newPos = e.target.value;
+                                                                    if (!newPos) return;
+                                                                    e.target.value = '';
+                                                                    const { movePosition } = await import('../draft-sessions/requests.js');
+                                                                    const res = await movePosition(draftSessionId, purchaseId, newPos, eligiblePos);
+                                                                    if (res.status === 200 && res.data?.success) {
+                                                                        await store.loadDraftSession(draftSessionId);
+                                                                    } else {
+                                                                        showToast('error', res.data?.errorMessage || 'Could not move player.');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <option value="">Move…</option>
+                                                                {eligiblePos.map((pos) => (
+                                                                    <option key={pos} value={pos}>{pos}</option>
+                                                                ))}
+                                                                <option value="BENCH">BENCH</option>
+                                                            </select>
+                                                        ) : '—'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

@@ -170,20 +170,30 @@ function serializeSession(session) {
                 playerId: p.playerId,
                 price: p.price
             })),
-            filledRosterSlots: toPlainObject(team.filledRosterSlots)
+            filledRosterSlots: toPlainObject(team.filledRosterSlots),
+            // US-18.1: include keepers so the setup screen can display/edit them
+            keepers: (team.keepers || []).map((k) => ({
+                playerId:         k.playerId,
+                playerName:       k.playerName,
+                price:            k.price,
+                contractYears:    k.contractYears ?? 1,
+                positionAssigned: k.positionAssigned ?? null,
+            })),
         })),
         availablePlayerIds: plain.availablePlayerIds || [],
         purchasedPlayerIds,
         draftHistory: (plain.draftHistory || []).map((entry) => ({
-            purchaseId: entry.purchaseId,
-            playerId: entry.playerId,
-            playerName: entry.playerName,
-            teamId: entry.teamId,
-            price: entry.price,
-            positionFilled: entry.positionFilled || null,
-            notes: entry.notes || '',
-            timestamp: entry.timestamp,
+            purchaseId:      entry.purchaseId,
+            playerId:        entry.playerId,
+            playerName:      entry.playerName,
+            teamId:          entry.teamId,
+            price:           entry.price,
+            positionFilled:  entry.positionFilled || null,
+            notes:           entry.notes || '',
+            timestamp:       entry.timestamp,
             nominationOrder: entry.nominationOrder,
+            isKeeper:        entry.isKeeper || false,       // US-18.1
+            contractYears:   entry.contractYears ?? null,   // US-18.1
         })),
         playerNotes: toPlainObject(plain.playerNotes),
     };

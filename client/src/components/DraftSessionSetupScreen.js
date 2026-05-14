@@ -1,6 +1,7 @@
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import { GlobalStoreContext } from '../store';
+import { getPlayers } from '../players/requests';
 
 const DEFAULT_ROSTER_SLOTS = {
     C: 2,
@@ -239,6 +240,65 @@ export default function DraftSessionSetupScreen() {
         }));
     };
 
+    // US-18.1: keepers state
+    const [keeperTeamId,    setKeeperTeamId]    = useState('');
+    const [keeperSearch,    setKeeperSearch]     = useState('');
+    const [keeperResults,   setKeeperResults]    = useState([]);
+    const [keeperPlayer,    setKeeperPlayer]     = useState(null); // { playerId, playerName }
+    const [keeperPrice,     setKeeperPrice]      = useState('');
+    const [keeperYears,     setKeeperYears]      = useState('1');
+    const [keeperPos,       setKeeperPos]        = useState('');
+    const [keeperSearching, setKeeperSearching]  = useState(false);
+
+    const rosterPositions = useMemo(() => Object.keys(formState.rosterSlots), [formState.rosterSlots]);
+
+    const searchKeepers = useCallback(async (term) => {
+        if (!term || term.length < 2) { setKeeperResults([]); return; }
+        setKeeperSearching(true);
+        const res = await getPlayers({ search: term, limit: 8 });
+        setKeeperSearching(false);
+        if (res.status === 200 && res.data?.success) setKeeperResults(res.data.players || []);
+    }, []);
+
+    const addKeeper = () => {
+        if (!keeperTeamId || !keeperPlayer || !keeperPrice || Number(keeperPrice) < 1) return;
+        setFormState((prev) => ({
+            ...prev,
+            teams: prev.teams.map((team) => {
+                if (team.teamId !== keeperTeamId) return team;
+                const existing = team.keepers || [];
+                if (existing.some((k) => k.playerId === keeperPlayer.playerId)) return team;
+                return {
+                    ...team,
+                    keepers: [...existing, {
+                        playerId:         keeperPlayer.playerId,
+                        playerName:       keeperPlayer.playerName || keeperPlayer.name || keeperPlayer.playerId,
+                        price:            Number(keeperPrice),
+                        contractYears:    Number(keeperYears) || 1,
+                        positionAssigned: keeperPos || null,
+                    }]
+                };
+            })
+        }));
+        setKeeperPlayer(null);
+        setKeeperSearch('');
+        setKeeperResults([]);
+        setKeeperPrice('');
+        setKeeperYears('1');
+        setKeeperPos('');
+    };
+
+    const removeKeeper = (teamId, playerId) => {
+        setFormState((prev) => ({
+            ...prev,
+            teams: prev.teams.map((team) =>
+                team.teamId === teamId
+                    ? { ...team, keepers: (team.keepers || []).filter((k) => k.playerId !== playerId) }
+                    : team
+            )
+        }));
+    };
+
     if (loading) {
         return <main className="page-shell">Loading draft session...</main>;
     }
@@ -444,6 +504,86 @@ export default function DraftSessionSetupScreen() {
                             {saving ? 'Starting...' : 'Start Draft'}
                         </button>
                     </div>
+                </article>
+
+                {/* US-18.1: Keepers tab */}
+                <article className="home-card draft-setup-card">
+                    <div className="draft-setup-section-head">
+                        <h3>Keepers</h3>
+                        <p>Pre-assign players before the draft starts. Their cost and slot are debited automatically at draft start.</p>
+                    </div>
+
+                    {/* Add keeper form */}
+                    <div className="draft-setup-keeper-form">
+                        <select
+                            className="draft-setup-keeper-select"
+                            value={keeperTeamId}
+                            onChange={(e) => setKeeperTeamId(e.target.value)}
+                        >
+                            <option value="">— Select team —</option>
+                            {formState.teams.map((t) => (
+                                <option key={t.teamId} value={t.teamId}>{t.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</option>
+                            ))}
+                        </select>
+
+                        <div className="draft-setup-keeper-search">
+                            <input
+                                type="text"
+                                placeholder="Search player…"
+                                value={keeperSearch}
+                                onChange={(e) => { setKeeperSearch(e.target.value); setKeeperPlayer(null); searchKeepers(e.target.value); }}
+                                autoComplete="off"
+                            />
+                            {keeperPlayer && <span className="draft-setup-keeper-chosen">✓ {keeperPlayer.playerName || keeperPlayer.name}</span>}
+                            {keeperResults.length > 0 && !keeperPlayer && (
+                                <div className="draft-setup-keeper-dropdown">
+                                    {keeperResults.map((p) => (
+                                        <button key={p.playerId} type="button"
+                                            onClick={() => { setKeeperPlayer(p); setKeeperSearch(p.name || p.playerName || p.playerId); setKeeperResults([]); }}
+                                        >
+                                            {p.name || p.playerName} <span>{p.mlbTeam} · {(p.positions || [p.position]).join('/')}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <input type="number" min="1" placeholder="$ Price" value={keeperPrice}
+                            onChange={(e) => setKeeperPrice(e.target.value)} className="draft-setup-keeper-num" />
+                        <input type="number" min="0" placeholder="Years" value={keeperYears}
+                            onChange={(e) => setKeeperYears(e.target.value)} className="draft-setup-keeper-num" style={{ width: 60 }} />
+                        <select value={keeperPos} onChange={(e) => setKeeperPos(e.target.value)} className="draft-setup-keeper-select">
+                            <option value="">— Pos —</option>
+                            {rosterPositions.map((pos) => <option key={pos} value={pos}>{pos}</option>)}
+                        </select>
+                        <button type="button" className="home-dark-btn"
+                            onClick={addKeeper}
+                            disabled={!keeperTeamId || !keeperPlayer || !keeperPrice || Number(keeperPrice) < 1}
+                        >+ Add</button>
+                    </div>
+
+                    {/* Per-team keeper lists */}
+                    {formState.teams.map((team) => {
+                        const keepers = team.keepers || [];
+                        if (!keepers.length) return null;
+                        return (
+                            <div key={team.teamId} className="draft-setup-keeper-team">
+                                <strong>{team.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</strong>
+                                {keepers.map((k) => (
+                                    <div key={k.playerId} className="draft-setup-keeper-row">
+                                        <span>{k.playerName}</span>
+                                        <span>${k.price}</span>
+                                        <span>{k.contractYears}yr</span>
+                                        <span>{k.positionAssigned || '—'}</span>
+                                        <button type="button" onClick={() => removeKeeper(team.teamId, k.playerId)}>✕</button>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })}
+                    {formState.teams.every((t) => !(t.keepers || []).length) && (
+                        <p className="draft-setup-keeper-empty">No keepers added yet.</p>
+                    )}
                 </article>
             </section>
         </main>

@@ -131,12 +131,58 @@ async function initializeDraft(draftSessionId) {
     session.purchasedPlayerIds = [];
     session.draftHistory = [];
     session.nominationOrder = 0;
-    session.status = 'active';
 
+    // US-18.1: convert keepers into purchases at draft start
+    const keeperErrors = [];
+    for (const team of session.teams) {
+        const keepers = team.keepers || [];
+        for (const keeper of keepers) {
+            const keeperIdStr = String(keeper.playerId);
+
+            // Validate keeper budget
+            const openSlots = countTotalSlots(rosterSlots) - countFilledSlots(toPlainObject(team.filledRosterSlots));
+            const maxBid = openSlots > 1 ? team.budgetRemaining - (openSlots - 1) : team.budgetRemaining;
+            if (keeper.price > maxBid) {
+                keeperErrors.push(`${keeper.playerName} exceeds ${team.teamName}'s budget.`);
+                continue;
+            }
+
+            // Find and fill the slot
+            const slotKey = findSlotForPosition(rosterSlots, toPlainObject(team.filledRosterSlots), keeper.positionAssigned || '');
+
+            team.budgetRemaining -= keeper.price;
+            team.purchasedPlayers.push({ playerId: keeperIdStr, price: keeper.price });
+            if (slotKey) {
+                team.filledRosterSlots.set(slotKey, (team.filledRosterSlots.get(slotKey) || 0) + 1);
+            }
+
+            // Remove from available pool
+            session.availablePlayerIds = session.availablePlayerIds.filter((id) => id !== keeperIdStr);
+            session.purchasedPlayerIds.push(keeperIdStr);
+            session.draftHistory.push({
+                purchaseId:      DraftSession.generatePurchaseId(),
+                playerId:        keeperIdStr,
+                playerName:      keeper.playerName,
+                teamId:          team.teamId,
+                price:           keeper.price,
+                positionFilled:  slotKey || null,
+                nominationOrder: 0,
+                isKeeper:        true,
+                contractYears:   keeper.contractYears ?? null,
+            });
+        }
+    }
+
+    session.status = 'active';
     session.markModified('teams');
     await session.save();
 
-    return { success: true, session, snapshot: buildSnapshot(session) };
+    return {
+        success: true,
+        session,
+        snapshot: buildSnapshot(session),
+        keeperErrors: keeperErrors.length ? keeperErrors : undefined,
+    };
 }
 
 /**
@@ -426,6 +472,67 @@ async function setPlayerNote(draftSessionId, playerId, note) {
     return { success: true, session, snapshot: buildSnapshot(session) };
 }
 
+/**
+ * US-18.2 / US-18.3: Move a purchased player to a different position slot on the same team.
+ * Validates eligibility and slot availability. Atomically decrements the old slot
+ * and increments the new one.
+ */
+async function movePosition(draftSessionId, purchaseId, { positionFilled: targetPos, eligiblePositions = [] }) {
+    const session = await DraftSession.findOne({ draftSessionId });
+    if (!session) return { success: false, errorMessage: 'Draft session not found.' };
+
+    const entry = session.draftHistory.find((h) => h.purchaseId === purchaseId);
+    if (!entry) return { success: false, errorMessage: 'Purchase not found.' };
+
+    const team = session.teams.find((t) => t.teamId === entry.teamId);
+    if (!team) return { success: false, errorMessage: 'Team not found.' };
+
+    const rosterSlots = toPlainObject(session.leagueSettings?.rosterSlots || {});
+    const filledSlots = toPlainObject(team.filledRosterSlots);
+
+    // US-18.3: enforce position eligibility
+    const ALWAYS_ELIGIBLE = new Set(['UTIL', 'BENCH']);
+    const isBatter = eligiblePositions.length > 0 && eligiblePositions.every((p) => !PITCHER_POSITIONS.has(p));
+
+    if (!ALWAYS_ELIGIBLE.has(targetPos)) {
+        const isDirectMatch   = eligiblePositions.includes(targetPos);
+        const isUtilForBatter = targetPos === 'UTIL' && isBatter;
+        if (!isDirectMatch && !isUtilForBatter) {
+            return { success: false, errorMessage: `Player is not eligible at ${targetPos}.`, code: 'POSITION_INELIGIBLE' };
+        }
+    }
+
+    // Target slot must exist in the league's roster config
+    if (rosterSlots[targetPos] == null) {
+        return { success: false, errorMessage: `Position ${targetPos} is not in the roster configuration.`, code: 'POSITION_INELIGIBLE' };
+    }
+
+    const currentPos = entry.positionFilled;
+
+    // Target slot must have an opening (unless moving to the same slot)
+    if (targetPos !== currentPos) {
+        const targetFilled = Number(filledSlots[targetPos] || 0);
+        const targetCapacity = Number(rosterSlots[targetPos] || 0);
+        if (targetFilled >= targetCapacity) {
+            return { success: false, errorMessage: `No open ${targetPos} slots remaining.`, code: 'ROSTER_FULL' };
+        }
+
+        // Atomically update filled counts
+        if (currentPos && rosterSlots[currentPos] != null) {
+            const cur = Number(filledSlots[currentPos] || 0);
+            team.filledRosterSlots.set(currentPos, Math.max(0, cur - 1));
+        }
+        team.filledRosterSlots.set(targetPos, targetFilled + 1);
+        entry.positionFilled = targetPos;
+
+        team.markModified?.('filledRosterSlots');
+        session.markModified('teams');
+        await session.save();
+    }
+
+    return { success: true, session, snapshot: buildSnapshot(session) };
+}
+
 module.exports = {
     initializeDraft,
     recordPurchase,
@@ -433,5 +540,6 @@ module.exports = {
     editPurchase,
     getDraftSnapshot,
     setPlayerNote,
-    buildSnapshot
+    movePosition,
+    buildSnapshot,
 };

@@ -662,6 +662,40 @@ const setPlayerNote = async (req, res) => {
     }
 };
 
+// US-18.2: move a purchased player to a different position slot
+const movePosition = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+
+        const { draftSessionId, purchaseId } = req.params;
+        const { positionFilled, eligiblePositions = [] } = req.body || {};
+
+        if (!positionFilled) {
+            return res.status(400).json({ success: false, errorMessage: 'positionFilled is required.', code: 'MISSING_FIELDS' });
+        }
+
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league || String(league.owner) !== String(userId)) {
+            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can move players.' });
+        }
+
+        const result = await draftService.movePosition(draftSessionId, purchaseId, { positionFilled, eligiblePositions });
+
+        if (!result.success) {
+            return res.status(400).json({ success: false, errorMessage: result.errorMessage, code: result.code });
+        }
+
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('[draft] movePosition error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to move player.' });
+    }
+};
+
 module.exports = {
     getMyDraftSessions,
     createDraftSession,
@@ -671,6 +705,7 @@ module.exports = {
     recordPurchase,
     undoPurchase,
     editPurchase,
+    movePosition,
     getSessionPlayers,
     getSessionValuations,
     getSessionRecommendations,

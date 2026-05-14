@@ -13,6 +13,8 @@ router.get('/:draftSessionId/recommendations', DraftSessionController.getSession
 router.post('/:draftSessionId/purchases', DraftSessionController.recordPurchase);
 router.delete('/:draftSessionId/purchases/:purchaseId', DraftSessionController.undoPurchase);
 router.put('/:draftSessionId/purchases/:purchaseId', DraftSessionController.editPurchase);
+// US-18.2: move a purchased player to a different position slot
+router.put('/:draftSessionId/purchases/:purchaseId/position', DraftSessionController.movePosition);
 router.put('/:draftSessionId/player-notes/:playerId', DraftSessionController.setPlayerNote);
 
 module.exports = router;

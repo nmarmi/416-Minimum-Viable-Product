@@ -3262,6 +3262,105 @@ body {
   background: #fff;
 }
 
+/* US-18.1: Keeper entry form */
+.draft-setup-keeper-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.draft-setup-keeper-select {
+  border: 1px solid #c9d2e3;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  background: #fff;
+  min-width: 130px;
+}
+.draft-setup-keeper-num {
+  border: 1px solid #c9d2e3;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  width: 80px;
+}
+.draft-setup-keeper-search {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+}
+.draft-setup-keeper-search input {
+  width: 100%;
+  border: 1px solid #c9d2e3;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+.draft-setup-keeper-chosen {
+  font-size: 0.78rem;
+  color: #2f9e5a;
+  display: block;
+  margin-top: 2px;
+}
+.draft-setup-keeper-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #c9d2e3;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.draft-setup-keeper-dropdown button {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f0f2f8;
+  cursor: pointer;
+  font-size: 0.83rem;
+  text-align: left;
+}
+.draft-setup-keeper-dropdown button:hover { background: #f5f7fd; }
+.draft-setup-keeper-dropdown button span { color: #6b7080; font-size: 0.75rem; }
+.draft-setup-keeper-team { margin: 10px 0 4px; }
+.draft-setup-keeper-team strong { font-size: 0.82rem; color: #4a5568; }
+.draft-setup-keeper-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #edf0f6;
+  font-size: 0.84rem;
+}
+.draft-setup-keeper-row span:first-child { flex: 1; font-weight: 600; }
+.draft-setup-keeper-row button {
+  background: none;
+  border: none;
+  color: #e53e3e;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+}
+.draft-setup-keeper-empty { color: #a0aec0; font-size: 0.83rem; text-align: center; padding: 12px 0; }
+
+/* US-18.2: position-move dropdown in My Roster */
+.draft-v2-move-select {
+  font-size: 0.78rem;
+  padding: 4px 6px;
+  border: 1px solid #c9d2e3;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
 .draft-setup-readonly {
   background: #f2f4f8 !important;
   color: #516078;
