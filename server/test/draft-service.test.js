@@ -639,3 +639,53 @@ describe('US-15.1 seasonYear round-trips through create → update → fetch', (
         expect(serialized.leagueSettings.seasonYear).toBe(2026);
     });
 });
+
+describe('US-17 League configuration extensions', () => {
+    const { sanitizeLeagueSettings, LEAGUE_SCOPES, STAT_CATEGORY_PRESETS } = require('../services/draft-defaults');
+
+    it('US-17.1: sanitizeLeagueSettings accepts valid leagueScope values', () => {
+        for (const scope of ['MLB', 'AL', 'NL']) {
+            const result = sanitizeLeagueSettings({ leagueScope: scope });
+            expect(result.leagueScope).toBe(scope);
+        }
+    });
+
+    it('US-17.1: invalid leagueScope falls back to MLB', () => {
+        const result = sanitizeLeagueSettings({ leagueScope: 'INTER' });
+        expect(result.leagueScope).toBe('MLB');
+    });
+
+    it('US-17.1: default leagueScope is MLB', () => {
+        const result = sanitizeLeagueSettings({});
+        expect(result.leagueScope).toBe('MLB');
+    });
+
+    it('US-17.2: statCategories round-trips through sanitizeLeagueSettings', () => {
+        const cats = { hitting: ['hr', 'rbi', 'avg'], pitching: ['era', 'whip', 'k'] };
+        const result = sanitizeLeagueSettings({ statCategories: cats });
+        expect(result.statCategories).toEqual(cats);
+    });
+
+    it('US-17.2: statCategories is undefined when not provided', () => {
+        const result = sanitizeLeagueSettings({});
+        expect(result.statCategories).toBeUndefined();
+    });
+
+    it('US-17.3: positionCatalog round-trips through sanitizeLeagueSettings', () => {
+        const catalog = { hitter: ['C', '1B', 'OF', 'MI'], pitcher: ['SP', 'RP', 'P'] };
+        const result = sanitizeLeagueSettings({ positionCatalog: catalog });
+        expect(result.positionCatalog).toEqual(catalog);
+    });
+
+    it('US-17.1: LEAGUE_SCOPES constant contains exactly MLB AL NL', () => {
+        expect(LEAGUE_SCOPES).toEqual(expect.arrayContaining(['MLB', 'AL', 'NL']));
+        expect(LEAGUE_SCOPES).toHaveLength(3);
+    });
+
+    it('US-17.2: STAT_CATEGORY_PRESETS has hitting and pitching for every scoring type', () => {
+        for (const type of ['5x5 Roto', 'H2H Categories', 'Points']) {
+            expect(STAT_CATEGORY_PRESETS[type].hitting.length).toBeGreaterThan(0);
+            expect(STAT_CATEGORY_PRESETS[type].pitching.length).toBeGreaterThan(0);
+        }
+    });
+});

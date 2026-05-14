@@ -33,13 +33,18 @@ function toPlayerApiLeagueSettings(leagueSettings, { forValuations = true } = {}
 
     if (forValuations) {
         const { hitterSlotsPerTeam, pitcherSlotsPerTeam } = computeRosterSlotCounts(rosterSlots);
-        return {
+        const payload = {
             numTeams: leagueSettings?.numberOfTeams || DEFAULT_NUM_TEAMS,
             budget,
             hitterBudgetPct: 0.675,
             hitterSlotsPerTeam,
             pitcherSlotsPerTeam
         };
+        // US-17.2: pass custom stat categories when configured
+        const statCategories = leagueSettings?.statCategories;
+        if (statCategories?.hitting?.length)  payload.hittingCategories  = statCategories.hitting;
+        if (statCategories?.pitching?.length) payload.pitchingCategories = statCategories.pitching;
+        return payload;
     }
 
     const totalRosterSlots = Object.values(rosterSlots).reduce((s, n) => s + Number(n || 0), 0);

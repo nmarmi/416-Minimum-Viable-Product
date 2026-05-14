@@ -1,6 +1,26 @@
 const db = require('../db');
 const licensedApi = require('../lib/licensed-player-api');
 
+// US-17.1: MLB team abbreviations by league (2025 rosters)
+const AL_TEAMS = new Set([
+    'NYY', 'BOS', 'TOR', 'BAL', 'TB',
+    'CLE', 'MIN', 'DET', 'KC',  'CWS',
+    'HOU', 'LAA', 'SEA', 'ATH', 'OAK', 'TEX',
+]);
+const NL_TEAMS = new Set([
+    'NYM', 'PHI', 'ATL', 'MIA', 'WSH',
+    'CHC', 'STL', 'MIL', 'CIN', 'PIT',
+    'LAD', 'SF',  'SD',  'COL', 'ARI',
+]);
+
+function teamInScope(mlbTeam, leagueScope) {
+    if (!leagueScope || leagueScope === 'MLB') return true;
+    const t = String(mlbTeam || '').toUpperCase();
+    if (leagueScope === 'AL') return AL_TEAMS.has(t);
+    if (leagueScope === 'NL') return NL_TEAMS.has(t);
+    return true;
+}
+
 /**
  * Thrown when PLAYER_API_URL is configured but the Player Data API
  * cannot be reached (per US-3.2). Controllers translate this into a
@@ -72,7 +92,9 @@ function toPlayerStub(raw = {}, dataAsOf = null) {
  *  - If PLAYER_API_URL is NOT set, fall back to the legacy local
  *    MongoDB Player collection (documented as a dev-only fallback).
  */
-async function fetchPoolPlayerIds() {
+async function fetchPoolPlayerIds(options = {}) {
+    const { leagueScope = 'MLB' } = options;
+
     if (licensedApi.hasConfig()) {
         let data;
         try {
@@ -88,6 +110,8 @@ async function fetchPoolPlayerIds() {
         const seen = new Set();
         const playerIds = [];
         for (const p of players) {
+            // US-17.1: filter by league scope when AL-only or NL-only
+            if (!teamInScope(p.mlbTeam || p.team, leagueScope)) continue;
             const id = String(p.playerId || p.id || '').trim();
             if (id && !seen.has(id)) {
                 seen.add(id);

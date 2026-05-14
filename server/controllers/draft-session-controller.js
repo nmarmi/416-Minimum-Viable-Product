@@ -55,8 +55,8 @@ async function getLeagueForUser(leagueId, userId) {
  * `/api/v1/players/pool` call. Upstream failures surface as
  * `PlayerPoolUnavailableError` so callers can reply with 503.
  */
-async function loadPoolPlayerIds() {
-    const { playerIds, pooledAt } = await fetchPoolPlayerIds();
+async function loadPoolPlayerIds(options = {}) {
+    const { playerIds, pooledAt } = await fetchPoolPlayerIds(options);
     return { playerIds, pooledAt };
 }
 
@@ -522,9 +522,10 @@ const startDraft = async (req, res) => {
             });
         }
 
+        const leagueScope = session.leagueSettings?.leagueScope || 'MLB';
         let pool;
         try {
-            pool = await loadPoolPlayerIds();
+            pool = await loadPoolPlayerIds({ leagueScope });
         } catch (poolErr) {
             if (poolErr instanceof PlayerPoolUnavailableError) {
                 return res.status(503).json({

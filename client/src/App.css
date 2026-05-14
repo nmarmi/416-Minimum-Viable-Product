@@ -3201,6 +3201,46 @@ body {
   gap: 8px;
 }
 
+.draft-setup-full-width { grid-column: 1 / -1; }
+
+/* US-17.1: league scope 3-button toggle */
+.draft-setup-scope-row {
+  display: flex;
+  gap: 6px;
+}
+.draft-setup-scope-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  background: none;
+  color: #a0aec0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.draft-setup-scope-btn.active { background: #2b6cb0; border-color: #2b6cb0; color: #fff; }
+
+/* US-17.2 / US-17.3: stat / position chip toggles */
+.draft-setup-stat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.draft-setup-stat-chip {
+  padding: 5px 10px;
+  border-radius: 14px;
+  border: 1px solid #4a5568;
+  background: none;
+  color: #718096;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.draft-setup-stat-chip.active { background: #276749; border-color: #276749; color: #9ae6b4; }
+
 .draft-setup-grid label span,
 .draft-setup-slot-grid label span,
 .draft-setup-team-row span {

@@ -179,6 +179,22 @@ const DraftSessionSchema = new Schema(
             seasonYear: {
                 type: Number,
                 default: () => new Date().getFullYear()
+            },
+            // US-17.1: AL-only / NL-only / all-MLB player pool scope
+            leagueScope: {
+                type: String,
+                enum: ['MLB', 'AL', 'NL'],
+                default: 'MLB'
+            },
+            // US-17.2: custom scoring stat categories (overrides scoringType preset)
+            statCategories: {
+                hitting:  { type: [String], default: undefined },
+                pitching: { type: [String], default: undefined }
+            },
+            // US-17.3: which positions count as hitter vs pitcher slots
+            positionCatalog: {
+                hitter:  { type: [String], default: undefined },
+                pitcher: { type: [String], default: undefined }
             }
         },
         teams: {

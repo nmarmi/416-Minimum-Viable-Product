@@ -1132,7 +1132,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "Setup Draft using AL-only / NL-only / all MLB" (2pt), "Custom Stats Selection for League" (2pt), "Custom Hitter and Pitcher Positions for League" (2pt) — 6pt total.
 
-### US-17.1: League scope (AL-only / NL-only / MLB)
+### US-17.1: League scope (AL-only / NL-only / MLB) ✅ COMPLETED
 **As a** drafter, **I want** to choose whether my league is American League–only, National League–only, or all-MLB, **so that** the player pool is scoped correctly.
 
 **Acceptance criteria:**
@@ -1141,7 +1141,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - When the draft starts, `availablePlayerIds` is filtered by MLB league before persisting (the Player Data API's `/players/pool` accepts a `league` query param — Draft Kit forwards `leagueScope`)
 - Mid-draft scope changes are blocked (status must be `setup`)
 
-### US-17.2: Custom stats selection for league
+### US-17.2: Custom stats selection for league ✅ COMPLETED
 **As a** drafter, **I want** to pick which stats my league uses (e.g. for 5×5 Roto, swap OBP for AVG), **so that** valuations match my league's scoring.
 
 **Acceptance criteria:**
@@ -1150,7 +1150,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Cross-repo contract: the picker's selections flow into `leagueSettings` and the Player Data API's `/valuations` endpoint accepts the override (per the API's US-5.3 normalize step)
 - Default behavior unchanged when `statCategories` is unset (presets apply)
 
-### US-17.3: Custom hitter & pitcher positions for league
+### US-17.3: Custom hitter & pitcher positions for league ✅ COMPLETED
 **As a** drafter, **I want** to define which positions count as hitters vs pitchers (e.g. add MI, CI, IF, NA), **so that** my league's roster slots aren't limited to the default set.
 
 **Acceptance criteria:**

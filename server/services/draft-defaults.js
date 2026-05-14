@@ -14,7 +14,19 @@ const DEFAULT_ROSTER_SLOTS = {
     RP: 3,
     BENCH: 4
 };
-const SCORING_TYPES = ['5x5 Roto', 'H2H Categories', 'Points'];
+const SCORING_TYPES   = ['5x5 Roto', 'H2H Categories', 'Points'];
+const LEAGUE_SCOPES   = ['MLB', 'AL', 'NL'];
+
+// US-17.3: default position catalog
+const DEFAULT_HITTER_POSITIONS  = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'DH'];
+const DEFAULT_PITCHER_POSITIONS = ['SP', 'RP', 'P'];
+
+// US-17.2: default stat categories per scoring type
+const STAT_CATEGORY_PRESETS = {
+    '5x5 Roto':       { hitting: ['hr', 'r', 'rbi', 'sb', 'avg'],   pitching: ['w', 'k', 'sv', 'era', 'whip'] },
+    'H2H Categories': { hitting: ['hr', 'r', 'rbi', 'sb', 'avg'],   pitching: ['w', 'k', 'sv', 'era', 'whip'] },
+    'Points':         { hitting: ['hr', 'r', 'rbi', 'sb', 'avg', 'obp'], pitching: ['w', 'k', 'sv', 'era', 'whip', 'k9'] },
+};
 
 function toPositiveInt(value, fallback) {
     const parsed = Number.parseInt(value, 10);
@@ -106,7 +118,15 @@ function sanitizeLeagueSettings(input = {}, fallback = {}) {
         rosterSlots,
         scoringType,
         draftType: DEFAULT_DRAFT_TYPE,
-        seasonYear
+        seasonYear,
+        // US-17.1: league scope
+        leagueScope: LEAGUE_SCOPES.includes(resolvedInput.leagueScope)
+            ? resolvedInput.leagueScope
+            : (resolvedFallback.leagueScope || 'MLB'),
+        // US-17.2: custom stat categories (undefined = use scoringType preset)
+        statCategories: resolvedInput.statCategories || resolvedFallback.statCategories || undefined,
+        // US-17.3: custom position catalog (undefined = use defaults)
+        positionCatalog: resolvedInput.positionCatalog || resolvedFallback.positionCatalog || undefined,
     };
 }
 
@@ -134,8 +154,11 @@ function serializeSession(session) {
         pooledAt: plain.pooledAt || null,
         leagueSettings: {
             ...plain.leagueSettings,
-            rosterSlots: toPlainObject(plain.leagueSettings?.rosterSlots),
-            seasonYear: plain.leagueSettings?.seasonYear ?? new Date().getFullYear()
+            rosterSlots:     toPlainObject(plain.leagueSettings?.rosterSlots),
+            seasonYear:      plain.leagueSettings?.seasonYear ?? new Date().getFullYear(),
+            leagueScope:     plain.leagueSettings?.leagueScope     ?? 'MLB',
+            statCategories:  plain.leagueSettings?.statCategories  ?? null,
+            positionCatalog: plain.leagueSettings?.positionCatalog ?? null,
         },
         teams: (plain.teams || []).map((team) => ({
             teamId: team.teamId,
@@ -171,6 +194,10 @@ module.exports = {
     DEFAULT_SALARY_CAP,
     DEFAULT_ROSTER_SLOTS,
     SCORING_TYPES,
+    LEAGUE_SCOPES,
+    STAT_CATEGORY_PRESETS,
+    DEFAULT_HITTER_POSITIONS,
+    DEFAULT_PITCHER_POSITIONS,
     toPositiveInt,
     toPlainObject,
     buildFilledRosterSlots,

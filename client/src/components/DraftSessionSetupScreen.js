@@ -17,6 +17,21 @@ const DEFAULT_ROSTER_SLOTS = {
 
 const SCORING_OPTIONS = ['5x5 Roto', 'H2H Categories', 'Points'];
 
+// US-17.1
+const LEAGUE_SCOPE_OPTIONS = [
+    { value: 'MLB', label: 'All MLB' },
+    { value: 'AL',  label: 'AL Only' },
+    { value: 'NL',  label: 'NL Only' },
+];
+
+// US-17.2: stat options per side
+const HITTING_STAT_OPTIONS  = ['hr', 'r', 'rbi', 'sb', 'avg', 'obp', 'slg', 'h', 'ab', 'bb', 'k', 'cs'];
+const PITCHING_STAT_OPTIONS = ['w', 'k', 'sv', 'era', 'whip', 'hld', 'k9', 'ip', 'qs', 'l'];
+
+// US-17.3: default position catalogs
+const DEFAULT_HITTER_CATALOG  = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'DH'];
+const DEFAULT_PITCHER_CATALOG = ['SP', 'RP', 'P'];
+
 const clampInt = (value, min, max = Number.POSITIVE_INFINITY) => {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed)) return min;
@@ -56,6 +71,20 @@ const normalizeSession = (draftSession) => {
     const rawYear = leagueSettings.seasonYear;
     const seasonYear = rawYear && Number(rawYear) >= 2000 ? Number(rawYear) : new Date().getFullYear();
 
+    // US-17.1: league scope
+    const leagueScope = ['MLB', 'AL', 'NL'].includes(leagueSettings.leagueScope)
+        ? leagueSettings.leagueScope : 'MLB';
+
+    // US-17.2: custom stat categories
+    const statCategories = leagueSettings.statCategories
+        ? { hitting: leagueSettings.statCategories.hitting || [], pitching: leagueSettings.statCategories.pitching || [] }
+        : null;
+
+    // US-17.3: custom position catalog
+    const positionCatalog = leagueSettings.positionCatalog
+        ? { hitter: leagueSettings.positionCatalog.hitter || [...DEFAULT_HITTER_CATALOG], pitcher: leagueSettings.positionCatalog.pitcher || [...DEFAULT_PITCHER_CATALOG] }
+        : null;
+
     return {
         numberOfTeams,
         salaryCap,
@@ -63,6 +92,9 @@ const normalizeSession = (draftSession) => {
         scoringType: leagueSettings.scoringType || '5x5 Roto',
         draftType: leagueSettings.draftType || 'AUCTION',
         seasonYear,
+        leagueScope,
+        statCategories,
+        positionCatalog,
         teams: buildTeams(numberOfTeams, salaryCap, rosterSlots, draftSession?.teams || [])
     };
 };
@@ -109,12 +141,15 @@ export default function DraftSessionSetupScreen() {
 
     const buildPayload = () => ({
         leagueSettings: {
-            numberOfTeams: formState.numberOfTeams,
-            salaryCap: formState.salaryCap,
-            rosterSlots: formState.rosterSlots,
-            scoringType: formState.scoringType,
-            draftType: 'AUCTION',
-            seasonYear: formState.seasonYear  // US-15.1
+            numberOfTeams:   formState.numberOfTeams,
+            salaryCap:       formState.salaryCap,
+            rosterSlots:     formState.rosterSlots,
+            scoringType:     formState.scoringType,
+            draftType:       'AUCTION',
+            seasonYear:      formState.seasonYear,      // US-15.1
+            leagueScope:     formState.leagueScope,     // US-17.1
+            statCategories:  formState.statCategories,  // US-17.2
+            positionCatalog: formState.positionCatalog, // US-17.3
         },
         teams: formState.teams.map((team) => ({
             teamId: team.teamId,
@@ -274,6 +309,81 @@ export default function DraftSessionSetupScreen() {
                                     <option key={option}>{option}</option>
                                 ))}
                             </select>
+                        </label>
+
+                        {/* US-17.1: league scope toggle */}
+                        <label>
+                            <span>League Scope</span>
+                            <div className="draft-setup-scope-row">
+                                {LEAGUE_SCOPE_OPTIONS.map(({ value, label }) => (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        className={`draft-setup-scope-btn ${formState.leagueScope === value ? 'active' : ''}`}
+                                        onClick={() => setFormState((prev) => ({ ...prev, leagueScope: value }))}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </label>
+
+                        {/* US-17.2: custom stat categories */}
+                        <label className="draft-setup-full-width">
+                            <span>Hitting Stats</span>
+                            <div className="draft-setup-stat-chips">
+                                {HITTING_STAT_OPTIONS.map((stat) => {
+                                    const selected = formState.statCategories?.hitting?.includes(stat) ?? false;
+                                    return (
+                                        <button key={stat} type="button"
+                                            className={`draft-setup-stat-chip ${selected ? 'active' : ''}`}
+                                            onClick={() => setFormState((prev) => {
+                                                const cur = prev.statCategories?.hitting || [];
+                                                const next = selected ? cur.filter((s) => s !== stat) : [...cur, stat];
+                                                return { ...prev, statCategories: { ...prev.statCategories, hitting: next } };
+                                            })}
+                                        >{stat.toUpperCase()}</button>
+                                    );
+                                })}
+                            </div>
+                        </label>
+                        <label className="draft-setup-full-width">
+                            <span>Pitching Stats</span>
+                            <div className="draft-setup-stat-chips">
+                                {PITCHING_STAT_OPTIONS.map((stat) => {
+                                    const selected = formState.statCategories?.pitching?.includes(stat) ?? false;
+                                    return (
+                                        <button key={stat} type="button"
+                                            className={`draft-setup-stat-chip ${selected ? 'active' : ''}`}
+                                            onClick={() => setFormState((prev) => {
+                                                const cur = prev.statCategories?.pitching || [];
+                                                const next = selected ? cur.filter((s) => s !== stat) : [...cur, stat];
+                                                return { ...prev, statCategories: { ...prev.statCategories, pitching: next } };
+                                            })}
+                                        >{stat.toUpperCase()}</button>
+                                    );
+                                })}
+                            </div>
+                        </label>
+
+                        {/* US-17.3: custom position catalog drives the roster slot rows */}
+                        <label className="draft-setup-full-width">
+                            <span>Hitter Positions</span>
+                            <div className="draft-setup-stat-chips">
+                                {[...new Set([...DEFAULT_HITTER_CATALOG, ...(formState.positionCatalog?.hitter || [])])].map((pos) => {
+                                    const inCatalog = (formState.positionCatalog?.hitter || DEFAULT_HITTER_CATALOG).includes(pos);
+                                    return (
+                                        <button key={pos} type="button"
+                                            className={`draft-setup-stat-chip ${inCatalog ? 'active' : ''}`}
+                                            onClick={() => setFormState((prev) => {
+                                                const cur = prev.positionCatalog?.hitter || [...DEFAULT_HITTER_CATALOG];
+                                                const next = inCatalog ? cur.filter((p) => p !== pos) : [...cur, pos];
+                                                return { ...prev, positionCatalog: { ...prev.positionCatalog, hitter: next } };
+                                            })}
+                                        >{pos}</button>
+                                    );
+                                })}
+                            </div>
                         </label>
                         <label>
                             <span>Draft Type</span>
