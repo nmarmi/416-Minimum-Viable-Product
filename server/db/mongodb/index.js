@@ -15,13 +15,10 @@ class MongoDBManager extends DatabaseManager {
         }
 
         try {
-            await mongoose.connect(mongoUri, {
-                //useNewUrlParser: true,
-                serverSelectionTimeoutMS: 5000
-            });
-            console.log("MongoDB Connected");
+            await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
+            console.info('[draftiq-server] MongoDB connected');
         } catch (e) {
-            console.error("MongoDB Connection error", e.message);
+            console.error('[draftiq-server] MongoDB connection error:', e.message);
             throw e;
         }
     }

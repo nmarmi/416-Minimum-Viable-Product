@@ -12,7 +12,7 @@ const getCookieOptions = (overrides = {}) => {
     };
 };
 
-getLoggedIn = async (req, res) => {
+const getLoggedIn = async (req, res) => {
     try {
         let userId = auth.verifyUser(req);
         if (!userId) {
@@ -41,7 +41,7 @@ getLoggedIn = async (req, res) => {
     }
 }
 
-loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
     console.log("loginUser");
     try {
         const { email, password } = req.body;
@@ -96,13 +96,13 @@ loginUser = async (req, res) => {
     }
 }
 
-logoutUser = async (req, res) => {
+const logoutUser = async (req, res) => {
     res.cookie("token", "", getCookieOptions({
         expires: new Date(0)
     })).send();
 }
 
-updateUser = async (req, res) => {
+const updateUser = async (req, res) => {
     try {
         let userId = auth.verifyUser(req);
         if (!userId) {
@@ -139,7 +139,7 @@ updateUser = async (req, res) => {
     }
 }
 
-registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
     console.log("REGISTERING USER IN BACKEND");
     try {
         const { userName, email, password, passwordVerify, avatar } = req.body;

@@ -132,19 +132,8 @@ describe('licensed-player-api (versioned paths)', () => {
             expect(JSON.parse(options.body)).toEqual({ leagueSettings, draftState });
         });
 
-        it('falls back to /players/valuations when versioned path fails', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockErrorResponse(404, { error: 'Not found' }))
-                .mockResolvedValueOnce(mockOkResponse({ success: true, valuations: [] }));
-            await api.postValuations({}, {});
-            expect(mockFetch).toHaveBeenCalledTimes(2);
-            expect(mockFetch.mock.calls[1][0]).toBe(`${MOCK_URL}/players/valuations`);
-        });
-
-        it('throws when both URLs fail', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockErrorResponse(404))
-                .mockResolvedValueOnce(mockErrorResponse(400, { error: 'Bad request', code: 'BAD_REQUEST' }));
+        it('throws when the API responds with an error', async () => {
+            mockFetch.mockResolvedValueOnce(mockErrorResponse(400, { error: 'Bad request', code: 'BAD_REQUEST' }));
             await expect(api.postValuations({}, {})).rejects.toThrow('Bad request');
         });
 
@@ -200,61 +189,16 @@ describe('licensed-player-api (versioned paths)', () => {
     });
 
     describe('postUsage', () => {
-        it('POSTs to /api/v1/usage', async () => {
+        it('POSTs to /api/v1/analytics/usage', async () => {
             await api.postUsage({ event: 'draft_started', metadata: { leagueId: 'l-1' } });
             const [url, options] = mockFetch.mock.calls[0];
-            expect(url).toBe(`${MOCK_URL}/api/v1/usage`);
+            expect(url).toBe(`${MOCK_URL}/api/v1/analytics/usage`);
             expect(JSON.parse(options.body).event).toBe('draft_started');
         });
     });
 });
 
-describe('licensed-player-api with PLAYER_API_LEGACY=1', () => {
-    let api;
-    const mockFetch = vi.fn();
-
-    beforeAll(async () => {
-        process.env.PLAYER_API_URL = MOCK_URL;
-        process.env.PLAYER_API_KEY = MOCK_KEY;
-        process.env.PLAYER_API_LEGACY = '1';
-        vi.stubGlobal('fetch', mockFetch);
-        // Health check on import — still uses /api/v1/health regardless of LEGACY flag
-        mockFetch.mockResolvedValueOnce(mockOkResponse({ success: true, status: 'ok' }));
-        vi.resetModules();
-        api = await import('../lib/licensed-player-api.js');
-    });
-
-    afterAll(() => {
-        delete process.env.PLAYER_API_URL;
-        delete process.env.PLAYER_API_KEY;
-        delete process.env.PLAYER_API_LEGACY;
-        vi.unstubAllGlobals();
-    });
-
-    beforeEach(() => {
-        mockFetch.mockReset();
-        mockFetch.mockResolvedValue(mockOkResponse());
-    });
-
-    it('getPlayers calls unversioned /players', async () => {
-        await api.getPlayers();
-        const [url] = mockFetch.mock.calls[0];
-        expect(url).toBe(`${MOCK_URL}/players`);
-    });
-
-    it('getPlayer calls unversioned /players/:id', async () => {
-        mockFetch.mockResolvedValueOnce(mockOkResponse({ player: {} }));
-        await api.getPlayer('mlb-123');
-        const [url] = mockFetch.mock.calls[0];
-        expect(url).toBe(`${MOCK_URL}/players/mlb-123`);
-    });
-
-    it('postValuations POSTs to unversioned /players/valuations (single attempt)', async () => {
-        await api.postValuations({}, {});
-        expect(mockFetch).toHaveBeenCalledTimes(1);
-        expect(mockFetch.mock.calls[0][0]).toBe(`${MOCK_URL}/players/valuations`);
-    });
-});
+// PLAYER_API_LEGACY=1 mode was removed — the Player Data API now uses /api/v1/ exclusively.
 
 describe('licensed-player-api with no config', () => {
     let api;

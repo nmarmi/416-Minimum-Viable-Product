@@ -1,5 +1,5 @@
 {
-  "name": "playlister-server",
+  "name": "draftiq-server",
   "version": "4.0.0",
   "main": "index.js",
   "scripts": {
