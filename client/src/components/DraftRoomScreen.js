@@ -1713,7 +1713,18 @@ const DraftRoomScreen = () => {
                             <span>Remaining Budget</span>
                             <strong>{sidebarTeam?.budgetRemaining != null ? `$${sidebarTeam.budgetRemaining}` : '--'}</strong>
                         </div>
-                        <div className="draft-v2-meter" />
+                        {(() => {
+                            const cap = Number(draftSession?.leagueSettings?.salaryCap || 0);
+                            const remaining = Number(sidebarTeam?.budgetRemaining ?? cap);
+                            const pct = cap > 0 ? Math.round((remaining / cap) * 100) : 100;
+                            return (
+                                <div
+                                    className="draft-v2-meter"
+                                    style={{ background: `linear-gradient(to right, #151735 ${pct}%, #d2d5de ${pct}%)` }}
+                                    title={`${pct}% budget remaining`}
+                                />
+                            );
+                        })()}
                         <p className="draft-v2-muted">
                             {draftSession ? (
                                 <>
@@ -1780,7 +1791,9 @@ const DraftRoomScreen = () => {
                             <ul className="draft-v2-checklist">
                                 {recommendations.slice(0, 5).map((rec) => {
                                     const match = players.find((p) => getPlayerId(p) === rec.playerId);
-                                    const name = match ? getPlayerName(match) : rec.playerId;
+                                    // Prefer local player name → API-returned name → prettified ID
+                                    const localName = match ? getPlayerName(match) : '';
+                                    const name = localName || rec.name || rec.playerName || rec.playerId;
                                     return (
                                         <li key={rec.playerId}>
                                             <strong>{name}</strong> — Bid ${rec.recommendedBid}

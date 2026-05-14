@@ -73,10 +73,12 @@ function buildTeams(numberOfTeams, salaryCap, rosterSlots, existingTeams = []) {
         const teamId = `fantasy-team-${index + 1}`;
         const existingTeam = existingTeams.find((team) => team.teamId === teamId);
         const existingName = existingTeam?.teamName && String(existingTeam.teamName).trim();
+        // Default to "Team N" — friendlier than exposing the internal ID
+        const defaultName = `Team ${index + 1}`;
 
         return {
             teamId,
-            teamName: existingName || teamId,
+            teamName: existingName || defaultName,
             budgetRemaining: existingTeam != null && existingTeam.budgetRemaining != null
                 ? Number(existingTeam.budgetRemaining)
                 : resolvedSalaryCap,
