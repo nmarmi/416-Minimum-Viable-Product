@@ -7,314 +7,195 @@ const User   = require('../models/user-model');
 const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 const getCookieOptions = (overrides = {}) => {
-    const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = process.env.NODE_ENV === 'production';
     return {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "none" : "lax",
-        ...overrides
+        secure:   isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        ...overrides,
     };
 };
 
 const getLoggedIn = async (req, res) => {
     try {
-        let userId = auth.verifyUser(req);
+        const userId = auth.verifyUser(req);
         if (!userId) {
-            return res.status(200).json({
-                loggedIn: false,
-                user: null,
-                errorMessage: "?"
-            })
+            return res.status(200).json({ loggedIn: false, user: null, errorMessage: '?' });
         }
-
-        const loggedInUser = await db.getUserById(userId)
-        console.log("loggedInUser: " + loggedInUser);
-
+        const user = await db.getUserById(userId);
         return res.status(200).json({
             loggedIn: true,
-            user: {
-                _id: loggedInUser._id,
-                userName: loggedInUser.userName,
-                email: loggedInUser.email,
-                avatar: loggedInUser.avatar
-            }
-        })
+            user: { _id: user._id, userName: user.userName, email: user.email, avatar: user.avatar },
+        });
     } catch (err) {
-        console.log("err: " + err);
-        res.json(false);
+        console.error('[auth] getLoggedIn error:', err.message);
+        return res.json(false);
     }
-}
+};
 
 const loginUser = async (req, res) => {
-    console.log("loginUser");
     try {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res
-                .status(400)
-                .json({ errorMessage: "Please enter all required fields." });
+            return res.status(400).json({ errorMessage: 'Please enter all required fields.' });
         }
 
-        const existingUser = await db.getUserByEmail(email)
-        console.log("existingUser: " + existingUser);
+        const existingUser = await db.getUserByEmail(email);
         if (!existingUser) {
-            return res
-                .status(401)
-                .json({
-                    errorMessage: "Wrong email or password provided."
-                })
+            return res.status(401).json({ errorMessage: 'Wrong email or password provided.' });
         }
 
-        console.log("provided password: " + password);
         const passwordCorrect = await bcrypt.compare(password, existingUser.passwordHash);
         if (!passwordCorrect) {
-            console.log("Incorrect password");
-            return res
-                .status(401)
-                .json({
-                    errorMessage: "Wrong email or password provided."
-                })
+            return res.status(401).json({ errorMessage: 'Wrong email or password provided.' });
         }
 
-        // LOGIN THE USER
         const token = auth.signToken(existingUser._id);
-        console.log(token);
-
-        res.cookie("token", token, getCookieOptions()).status(200).json({
+        return res.cookie('token', token, getCookieOptions()).status(200).json({
             success: true,
-            user: {
-                _id: existingUser._id,
-                userName: existingUser.userName,
-                email: existingUser.email,
-                avatar: existingUser.avatar
-            }
-        })
-
-    } catch (err) {
-        console.error("loginUser error:", err);
-        res.status(500).json({
-            success: false,
-            errorMessage: "Unable to login right now. Check server config and database connection."
+            user: { _id: existingUser._id, userName: existingUser.userName, email: existingUser.email, avatar: existingUser.avatar },
         });
+    } catch (err) {
+        console.error('[auth] loginUser error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to login right now.' });
     }
-}
+};
 
-const logoutUser = async (req, res) => {
-    res.cookie("token", "", getCookieOptions({
-        expires: new Date(0)
-    })).send();
-}
+const logoutUser = (req, res) => {
+    res.cookie('token', '', getCookieOptions({ expires: new Date(0) })).send();
+};
 
 const updateUser = async (req, res) => {
     try {
-        let userId = auth.verifyUser(req);
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                errorMessage: "Unauthorized"
-            });
-        }
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
 
-        let { userName, avatar } = req.body;
-        let updatedUser = await db.updateUser(userId, { userName, avatar });
-        if (!updatedUser) {
-            return res.status(400).json({
-                success: false,
-                errorMessage: "error updating user"
-            });
-        }
+        const { userName, avatar } = req.body;
+        const updatedUser = await db.updateUser(userId, { userName, avatar });
+        if (!updatedUser) return res.status(400).json({ success: false, errorMessage: 'Error updating user.' });
 
         return res.status(200).json({
             success: true,
-            user: {
-                _id: updatedUser._id,
-                userName: updatedUser.userName,
-                email: updatedUser.email,
-                avatar: updatedUser.avatar
-            }
+            user: { _id: updatedUser._id, userName: updatedUser.userName, email: updatedUser.email, avatar: updatedUser.avatar },
         });
     } catch (err) {
-        console.error("Error updating user:", err);
-        return res.status(500).json({
-            success: false,
-            errorMessage: "Error updating user"
-        });
+        console.error('[auth] updateUser error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Error updating user.' });
     }
-}
+};
 
 const registerUser = async (req, res) => {
-    console.log("REGISTERING USER IN BACKEND");
     try {
         const { userName, email, password, passwordVerify, avatar } = req.body;
-        console.log("create user: " + userName + " " + email + " " + password + " " + passwordVerify+ " "+avatar);
+
         if (!userName || !email || !password || !passwordVerify) {
-            return res
-                .status(400)
-                .json({ errorMessage: "Please enter all required fields." });
+            return res.status(400).json({ errorMessage: 'Please enter all required fields.' });
         }
-        console.log("all fields provided");
         if (password.length < 8) {
-            return res
-                .status(400)
-                .json({
-                    errorMessage: "Please enter a password of at least 8 characters."
-                });
+            return res.status(400).json({ errorMessage: 'Please enter a password of at least 8 characters.' });
         }
-        console.log("password long enough");
         if (password !== passwordVerify) {
-            return res
-                .status(400)
-                .json({
-                    errorMessage: "Please enter the same password twice."
-                })
+            return res.status(400).json({ errorMessage: 'Please enter the same password twice.' });
         }
-        console.log("password and password verify match");
-        const existingUser = await db.getUserByEmail(email)
-        console.log("existingUser: " + existingUser);
+
+        const existingUser = await db.getUserByEmail(email);
         if (existingUser) {
-            return res
-                .status(400)
-                .json({
-                    success: false,
-                    errorMessage: "An account with this email address already exists."
-                })
+            return res.status(400).json({ success: false, errorMessage: 'An account with this email address already exists.' });
         }
 
-        const saltRounds = 10;
-        const salt = await bcrypt.genSalt(saltRounds);
-        const passwordHash = await bcrypt.hash(password, salt);
-        console.log("passwordHash: " + passwordHash);
-
+        const passwordHash = await bcrypt.hash(password, 10);
         const savedUser = await db.createUser({
             userName,
             email,
             passwordHash,
-            avatar: avatar && avatar !== "" ? avatar : "default-avatar"
+            avatar: avatar && avatar !== '' ? avatar : 'default-avatar',
         });
-        console.log("new user saved: " + savedUser._id);
 
-        // LOGIN THE USER
         const token = auth.signToken(savedUser._id);
-        console.log("token:" + token);
-
-        await res.cookie("token", token, getCookieOptions()).status(200).json({
+        return res.cookie('token', token, getCookieOptions()).status(200).json({
             success: true,
-            user: {
-                _id: savedUser._id,
-                userName: savedUser.userName,
-                email: savedUser.email,
-                avatar: savedUser.avatar
-            }
-        })
-
-        console.log("token sent");
-
-    } catch (err) {
-        console.error("registerUser error:", err);
-
-        if (err && err.code === 11000) {
-            return res.status(400).json({
-                success: false,
-                errorMessage: "An account with this email address already exists."
-            });
-        }
-
-        return res.status(500).json({
-            success: false,
-            errorMessage: "Unable to create account right now. Check server config and database connection."
+            user: { _id: savedUser._id, userName: savedUser.userName, email: savedUser.email, avatar: savedUser.avatar },
         });
+    } catch (err) {
+        console.error('[auth] registerUser error:', err.message);
+        if (err?.code === 11000) {
+            return res.status(400).json({ success: false, errorMessage: 'An account with this email address already exists.' });
+        }
+        return res.status(500).json({ success: false, errorMessage: 'Unable to create account right now.' });
     }
-}
+};
 
-changePassword = async (req, res) => {
+const changePassword = async (req, res) => {
     try {
         const userId = auth.verifyUser(req);
-        if (!userId) {
-            return res.status(401).json({ success: false, errorMessage: "Unauthorized" });
-        }
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
 
         const { currentPassword, newPassword, newPasswordVerify } = req.body;
         if (!currentPassword || !newPassword || !newPasswordVerify) {
-            return res.status(400).json({ errorMessage: "Please fill in all fields." });
+            return res.status(400).json({ errorMessage: 'Please fill in all fields.' });
         }
         if (newPassword.length < 8) {
-            return res.status(400).json({ errorMessage: "New password must be at least 8 characters." });
+            return res.status(400).json({ errorMessage: 'New password must be at least 8 characters.' });
         }
         if (newPassword !== newPasswordVerify) {
-            return res.status(400).json({ errorMessage: "New passwords do not match." });
+            return res.status(400).json({ errorMessage: 'New passwords do not match.' });
         }
 
         const user = await db.getUserById(userId);
         const passwordCorrect = await bcrypt.compare(currentPassword, user.passwordHash);
         if (!passwordCorrect) {
-            return res.status(401).json({ errorMessage: "Current password is incorrect." });
+            return res.status(401).json({ errorMessage: 'Current password is incorrect.' });
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(newPassword, salt);
+        const passwordHash = await bcrypt.hash(newPassword, 10);
         await db.updateUser(userId, { passwordHash });
-
         return res.status(200).json({ success: true });
     } catch (err) {
-        console.error("changePassword error:", err);
-        return res.status(500).json({ success: false, errorMessage: "Error changing password." });
+        console.error('[auth] changePassword error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Error changing password.' });
     }
-}
+};
 
-deleteAccount = async (req, res) => {
+const deleteAccount = async (req, res) => {
     try {
         const userId = auth.verifyUser(req);
-        if (!userId) {
-            return res.status(401).json({ success: false, errorMessage: "Unauthorized" });
-        }
-
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
         await db.deleteUser(userId);
-
-        res.cookie("token", "", getCookieOptions({ expires: new Date(0) })).status(200).json({ success: true });
+        return res.cookie('token', '', getCookieOptions({ expires: new Date(0) })).status(200).json({ success: true });
     } catch (err) {
-        console.error("deleteAccount error:", err);
-        return res.status(500).json({ success: false, errorMessage: "Error deleting account." });
+        console.error('[auth] deleteAccount error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Error deleting account.' });
     }
-}
+};
 
-// US-16.2: forgot-password — issue a single-use, time-limited reset token
+// US-16.2: forgot-password
 const forgotPassword = async (req, res) => {
     const { email } = req.body || {};
     if (!email) {
         return res.status(400).json({ success: false, errorMessage: 'Email is required.', code: 'MISSING_EMAIL' });
     }
-
     try {
         const user = await User.findOne({ email: email.toLowerCase().trim() });
-
-        // Always respond 200 so callers can't enumerate registered emails
         if (!user) {
             return res.status(200).json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
         }
 
-        // Generate a 32-byte random token; store only its SHA-256 hash
         const rawToken  = crypto.randomBytes(32).toString('hex');
         const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-
         user.resetTokenHash      = tokenHash;
         user.resetTokenExpiresAt = new Date(Date.now() + TOKEN_TTL_MS);
         await user.save();
 
-        // In production, email the token. In development, return it directly so
-        // tests and manual flows work without an email service.
         const isProd = process.env.NODE_ENV === 'production';
         if (isProd) {
             // TODO: integrate an email provider (SendGrid, Resend, etc.)
-            console.info('[auth] password reset token generated for', email, '— email delivery not yet wired up');
             return res.status(200).json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
         }
-
-        // Dev mode: return the raw token so it can be used immediately in tests
         return res.status(200).json({
             success: true,
-            message:  'Dev mode: reset token returned directly (no email sent).',
-            token:    rawToken,
+            message:   'Dev mode: reset token returned directly (no email sent).',
+            token:     rawToken,
             expiresAt: user.resetTokenExpiresAt,
         });
     } catch (err) {
@@ -323,33 +204,25 @@ const forgotPassword = async (req, res) => {
     }
 };
 
-// US-16.2: reset-password — validate token and set new password
+// US-16.2: reset-password
 const resetPassword = async (req, res) => {
     const { token, newPassword } = req.body || {};
-
     if (!token || !newPassword) {
         return res.status(400).json({ success: false, errorMessage: 'Token and newPassword are required.', code: 'MISSING_FIELDS' });
     }
     if (newPassword.length < 8) {
         return res.status(400).json({ success: false, errorMessage: 'Password must be at least 8 characters.', code: 'WEAK_PASSWORD' });
     }
-
     try {
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        const user = await User.findOne({
-            resetTokenHash:      tokenHash,
-            resetTokenExpiresAt: { $gt: new Date() },
-        });
-
+        const user = await User.findOne({ resetTokenHash: tokenHash, resetTokenExpiresAt: { $gt: new Date() } });
         if (!user) {
             return res.status(400).json({ success: false, errorMessage: 'Reset token is invalid or has expired.', code: 'TOKEN_EXPIRED' });
         }
-
         user.passwordHash        = await bcrypt.hash(newPassword, 10);
         user.resetTokenHash      = null;
         user.resetTokenExpiresAt = null;
         await user.save();
-
         return res.status(200).json({ success: true, message: 'Password updated. You can now log in with your new password.' });
     } catch (err) {
         console.error('[auth] resetPassword error:', err.message);
@@ -367,4 +240,4 @@ module.exports = {
     deleteAccount,
     forgotPassword,
     resetPassword,
-}
+};

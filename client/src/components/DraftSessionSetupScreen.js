@@ -425,7 +425,7 @@ export default function DraftSessionSetupScreen() {
                     <div className="draft-setup-team-list">
                         {formState.teams.map((team) => (
                             <label key={team.teamId} className="draft-setup-team-row">
-                                <span>{team.teamId}</span>
+                                <span>Team {team.teamId.replace('fantasy-team-', '')}</span>
                                 <input
                                     type="text"
                                     value={team.teamName}
