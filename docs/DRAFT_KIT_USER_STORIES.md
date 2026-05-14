@@ -1,5 +1,39 @@
 # DraftIQ — Draft Kit User Stories & Execution Plan
 
+## Implementation Status
+
+**74 / 111 stories complete** (67%). Stories that are implemented in the codebase are marked `✅ COMPLETED` on their heading line.
+
+| Epic | Status | Notes |
+|---|---|---|
+| Epic 0 — Product realignment (remove commissioner) | ✅ Done | League is now a single-owner draft container |
+| Epic 1 — Draft session setup | ✅ Done | All 8 stories — teams, salary cap, slots, scoring, naming, init |
+| Epic 2 — Domain model & draft state service | ✅ Done | DraftSession + FantasyTeam + DraftPurchase schemas; full CRUD service. US-2.4 superseded (no local PlayerStub cache; Player Data API is the source) |
+| Epic 3 — Player pool from Player Data API | ✅ Done | Pool ID fetch + proxied player details endpoint |
+| Epic 4 — Purchase recording (UI) | ✅ Done | Draft board entry, autocomplete, team dropdown, price validation |
+| Epic 5 — Undo / Edit purchase | ✅ Done | Undo most recent + any historical, edit price + team |
+| Epic 6 — Basic views | ✅ Done | Available, purchased, team budgets, history, my team, live sidebar |
+| Epic 7 — State validation & integrity | ✅ Done | Duplicate prevention, budget overrun, roster overflow, status guards, tests |
+| Epic 8 — API routes for draft operations | ✅ Done | All 9 endpoints — CRUD + start + purchases + valuations proxy |
+| Epic 9 — Client state architecture | ⚠️ Partial | US-9.3 home screen done. US-9.1/9.2 (DraftContext) **superseded** — `GlobalStoreContext` (Flux-style reducer in `client/src/store/index.js`) holds the draft session instead of a dedicated DraftContext |
+| Epic 10 — Polish & UX | ⚠️ Partial | US-10.2 (confirm dialogs), US-10.3 (toasts), US-10.5 (responsive) done. US-10.1 (status indicator) and US-10.4 (keyboard shortcut) **not done** |
+| Epic 11 — API integration readiness | ✅ Done | All 8 stories — contract docs, value column, draft-state export, expanded SDK, /api/v1 migration, settings serializer, freshness, error mapping |
+| Epic 12 — External data integration | ✅ Done | Hydration, injury display, depth chart |
+| Epic 13 — Valuation & recommendation engine | ✅ Done | Live valuations, recommendation tiers, surplus, scarcity alerts |
+| Epic 14 — End-to-end validation | ✅ Done | Two-server boot, smoke test, contract drift guard |
+| Epic 15 — Year-aware drafts | ⏳ Pending | Season year, year filtering, clone from prior year |
+| Epic 16 — Auth hardening | ⚠️ Partial | US-16.1 (document existing flow) done. US-16.2 (password reset) **not implemented** — `/forgot-password` is a UI shell with `event.preventDefault()` |
+| Epic 17 — League configuration extensions | ⏳ Pending | AL/NL/MLB scope, custom stats, custom positions |
+| Epic 18 — Pre-draft rosters & keepers | ⏳ Pending | Contract values, position moves, eligibility, team moves |
+| Epic 19 — Minor league rosters | ⏳ Pending | Per-team minors, exclusion from auction, moves |
+| Epic 20 — Player notes | ⏳ Pending | Pre-draft + during-draft notes, edit/delete |
+| Epic 21 — Single-player details surface | ⏳ Pending | Stats, age, injury, depth, transactions |
+| Epic 22 — Sorting & list operations | ⏳ Pending | Sort by $ / stats, position moves, redo |
+| Epic 23 — Team comparison | ⏳ Pending | Side-by-side, sortable |
+| Epic 24 — MLB depth chart view | ⏳ Pending | View MLB team depth |
+| Epic 25 — Push notification consumption | ⏳ Pending | Receive pushed updates, toast feed |
+| Epic 26 — Taxi draft | ⏳ Pending | Order, entry, eligibility removal, edits |
+
 ## Product Vision
 
 The Draft Kit is an **auction draft assistant** for a single fantasy baseball drafter. It tracks the live auction state: player availability, team budgets, purchase history, and roster slots. It is NOT a league manager or commissioner platform.
@@ -163,7 +197,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 0: Product Realignment — Remove League-Manager Assumptions
 
-### US-0.1: Remove commissioner role and home screen
+### US-0.1: Remove commissioner role and home screen ✅ COMPLETED
 **As a** drafter, **I want** the app to stop presenting commissioner vs. player role selection, **so that** the experience is focused on a single drafter using the tool.
 
 **Acceptance criteria:**
@@ -175,7 +209,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-0.2: Remove commissioner league workspace
+### US-0.2: Remove commissioner league workspace ✅ COMPLETED
 **As a** drafter, **I want** the commissioner league management screen removed, **so that** the app does not present features irrelevant to draft assistance.
 
 **Acceptance criteria:**
@@ -186,7 +220,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-0.3: Rescope league as a single-owner draft container
+### US-0.3: Rescope league as a single-owner draft container ✅ COMPLETED
 **As a** drafter, **I want** the `League` entity kept but reduced to an owner-scoped container that holds exactly one draft session, **so that** "create a league, then draft inside it" remains the user flow without any pretense of multi-user league management.
 
 > Revised from "remove league invite/join flow." The implementation kept `League` as a 1:1 wrapper around a `DraftSession` (see `CLAUDE.md` repo map and the `/league/:leagueId/draft/:draftSessionId/setup` route). The acceptance criteria below reflect the chosen approach.
@@ -201,7 +235,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-0.4: Remove season/standings/schedule concepts
+### US-0.4: Remove season/standings/schedule concepts ✅ COMPLETED
 **As a** drafter, **I want** all references to seasons, standings, and schedules removed, **so that** the product clearly focuses on the draft and doesn't carry dead code.
 
 **Acceptance criteria:**
@@ -212,7 +246,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-0.5: Clean up unused server dependencies
+### US-0.5: Clean up unused server dependencies ✅ COMPLETED
 **As a** developer, **I want** unused packages (`sequelize`, `pg`, `pg-hstore`, duplicate `bcrypt`/`bcryptjs`) removed from `server/package.json`, **so that** the dependency tree reflects actual usage.
 
 **Acceptance criteria:**
@@ -226,7 +260,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 1: Draft Session Setup
 
-### US-1.1: Create a new draft session
+### US-1.1: Create a new draft session ✅ COMPLETED
 **As a** drafter, **I want** to create a new draft session with a name, **so that** I can begin configuring my auction draft.
 
 **Acceptance criteria:**
@@ -238,7 +272,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-1.2: Configure number of teams
+### US-1.2: Configure number of teams ✅ COMPLETED
 **As a** drafter, **I want** to specify how many teams are in my league (e.g. 10, 12, 14), **so that** budgets and roster math are correct.
 
 **Acceptance criteria:**
@@ -248,7 +282,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-1.3: Configure salary cap
+### US-1.3: Configure salary cap ✅ COMPLETED
 **As a** drafter, **I want** to set the salary cap per team (e.g. $260), **so that** budget tracking is accurate.
 
 **Acceptance criteria:**
@@ -258,7 +292,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-1.4: Configure roster slots
+### US-1.4: Configure roster slots ✅ COMPLETED
 **As a** drafter, **I want** to define roster slot counts by position (C, 1B, 2B, 3B, SS, OF, UTIL, SP, RP, BENCH), **so that** the app can track filled vs. open slots.
 
 **Acceptance criteria:**
@@ -269,7 +303,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-1.5: Set scoring type placeholder
+### US-1.5: Set scoring type placeholder ✅ COMPLETED
 **As a** drafter, **I want** to select a scoring type label (e.g. "5x5 Roto", "H2H Categories", "Points"), **so that** the session records my league format for later use.
 
 **Acceptance criteria:**
@@ -279,7 +313,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-1.6: Draft type defaults to auction
+### US-1.6: Draft type defaults to auction ✅ COMPLETED
 **As a** drafter, **I want** the draft type to default to "AUCTION" and be displayed but not editable (for now), **so that** the entire app is oriented around auction drafts.
 
 **Acceptance criteria:**
@@ -289,7 +323,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-1.7: Name fantasy teams
+### US-1.7: Name fantasy teams ✅ COMPLETED
 **As a** drafter, **I want** to assign names to each fantasy team, **so that** I can identify who is purchasing players during the draft.
 
 **Acceptance criteria:**
@@ -300,7 +334,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-1.8: Initialize draft session
+### US-1.8: Initialize draft session ✅ COMPLETED
 **As a** drafter, **I want** to finalize setup and start the draft, **so that** the session transitions from setup to active.
 
 **Acceptance criteria:**
@@ -316,7 +350,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 2: Domain Model & Draft State Service
 
-### US-2.1: Create DraftSession server model
+### US-2.1: Create DraftSession server model ✅ COMPLETED
 **As a** developer, **I want** a `DraftSession` Mongoose model, **so that** draft state is persisted.
 
 **Acceptance criteria:**
@@ -325,7 +359,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-2.2: Create FantasyTeam embedded schema
+### US-2.2: Create FantasyTeam embedded schema ✅ COMPLETED
 **As a** developer, **I want** a `FantasyTeam` sub-schema, **so that** each team's budget and roster are tracked within the draft session.
 
 **Acceptance criteria:**
@@ -334,7 +368,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-2.3: Create DraftPurchase embedded schema
+### US-2.3: Create DraftPurchase embedded schema ✅ COMPLETED
 **As a** developer, **I want** a `DraftPurchase` sub-schema, **so that** each purchase is recorded in ordered history.
 
 **Acceptance criteria:**
@@ -349,7 +383,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 **Why superseded:** maintaining a local `PlayerStub` collection would require a sync job and risk staleness against the Player Data API's `dataAsOf`. The proxy-and-intersect approach keeps the Player Data API as the single source of truth.
 
-### US-2.5: Implement draft state service — initialize draft
+### US-2.5: Implement draft state service — initialize draft ✅ COMPLETED
 **As a** developer, **I want** a server-side draft state service that initializes a draft, **so that** business logic is separated from route handlers.
 
 **Acceptance criteria:**
@@ -359,7 +393,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-2.6: Implement draft state service — record purchase
+### US-2.6: Implement draft state service — record purchase ✅ COMPLETED
 **As a** developer, **I want** the draft state service to record a purchase, **so that** all state changes happen atomically.
 
 **Acceptance criteria:**
@@ -383,7 +417,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 > - add `nominationOrder` (auto-increment counter on the session)
 > - add `myTeamId: String` (used by US-6.5)
 
-### US-2.7: Implement draft state service — undo purchase
+### US-2.7: Implement draft state service — undo purchase ✅ COMPLETED
 **As a** developer, **I want** the draft state service to undo a purchase, **so that** mistakes can be corrected.
 
 **Acceptance criteria:**
@@ -398,7 +432,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-2.8: Implement draft state service — edit purchase
+### US-2.8: Implement draft state service — edit purchase ✅ COMPLETED
 **As a** developer, **I want** the draft state service to edit a purchase (change price or team), **so that** recording errors can be fixed without full undo.
 
 **Acceptance criteria:**
@@ -411,7 +445,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-2.9: Implement draft state service — get snapshot
+### US-2.9: Implement draft state service — get snapshot ✅ COMPLETED
 **As a** developer, **I want** a function that returns the current draft snapshot, **so that** views can render the latest state.
 
 **Acceptance criteria:**
@@ -430,7 +464,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > Note: US-3.1 (create seed dataset) has been removed. The Player Data API owns the pool. With the Player Data API live and serving `GET /api/v1/players/pool`, the Draft Kit **does not** import or store a local JSON seed. Stories below describe pulling the pool on demand.
 
-### US-3.2: Populate `availablePlayerIds` from the Player Data API pool
+### US-3.2: Populate `availablePlayerIds` from the Player Data API pool ✅ COMPLETED
 **As a** drafter, **I want** a new draft session's available player pool to come from the Player Data API, **so that** the pool is always in sync with the upstream source of truth and the Draft Kit doesn't carry a stale seed.
 
 **Acceptance criteria:**
@@ -442,7 +476,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-3.3: Expose player details to the draft room via a proxied endpoint
+### US-3.3: Expose player details to the draft room via a proxied endpoint ✅ COMPLETED
 **As a** drafter, **I want** the draft room's Players tab to render rich player details (name, team, positions, status), **so that** I can search and bid without a separate API dance.
 
 **Acceptance criteria:**
@@ -459,7 +493,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 4: Purchase Recording (UI)
 
-### US-4.1: Record a purchase from the draft board
+### US-4.1: Record a purchase from the draft board ✅ COMPLETED
 **As a** drafter, **I want** to select a player, select a team, enter a price, and record the purchase, **so that** the draft state updates in real time.
 
 **Acceptance criteria:**
@@ -471,7 +505,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`DraftRoomScreen.js#renderDraftBoardTab` — player autocomplete + auctioned-by/won-by team dropdowns + price input; "Record Purchase" disabled until all filled; `handleRecordPurchase` calls `store.recordPurchase`, clears the form on success and surfaces server `errorMessage` inline on failure.)
 
-### US-4.2: Player autocomplete filters to available players only
+### US-4.2: Player autocomplete filters to available players only ✅ COMPLETED
 **As a** drafter, **I want** the player search in the purchase form to only show available (unpurchased) players, **so that** I cannot accidentally re-select a purchased player.
 
 **Acceptance criteria:**
@@ -481,7 +515,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`searchDraftBoardPlayers()` filters by `isAvailable()` against the `availableSet` derived from `draftSession.availablePlayerIds`; the API fallback path applies the same filter so server-side suggestions also exclude purchased players.)
 
-### US-4.3: Team dropdown reflects session teams
+### US-4.3: Team dropdown reflects session teams ✅ COMPLETED
 **As a** drafter, **I want** the team dropdown in the purchase form to list the actual teams from my draft session, **so that** I select the correct buyer.
 
 **Acceptance criteria:**
@@ -491,7 +525,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`teamOptions` memoized selector renders `${getTeamName(t)} ($${t.budgetRemaining})`; live updates flow through the store's `RECORD_PURCHASE` reducer when the server returns the refreshed session.)
 
-### US-4.4: Price validation on purchase
+### US-4.4: Price validation on purchase ✅ COMPLETED
 **As a** drafter, **I want** the app to validate that the purchase price does not exceed the team's remaining budget (accounting for $1 minimums for remaining roster slots), **so that** invalid purchases are prevented.
 
 **Acceptance criteria:**
@@ -506,7 +540,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 5: Undo/Edit Purchase (UI)
 
-### US-5.1: Undo the most recent purchase
+### US-5.1: Undo the most recent purchase ✅ COMPLETED
 **As a** drafter, **I want** to undo the last recorded purchase with one click, **so that** I can quickly fix a mistake.
 
 **Acceptance criteria:**
@@ -519,7 +553,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (header ⟲ button in `DraftRoomScreen` is `disabled={!draftSession?.draftHistory?.length}`; `handleUndoLastPurchase` resolves the last `purchaseId` and routes through `confirmAndUndo` so it shares the same prompt + server call as the per-row Undo. State reversal happens server-side via `draft-service.undoPurchase`.)
 
-### US-5.2: Undo any purchase from draft history
+### US-5.2: Undo any purchase from draft history ✅ COMPLETED
 **As a** drafter, **I want** to undo any specific purchase from the draft history log, **so that** I can correct errors found later.
 
 **Acceptance criteria:**
@@ -531,7 +565,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (each draft-history row has an Undo button that calls `handleUndoRowPurchase`, which routes through `confirmAndUndo` — a `window.confirm("Undo {player} to {team} for $${price}?")` prompt; on accept, calls `store.undoPurchase` which fires the server `DELETE /draft-sessions/:id/purchases/:purchaseId`. Cancel aborts with no state change.)
 
-### US-5.3: Edit a purchase price
+### US-5.3: Edit a purchase price ✅ COMPLETED
 **As a** drafter, **I want** to edit the price of a recorded purchase, **so that** I can fix a typo without undoing and re-entering.
 
 **Acceptance criteria:**
@@ -543,7 +577,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (Edit button on each row triggers `handleStartEdit` which swaps the row to inline editors for team + price. `handleSaveEdit` validates: integer ≥ $1, and `projectedBudget = currentBudget + refundIfSameTeam − newPrice` must be ≥ remaining open slots × $1. On client validation failure, an inline `editError` renders next to the price field and the Save button is held; on server failure (e.g. roster full), the upstream `errorMessage` is surfaced in the same slot. Server `PUT /draft-sessions/:id/purchases/:purchaseId` handles the budget delta.)
 
-### US-5.4: Edit the purchasing team of a purchase
+### US-5.4: Edit the purchasing team of a purchase ✅ COMPLETED
 **As a** drafter, **I want** to change which team a purchase is assigned to, **so that** I can fix a team-selection error.
 
 **Acceptance criteria:**
@@ -558,7 +592,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 6: Basic Views
 
-### US-6.1: Available players view
+### US-6.1: Available players view ✅ COMPLETED
 **As a** drafter, **I want** to see all available (unpurchased) players in a searchable, filterable table, **so that** I know who is still on the board.
 
 **Acceptance criteria:**
@@ -571,7 +605,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`renderPlayersTab` table; `displayedPlayers` memo filters by `availableSet` (from `draftSession.availablePlayerIds`), the new `positionFilter` chip row, and the existing `injuryOnly` toggle. Count pill renders `${displayedPlayers.length} of ${availableSet.size} Available` so it tracks the live state, not the stale API total.)
 
-### US-6.2: Purchased players view
+### US-6.2: Purchased players view ✅ COMPLETED
 **As a** drafter, **I want** to see all purchased players with their buyer and price, **so that** I can track what has been drafted.
 
 **Acceptance criteria:**
@@ -582,7 +616,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (new `Purchased` tab + `renderPurchasedTab` shows every `draftHistory` row with #, Player, Position, Team That Bought, Price; sort chips for `order | price | team`; count pill in the header tracks `draftHistory.length`.)
 
-### US-6.3: Team budgets view
+### US-6.3: Team budgets view ✅ COMPLETED
 **As a** drafter, **I want** to see every team's remaining budget, roster slots filled, and max bid, **so that** I can gauge the competitive landscape.
 
 **Acceptance criteria:**
@@ -593,7 +627,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`renderTeamsTab` is now a real table: Team / Budget Remaining / Budget Spent (`salaryCap − budgetRemaining`) / Slots Filled (`filled / target`) / Max Bid (`budgetRemaining − (openSlots − 1)`). Updates flow live via the store's `RECORD_PURCHASE`/`UPDATE_DRAFT_SESSION` reducers.)
 
-### US-6.4: Draft history view
+### US-6.4: Draft history view ✅ COMPLETED
 **As a** drafter, **I want** to see the ordered log of all purchases, **so that** I can review what happened in the draft.
 
 **Acceptance criteria:**
@@ -605,7 +639,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`renderDraftBoardTab` "Draft Results Log" table — # / Player / Auctioned By / Won By / Price / Notes / Actions; per-row Undo + Edit (Epic 5); empty state renders "No picks logged yet".)
 
-### US-6.5: My team view / roster
+### US-6.5: My team view / roster ✅ COMPLETED
 **As a** drafter, **I want** to designate one team as "my team" and see my roster and budget prominently, **so that** I can focus on my own draft strategy.
 
 **Acceptance criteria:**
@@ -616,7 +650,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (server `updateDraftSession` accepts `myTeamId`; client store action `setMyTeam` posts via `PUT /draft-sessions/:id`. UI: "Set as Mine" button on each row of the Teams tab AND a button-row picker in the My Roster tab. `myTeam` derivation falls back to the first team when nothing is marked. Roster tab shows a Position / Filled / Target / Open table plus a list of purchased players + price for that team. Sidebar binds to `myTeam` for Remaining Budget, Maximum Bid (using live open slots), and Avg $/Open Slot.)
 
-### US-6.6: Sidebar budget tracker updates live
+### US-6.6: Sidebar budget tracker updates live ✅ COMPLETED
 **As a** drafter, **I want** the sidebar budget tracker to update immediately after every purchase, **so that** I always see current numbers.
 
 **Acceptance criteria:**
@@ -631,7 +665,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 7: State Validation & Integrity (Milestone 2)
 
-### US-7.1: Prevent duplicate player purchases
+### US-7.1: Prevent duplicate player purchases ✅ COMPLETED
 **As a** drafter, **I want** the system to reject a purchase if the player is already purchased, **so that** the draft state stays consistent.
 
 **Acceptance criteria:**
@@ -641,7 +675,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`draft-service.recordPurchase` now checks `purchasedPlayerIds` first and returns the specific message `Player has already been purchased in this draft session.` — distinct from the generic "not available" path. Controller maps service `errorMessage` → HTTP 400; client renders inline via `setEntryError`. `tests/draft-service.test.js` adds an explicit duplicate-purchase test that asserts the message AND verifies no state change: team1 still owns the player, team2's budget is intact, no extra history entry.)
 
-### US-7.2: Prevent budget overrun
+### US-7.2: Prevent budget overrun ✅ COMPLETED
 **As a** drafter, **I want** the system to reject a purchase if the team cannot afford it, **so that** budgets remain valid.
 
 **Acceptance criteria:**
@@ -651,7 +685,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`draft-service.recordPurchase` computes `maxBid = budgetRemaining − (openSlots − 1)` and returns `Team has insufficient budget.` when `price > maxBid`. Controller returns 400; client renders inline. `tests/draft-service.test.js` covers (a) overrun rejection with no-state-change assertions (budget intact, player still in `availablePlayerIds`, history empty) and (b) the boundary case at exactly `maxBid` succeeding while `maxBid + 1` rejects.)
 
-### US-7.3: Prevent roster overflow
+### US-7.3: Prevent roster overflow ✅ COMPLETED
 **As a** drafter, **I want** the system to reject a purchase if the team's roster is full, **so that** no team exceeds their roster size.
 
 **Acceptance criteria:**
@@ -661,7 +695,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`draft-service.recordPurchase` computes `openSlots = totalSlots − totalFilled` and returns `Team roster is full.` when `openSlots <= 0`. Controller maps to HTTP 400. `tests/draft-service.test.js` adds (a) full-roster rejection with no-state-change assertions (budget intact, history empty, player still in `availablePlayerIds`) and (b) a boundary test where a team with 1 open slot accepts the next pick but the one after that hits the full-roster guard. Position-specific enforcement is intentionally deferred — flexible position eligibility (e.g. UTIL-eligible bats slotting into BENCH) makes per-position validation a UX-trap that's better handled in a future polish story.)
 
-### US-7.4: Validate draft session status before mutations
+### US-7.4: Validate draft session status before mutations ✅ COMPLETED
 **As a** developer, **I want** all mutation endpoints to check that the draft session is active, **so that** completed or paused drafts cannot be modified.
 
 **Acceptance criteria:**
@@ -671,7 +705,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`draft-service.js` replaces the previous `MUTATION_BLOCKED_STATUSES` (which only blocked `paused`/`completed`) with a single `rejectInactive(session)` helper that requires `status === 'active'` — `setup` now correctly rejects mutations because the explicit `POST /start` action is the documented transition. All three mutation methods call it before any state read or write. Error message includes the offending status: `Draft is not active (current status: <status>).`. `tests/draft-service.test.js` adds parametrized `test.each(['setup','paused','completed'])` matrices for `recordPurchase`, `undoPurchase`, and `editPurchase` — 9 cases total — each asserting both the rejection AND no-state-change (history length, budget intact, player still available/purchased).)
 
-### US-7.5: State consistency tests
+### US-7.5: State consistency tests ✅ COMPLETED
 **As a** developer, **I want** automated tests for draft state transitions, **so that** regressions are caught early.
 
 **Acceptance criteria:**
@@ -686,7 +720,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 8: API Routes for Draft Operations
 
-### US-8.1: Create draft session endpoint
+### US-8.1: Create draft session endpoint ✅ COMPLETED
 **As a** developer, **I want** `POST /api/draft-sessions` to create a new draft session.
 
 **Acceptance criteria:**
@@ -696,7 +730,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-8.2: Get draft session endpoint
+### US-8.2: Get draft session endpoint ✅ COMPLETED
 **As a** developer, **I want** `GET /api/draft-sessions/:id` to return the full draft snapshot.
 
 **Acceptance criteria:**
@@ -706,7 +740,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-8.3: Update draft settings endpoint
+### US-8.3: Update draft settings endpoint ✅ COMPLETED
 **As a** developer, **I want** `PUT /api/draft-sessions/:id/settings` to update league settings.
 
 **Acceptance criteria:**
@@ -716,7 +750,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-8.4: Explicit start-draft endpoint
+### US-8.4: Explicit start-draft endpoint ✅ COMPLETED
 **As a** developer, **I want** an explicit `POST /draft-sessions/:id/start` action that idempotently transitions a `setup` session to `active`, **so that** clients have a clear, intentional moment of "the draft has begun" instead of relying on the side-effect of a `GET`.
 
 > **Current state:** lazy initialization is implemented inside `GET /draft-sessions/:id` — when a `setup` session is fetched, the controller hydrates `availablePlayerIds` from `/api/v1/players/pool`. That is enough to make the draft room work, but it (a) makes a "setup vs. active" transition implicit, (b) couples a read endpoint to a write/state-changing side-effect, and (c) makes the 503-on-API-failure path inconsistent (a read shouldn't fail if the upstream pool is down). This story tracks promoting that into a real action.
@@ -732,7 +766,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-8.5: Record purchase endpoint
+### US-8.5: Record purchase endpoint ✅ COMPLETED
 **As a** developer, **I want** `POST /api/draft-sessions/:id/purchases` to record a purchase.
 
 **Acceptance criteria:**
@@ -743,7 +777,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED**
 
-### US-8.6: Undo purchase endpoint
+### US-8.6: Undo purchase endpoint ✅ COMPLETED
 **As a** developer, **I want** `DELETE /api/draft-sessions/:id/purchases/:purchaseId` to undo a purchase.
 
 **Acceptance criteria:**
@@ -753,7 +787,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ** COMPLETED** (`DELETE /draft-sessions/:draftSessionId/purchases/:purchaseId` route in `draft-session-router.js` → `undoPurchase` controller delegates to `draft-service.undoPurchase` which restores availability, refunds budget, decrements `filledRosterSlots`, and removes the history entry. Controller now returns **404** specifically when the service errors with "Purchase not found." (regex-matched), keeping other failures as 400. New HTTP test file `tests/draft-session-routes.test.js` (with `createApp` helper extended to mount the draft-sessions router) covers the contract: `401` no-auth, `403` non-owner, `404` unknown session, `404` unknown purchaseId, and `200` success with the reversed snapshot (player back in `availablePlayerIds`, history empty, team budget refunded to $260).)
 
-### US-8.7: Edit purchase endpoint
+### US-8.7: Edit purchase endpoint ✅ COMPLETED
 **As a** developer, **I want** `PUT /api/draft-sessions/:id/purchases/:purchaseId` to edit a purchase.
 
 **Acceptance criteria:**
@@ -762,7 +796,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Adjusts budgets and rosters accordingly
 - Returns updated draft snapshot
 
-### US-8.8: List user's draft sessions endpoint
+### US-8.8: List user's draft sessions endpoint ✅ COMPLETED
 **As a** developer, **I want** `GET /api/draft-sessions` to return all sessions for the authenticated user.
 
 **Acceptance criteria:**
@@ -770,7 +804,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Sorted by `createdAt` descending
 - Requires authentication
 
-### US-8.9: Valuations proxy endpoint
+### US-8.9: Valuations proxy endpoint ✅ COMPLETED
 **As a** drafter, **I want** `GET /draft-sessions/:draftSessionId/valuations` to return per-player projected values for the active draft, **so that** the draft room can render the "$ Value" column without the client knowing the Player Data API exists.
 
 > Implementation already exposes the route per `CLAUDE.md` (line 63). This story formalizes its contract.
@@ -806,7 +840,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Form submissions call context actions
 - Component re-renders when context state changes
 
-### US-9.3: Home screen shows draft sessions list
+### US-9.3: Home screen shows draft sessions list ✅ COMPLETED
 **As a** drafter, **I want** the home screen to list my draft sessions, **so that** I can resume a draft or start a new one.
 
 **Acceptance criteria:**
@@ -824,13 +858,13 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Status badge displayed in draft room header
 - Color-coded: Setup=blue, Active=green, Paused=yellow, Completed=gray
 
-### US-10.2: Confirmation dialog for destructive actions
+### US-10.2: Confirmation dialog for destructive actions ✅ COMPLETED
 **Acceptance criteria:**
 - Undo triggers "Are you sure you want to undo [Player] to [Team] for $[Price]?"
 - Confirm/Cancel buttons
 - No state change on Cancel
 
-### US-10.3: Success/error toast notifications
+### US-10.3: Success/error toast notifications ✅ COMPLETED
 **Acceptance criteria:**
 - Green toast for success ("Juan Soto purchased by Team 3 for $47")
 - Red toast for errors ("Insufficient budget for this purchase")
@@ -841,7 +875,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Enter key in price field triggers "Record Purchase" if form is valid
 - Focus management: after recording, focus returns to player search field
 
-### US-10.5: Responsive layout for the draft room
+### US-10.5: Responsive layout for the draft room ✅ COMPLETED
 **Acceptance criteria:**
 - Sidebar collapses or becomes a bottom bar on narrow screens
 - Tables horizontally scroll on narrow screens
@@ -853,7 +887,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > This epic wires the Draft Kit to the Player Data API's valuation, recommendation, and player-pool endpoints. The canonical request/response contracts are owned by the Player Data API (see US-5.3, US-5.4, US-5.5 and US-6.1–6.4 in `PLAYER_DATA_API_USER_STORIES.md`). This epic is mostly client plumbing plus one serializer.
 
-### US-11.1: Document the cross-repo `{leagueSettings, draftState}` contract
+### US-11.1: Document the cross-repo `{leagueSettings, draftState}` contract ✅ COMPLETED
 **As a** developer maintaining both repos, **I want** a single authoritative description of the payload the Draft Kit sends to the Player Data API, **so that** breaking changes are caught at code-review time.
 
 **Acceptance criteria:**
@@ -862,13 +896,13 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Documents that `draftState.purchasedPlayers` is built from `DraftSession.draftHistory[]` + `teams[].purchasedPlayers[]`, and that `teamBudgets` and `filledRosterSlots` come from `teams[]`
 - Lists the exact endpoints the Draft Kit will call: `/api/v1/players/pool`, `/api/v1/players/:playerId`, `/api/v1/players/valuations`, `/api/v1/players/recommendations`, `/api/v1/players/recommendations/nominations`, `/api/v1/usage`
 
-### US-11.2: Add value column placeholder to player table
+### US-11.2: Add value column placeholder to player table ✅ COMPLETED
 **Acceptance criteria:**
 - "$ Value" column exists in available players table showing "--"
 - Column header has a tooltip explaining it will show model-derived values once US-13.1 is wired
 - Column renders the API's `projectedValue` when present, falls back to `--` otherwise
 
-### US-11.3: Draft state export for API consumption
+### US-11.3: Draft state export for API consumption ✅ COMPLETED
 **Acceptance criteria:**
 - `exportDraftState(sessionId)` returns a clean JSON payload matching the Player Data API contract from US-11.1:
   - `availablePlayerIds: string[]`
@@ -879,7 +913,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Player IDs use the `mlb-{id}` format; team IDs use `fantasy-team-{n}`
 - Accompanied by `exportLeagueSettings(sessionId)` that returns the raw `leagueSettings` shape (the Player Data API handles normalization per US-5.3)
 
-### US-11.4: Expand the licensed API client
+### US-11.4: Expand the licensed API client ✅ COMPLETED
 **As a** developer, **I want** `server/lib/licensed-player-api.js` to expose every endpoint this repo needs, **so that** the Draft Kit controllers don't hand-roll fetches.
 
 **Acceptance criteria:**
@@ -892,7 +926,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Each method propagates the Player Data API error shape through the translation in US-11.8
 - Unit tests mock `fetch` and assert each method builds the correct URL, headers (`X-API-Key`, `Authorization: Bearer`), and body
 
-### US-11.5: Migrate licensed API client to `/api/v1/*`
+### US-11.5: Migrate licensed API client to `/api/v1/*` ✅ COMPLETED
 **As a** developer, **I want** the Draft Kit to hit the versioned Player Data API surface, **so that** legacy-route deprecation in the Player Data API (US-2.8 there) doesn't break us.
 
 **Acceptance criteria:**
@@ -901,7 +935,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Health of the configured base URL is logged once on server startup (versioned path reachable, yes/no)
 - README (`416-Minimum-Viable-Product/README.md`) updates its "Licensed Player Data API" examples to the versioned paths
 
-### US-11.6: League-settings serializer for Player Data API calls
+### US-11.6: League-settings serializer for Player Data API calls ✅ COMPLETED
 **As a** developer, **I want** a single helper that turns `DraftSession.leagueSettings` into whatever shape the Player Data API currently expects, **so that** future contract tweaks happen in one place.
 
 **Acceptance criteria:**
@@ -910,7 +944,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - `toPlayerApiDraftState` handles edge cases: no purchases yet, `teams` with missing `filledRosterSlots`, paused/completed sessions
 - Unit tested with a representative session fixture
 
-### US-11.7: Surface Player Data API data-freshness in the draft room
+### US-11.7: Surface Player Data API data-freshness in the draft room ✅ COMPLETED
 **As a** drafter, **I want** to see when the upstream player data was last refreshed, **so that** I know whether injury flags are current.
 
 **Acceptance criteria:**
@@ -918,7 +952,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Draft room header renders a small "Player data as of X ago" line
 - If `staleWarnings` is non-empty, render a yellow badge and list the stale sources on hover
 
-### US-11.8: Translate Player Data API errors to the Draft Kit error shape
+### US-11.8: Translate Player Data API errors to the Draft Kit error shape ✅ COMPLETED
 **As a** client developer, **I want** error shapes from the Player Data API to be translated into the Draft Kit's `{ success, errorMessage }` shape on the server side, **so that** the client only has to handle one error convention.
 
 **Acceptance criteria:**
@@ -933,7 +967,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rewrite note (was ingestion, now consumption):** The Player Data API owns MLB Stats API ingestion (its Epic 4). This epic used to describe the Draft Kit doing its own sync; that duplicated work. These stories now describe the Draft Kit **consuming** what the Player Data API already produces. If/when a local cache is ever desired, it is additive — the pull-through flow is the baseline.
 
-### US-12.1: Hydrate player details from the Player Data API pool
+### US-12.1: Hydrate player details from the Player Data API pool ✅ COMPLETED
 **As a** drafter, **I want** the draft room's player list to carry full metadata (name, positions, team, status, depth-chart info), **so that** I can judge playing time before bidding.
 
 **Acceptance criteria:**
@@ -942,7 +976,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - A manual "Refresh player data" button in the draft room re-fetches the pool and updates displayed rows in place
 - No local `PlayerStub` collection is required; if caching is added later, it is behind a feature flag
 
-### US-12.2: Display injury status from Player Data API
+### US-12.2: Display injury status from Player Data API ✅ COMPLETED
 **As a** drafter, **I want** to see each player's injury status (e.g. `IL-10`, `IL-60`, `DTD`, `active`), **so that** I can avoid bidding on unavailable players.
 
 **Acceptance criteria:**
@@ -951,7 +985,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - No polling from the Draft Kit — the Player Data API's refresh cadence (every 15–60 min per its US-4.2) is the source of truth
 - Sort by `status` available on the Players tab
 
-### US-12.3: Display depth-chart / roster status from Player Data API
+### US-12.3: Display depth-chart / roster status from Player Data API ✅ COMPLETED
 **As a** drafter, **I want** to see whether a player is a starter, backup, or in the minors, **so that** I can assess playing time quickly.
 
 **Acceptance criteria:**
@@ -965,7 +999,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > Depends on Player Data API Epics 5 and 6, and Draft Kit Epic 11 (specifically US-11.4 for the client methods and US-11.6 for the serializers).
 
-### US-13.1: Request live valuations from the Player Data API
+### US-13.1: Request live valuations from the Player Data API ✅ COMPLETED
 **Acceptance criteria:**
 - After each recorded purchase (and on draft-room load), the Draft Kit server calls `postValuations({ leagueSettings, draftState })` via US-11.4
 - `leagueSettings` is the session's raw leagueSettings (the Player Data API handles normalization per its US-5.3)
@@ -974,7 +1008,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Values change as the draft progresses (verified by eyeballing the column mid-draft)
 - If the Player Data API returns `valuations: []` with a "no stats" meta, the UI shows the placeholder `--` (no crash)
 
-### US-13.2: Display recommendation tier for available players
+### US-13.2: Display recommendation tier for available players ✅ COMPLETED
 **Acceptance criteria:**
 - Recommendation column in the player table renders the `tier` value returned by the Player Data API (per its US-6.1)
 - **Color mapping is rendered from the API `tier` field only** — the Draft Kit does not compute thresholds locally:
@@ -984,7 +1018,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Hovering the badge shows the API's `reason` string
 - Column is hidden while `recommendations` is empty / loading
 
-### US-13.3: Show value-over-replacement ("Surplus") for remaining players
+### US-13.3: Show value-over-replacement ("Surplus") for remaining players ✅ COMPLETED
 **Acceptance criteria:**
 - "Surplus" column renders the `valueGap` field from the Player Data API (per its US-5.5)
 - For available players (no `purchasePrice`), `valueGap` is `null` → column shows `--`
@@ -993,7 +1027,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Sortable, so best values float to top
 - Draft Kit does **not** recompute surplus locally
 
-### US-13.4: Position scarcity alerts
+### US-13.4: Position scarcity alerts ✅ COMPLETED
 **Acceptance criteria:**
 - The Draft Kit pulls position-scarcity metadata from the Player Data API's `/players/recommendations` response (threshold + position list)
 - Thresholds and triggering logic live in the API response metadata — not hardcoded in the Draft Kit client
@@ -1006,7 +1040,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > Both repos are now implemented enough to talk to each other for the pool flow (US-3.2, US-3.3). These stories close the loop with executable proof that the two halves work together.
 
-### US-14.1: Two-server local boot script
+### US-14.1: Two-server local boot script ✅ COMPLETED
 **As a** developer, **I want** a single command that boots both the Player Data API and the Draft Kit server with a known-good `PLAYER_API_URL`, `PLAYER_API_KEY`, and Mongo URI, **so that** any contributor can reproduce a draft end-to-end without reading two READMEs.
 
 **Acceptance criteria:**
@@ -1014,7 +1048,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - A script (e.g. `npm run dev:full` at the project root, or a documented two-terminal recipe) brings up both servers
 - Health check: hitting `GET /api/v1/health` on the API and `GET /draft-sessions/<id>` on the Draft Kit both return 200 against the same Mongo + same API key
 
-### US-14.2: End-to-end smoke test
+### US-14.2: End-to-end smoke test ✅ COMPLETED
 **As a** developer, **I want** an automated smoke test that exercises the full happy path against a real (in-process or containerized) Player Data API, **so that** cross-repo contract drift is caught before merge.
 
 **Acceptance criteria:**
@@ -1023,7 +1057,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Test fails loudly if upstream pool shape changes (e.g. `playerId` field renamed)
 - Runs in CI; gated behind `RUN_E2E=1` locally so default `npm test` stays fast
 
-### US-14.3: Contract drift guard
+### US-14.3: Contract drift guard ✅ COMPLETED
 **As a** developer, **I want** `toPlayerApiLeagueSettings` and `toPlayerApiDraftState` (US-11.6) covered by a contract test that loads a fixture from the Player Data API repo's documented schema, **so that** if the API changes the request shape, the Draft Kit's serializer test fails — not a live draft.
 
 **Acceptance criteria:**
@@ -1072,7 +1106,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "Account Creation & Login Mechanisms" (2pt), "Account Password/Login Reset/Retrieval" (2pt) — 4pt total.
 
-### US-16.1: Document and verify the existing register/login/logout flow
+### US-16.1: Document and verify the existing register/login/logout flow ✅ COMPLETED
 **As a** new drafter, **I want** account creation, login, and logout to work end-to-end, **so that** my drafts are persisted to my account.
 
 **Acceptance criteria:**
