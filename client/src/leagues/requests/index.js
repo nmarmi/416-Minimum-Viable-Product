@@ -51,11 +51,14 @@ async function request(path, method = "GET", body = null) {
 export const createLeague = async (leagueData) => request("/", "POST", leagueData);
 export const getMyLeagues = async () => request("/", "GET");
 export const deleteLeague = async (leagueId) => request(`/${leagueId}`, "DELETE");
+// US-15.3: clone a prior-year draft into a new league for the target season
+export const cloneLeague = async (leagueId, targetYear) => request(`/${leagueId}/clone`, "POST", { targetYear });
 
 const apis = {
     createLeague,
     getMyLeagues,
-    deleteLeague
+    deleteLeague,
+    cloneLeague
 };
 
 export default apis;

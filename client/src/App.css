@@ -758,6 +758,36 @@ body {
   gap: 22px;
 }
 
+/* US-15.2: year filter chips */
+.home-year-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.home-year-chip {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid #4a5568;
+  background: none;
+  color: #a0aec0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.home-year-chip:hover { border-color: #90cdf4; color: #90cdf4; }
+.home-year-chip.active { background: #2b6cb0; border-color: #2b6cb0; color: #fff; }
+
+.home-year-section-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #718096;
+  margin: 16px 0 8px;
+}
+
 .league-card {
   padding: 18px 22px 16px;
 }
@@ -1699,6 +1729,22 @@ body {
   align-items: center;
   gap: 10px;
 }
+
+/* US-10.1: session status badge */
+.draft-v2-status-indicator {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.draft-v2-status-indicator--setup     { background: #1e3a8a; color: #93c5fd; }
+.draft-v2-status-indicator--active    { background: #14532d; color: #86efac; }
+.draft-v2-status-indicator--paused    { background: #713f12; color: #fde68a; }
+.draft-v2-status-indicator--completed { background: #1c1917; color: #a8a29e; }
 
 .draft-v2-top-controls {
   padding: 14px 26px 10px;

@@ -174,6 +174,11 @@ const DraftSessionSchema = new Schema(
             draftType: {
                 type: String,
                 default: 'AUCTION'
+            },
+            // US-15.1: season year tag so multi-year history stays organised
+            seasonYear: {
+                type: Number,
+                default: () => new Date().getFullYear()
             }
         },
         teams: {

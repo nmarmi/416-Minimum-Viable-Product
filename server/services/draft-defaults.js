@@ -93,12 +93,20 @@ function sanitizeLeagueSettings(input = {}, fallback = {}) {
         ? resolvedInput.scoringType
         : (resolvedFallback.scoringType || DEFAULT_SCORING_TYPE);
 
+    // US-15.1: season year — default to current calendar year, accept any integer >= 2000
+    const currentYear = new Date().getFullYear();
+    const rawYear = resolvedInput.seasonYear ?? resolvedFallback.seasonYear ?? currentYear;
+    const seasonYear = Number.isInteger(Number(rawYear)) && Number(rawYear) >= 2000
+        ? Number(rawYear)
+        : currentYear;
+
     return {
         numberOfTeams: Math.min(Math.max(toPositiveInt(resolvedInput.numberOfTeams, resolvedFallback.numberOfTeams || DEFAULT_NUM_TEAMS), 2), 30),
         salaryCap: Math.max(toPositiveInt(resolvedInput.salaryCap, resolvedFallback.salaryCap || DEFAULT_SALARY_CAP), 1),
         rosterSlots,
         scoringType,
-        draftType: DEFAULT_DRAFT_TYPE
+        draftType: DEFAULT_DRAFT_TYPE,
+        seasonYear
     };
 }
 
@@ -126,7 +134,8 @@ function serializeSession(session) {
         pooledAt: plain.pooledAt || null,
         leagueSettings: {
             ...plain.leagueSettings,
-            rosterSlots: toPlainObject(plain.leagueSettings?.rosterSlots)
+            rosterSlots: toPlainObject(plain.leagueSettings?.rosterSlots),
+            seasonYear: plain.leagueSettings?.seasonYear ?? new Date().getFullYear()
         },
         teams: (plain.teams || []).map((team) => ({
             teamId: team.teamId,

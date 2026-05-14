@@ -174,6 +174,7 @@ const DraftRoomScreen = () => {
     const teamPickerRef = useRef(null);
     const sortMenuRef = useRef(null);
     const filtersMenuRef = useRef(null);
+    const playerSearchRef = useRef(null);  // US-10.4: focus target after recording purchase
 
     const draftSession = store.currentDraftSession;
     const availablePlayerIdsKey = useMemo(
@@ -661,6 +662,8 @@ const DraftRoomScreen = () => {
             setEntrySuccess('Purchase recorded.');
             showToast('success', `${purchasedPlayerName} purchased by ${purchasedTeamName} for $${purchasedPrice}`);
             setTimeout(() => setEntrySuccess(''), 3000);
+            // US-10.4: return focus to player search so the next nomination flows quickly
+            setTimeout(() => playerSearchRef.current?.focus(), 50);
         } else {
             const errorMessage = res.data?.errorMessage || 'Failed to record purchase.';
             setEntryError(errorMessage);
@@ -835,6 +838,7 @@ const DraftRoomScreen = () => {
                         <label className="draft-v2-search-wrap draft-v2-live-search-wrap">
                             <span className="draft-v2-search-icon">⌕</span>
                             <input
+                                ref={playerSearchRef}
                                 type="text"
                                 placeholder="Search players by name"
                                 value={playerSearch}
@@ -1299,7 +1303,19 @@ const DraftRoomScreen = () => {
                     </label>
                     <label className="draft-v2-field">
                         <span>Winning Price ($)</span>
-                        <input type="number" min="1" placeholder="e.g., 37" value={entryPrice} onChange={(event) => setEntryPrice(event.target.value)} />
+                        <input
+                            type="number"
+                            min="1"
+                            placeholder="e.g., 37"
+                            value={entryPrice}
+                            onChange={(event) => setEntryPrice(event.target.value)}
+                            onKeyDown={(e) => {
+                                // US-10.4: Enter triggers Record Purchase when form is valid
+                                if (e.key === 'Enter' && !priceError && entryPlayer && entryPrice && !entrySubmitting) {
+                                    handleRecordPurchase();
+                                }
+                            }}
+                        />
                         {priceError ? <span className="draft-v2-field-error">{priceError}</span> : null}
                     </label>
                     <label className="draft-v2-field full">
@@ -1612,6 +1628,13 @@ const DraftRoomScreen = () => {
                     <h1>{draftTitle}</h1>
                     <p>{draftSubtitle}</p>
                 </div>
+
+                {/* US-10.1: draft session status badge */}
+                {draftSession && (
+                    <span className={`draft-v2-status-indicator draft-v2-status-indicator--${draftStatus.className}`}>
+                        {draftStatus.label}
+                    </span>
+                )}
 
                 <div className="draft-v2-header-actions">
                     {draftSession?.teams?.length > 0 && (

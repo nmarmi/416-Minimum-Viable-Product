@@ -176,6 +176,16 @@ function GlobalStoreContextProvider(props) {
         return res;
     };
 
+    // US-15.3: clone a league into a new year
+    store.cloneLeague = async function (leagueId, targetYear) {
+        const res = await leaguesRequestSender.cloneLeague(leagueId, targetYear);
+        if (res.status === 201 && res.data?.success) {
+            // Reload the full league list so the cloned entry appears
+            await store.loadLeagues();
+        }
+        return res;
+    };
+
     store.loadDraftSession = async function (draftSessionId) {
         const res = await draftSessionsRequestSender.getDraftSession(draftSessionId);
         if (res.status === 200 && res.data?.success) {

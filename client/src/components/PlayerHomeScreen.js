@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { GlobalStoreContext } from '../store';
 
@@ -16,6 +16,10 @@ const PlayerHomeScreen = () => {
 
     const [leagueToDelete, setLeagueToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+
+    // US-15.2: year filter chip state
+    const [yearFilter, setYearFilter] = useState('all');
+    const [cloning, setCloning] = useState(null); // leagueId being cloned
 
     const loadLeagues = async () => {
         setLoadingLeagues(true);
@@ -75,6 +79,41 @@ const PlayerHomeScreen = () => {
         setLeagueToDelete(null);
     };
 
+    // US-15.3: clone a completed league into the next year
+    const handleClone = async (league) => {
+        setCloning(league._id);
+        const nextYear = (league.seasonYear ?? new Date().getFullYear()) + 1;
+        const res = await store.cloneLeague(league._id, nextYear);
+        setCloning(null);
+        if (res.status === 201 && res.data?.success) {
+            const { draftSession } = res.data;
+            history.push(`/league/${res.data.league._id}/draft/${draftSession.draftSessionId}/setup`);
+        }
+    };
+
+    // US-15.2: derive distinct years and filtered league list
+    const distinctYears = useMemo(() => {
+        const years = [...new Set(store.leagues.map((l) => l.seasonYear ?? new Date().getFullYear()))].sort((a, b) => b - a);
+        return years;
+    }, [store.leagues]);
+
+    const filteredLeagues = useMemo(() => {
+        if (yearFilter === 'all') return store.leagues;
+        return store.leagues.filter((l) => (l.seasonYear ?? new Date().getFullYear()) === Number(yearFilter));
+    }, [store.leagues, yearFilter]);
+
+    // Group filtered leagues by year for section headers
+    const groupedLeagues = useMemo(() => {
+        const groups = {};
+        filteredLeagues.forEach((l) => {
+            const yr = l.seasonYear ?? new Date().getFullYear();
+            if (!groups[yr]) groups[yr] = [];
+            groups[yr].push(l);
+        });
+        // Sort years descending
+        return Object.entries(groups).sort(([a], [b]) => Number(b) - Number(a));
+    }, [filteredLeagues]);
+
     return (
         <main className="app-home">
             <section className="home-left-column">
@@ -109,37 +148,87 @@ const PlayerHomeScreen = () => {
                     </article>
                 ) : null}
 
-                {!loadingLeagues && !leagueError && store.leagues.length > 0 ? (
+                {/* US-15.2: year filter chip row */}
+                {!loadingLeagues && !leagueError && store.leagues.length > 0 && distinctYears.length > 1 ? (
+                    <div className="home-year-filter-row">
+                        <button
+                            type="button"
+                            className={`home-year-chip ${yearFilter === 'all' ? 'active' : ''}`}
+                            onClick={() => setYearFilter('all')}
+                        >
+                            All years
+                        </button>
+                        {distinctYears.map((yr) => (
+                            <button
+                                key={yr}
+                                type="button"
+                                className={`home-year-chip ${yearFilter === String(yr) ? 'active' : ''}`}
+                                onClick={() => setYearFilter(String(yr))}
+                            >
+                                {yr}
+                            </button>
+                        ))}
+                    </div>
+                ) : null}
+
+                {/* US-15.2: leagues grouped by year with section headers */}
+                {!loadingLeagues && !leagueError && filteredLeagues.length === 0 && store.leagues.length > 0 ? (
+                    <article className="home-card home-empty-leagues">
+                        <h3>No drafts in {yearFilter} yet</h3>
+                        <p>Switch to "All years" or create a new league for this year.</p>
+                    </article>
+                ) : null}
+
+                {!loadingLeagues && !leagueError && groupedLeagues.length > 0 ? (
                     <div className="league-stack">
-                        {store.leagues.map((league) => (
-                            <article className="home-card league-list-card" key={league._id}>
-                                <div className="league-card-header">
-                                    <h3>{league.name}</h3>
-                                </div>
-                                <div className="league-card-actions">
-                                    <button
-                                        className="home-dark-btn"
-                                        type="button"
-                                        onClick={() => history.push(`/league/${league._id}/draft-room/${league.draftSessionId}`)}
-                                    >
-                                        Enter Draft Room
-                                    </button>
-                                    <button
-                                        className="home-light-btn"
-                                        type="button"
-                                        onClick={() => history.push(`/league/${league._id}/draft/${league.draftSessionId}/setup`)}
-                                    >
-                                        Draft Settings
-                                    </button>
-                                    <button
-                                        className="home-danger-btn"
-                                        type="button"
-                                        onClick={() => setLeagueToDelete(league)}
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </article>
+                        {groupedLeagues.map(([yr, yrLeagues]) => (
+                            <div key={yr}>
+                                {/* Section header shown when "All years" is selected and there are multiple years */}
+                                {yearFilter === 'all' && distinctYears.length > 1 ? (
+                                    <h3 className="home-year-section-header">{yr}</h3>
+                                ) : null}
+                                {yrLeagues.map((league) => (
+                                    <article className="home-card league-list-card" key={league._id}>
+                                        <div className="league-card-header">
+                                            <h3>{league.name}</h3>
+                                        </div>
+                                        <div className="league-card-actions">
+                                            <button
+                                                className="home-dark-btn"
+                                                type="button"
+                                                onClick={() => history.push(`/league/${league._id}/draft-room/${league.draftSessionId}`)}
+                                            >
+                                                Enter Draft Room
+                                            </button>
+                                            <button
+                                                className="home-light-btn"
+                                                type="button"
+                                                onClick={() => history.push(`/league/${league._id}/draft/${league.draftSessionId}/setup`)}
+                                            >
+                                                Draft Settings
+                                            </button>
+                                            {/* US-15.3: clone to next year when this draft is completed */}
+                                            {league.draftStatus === 'completed' ? (
+                                                <button
+                                                    className="home-light-btn"
+                                                    type="button"
+                                                    disabled={cloning === league._id}
+                                                    onClick={() => handleClone(league)}
+                                                >
+                                                    {cloning === league._id ? 'Cloning...' : `Use Last Year →`}
+                                                </button>
+                                            ) : null}
+                                            <button
+                                                className="home-danger-btn"
+                                                type="button"
+                                                onClick={() => setLeagueToDelete(league)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
                         ))}
                     </div>
                 ) : null}

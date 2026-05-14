@@ -853,7 +853,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 10: Polish & UX (Milestone 2)
 
-### US-10.1: Draft session status indicator
+### US-10.1: Draft session status indicator ✅ COMPLETED
 **Acceptance criteria:**
 - Status badge displayed in draft room header
 - Color-coded: Setup=blue, Active=green, Paused=yellow, Completed=gray
@@ -870,7 +870,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Red toast for errors ("Insufficient budget for this purchase")
 - Toasts auto-dismiss after 4 seconds
 
-### US-10.4: Keyboard shortcut for quick purchase recording
+### US-10.4: Keyboard shortcut for quick purchase recording ✅ COMPLETED
 **Acceptance criteria:**
 - Enter key in price field triggers "Record Purchase" if form is valid
 - Focus management: after recording, focus returns to player search field
@@ -1071,7 +1071,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "User can create draft for given year" (2pt), "User can access drafts from current and past years" (2pt), "Can create new draft using completed draft from previous year" (2pt) — 6pt total.
 
-### US-15.1: Associate every draft with a season year
+### US-15.1: Associate every draft with a season year ✅ COMPLETED
 **As a** drafter, **I want** every draft session tagged with a `seasonYear`, **so that** I can keep multiple years of drafts and look back at past results.
 
 **Acceptance criteria:**
@@ -1080,7 +1080,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - `serializeSession` includes `seasonYear` in the response
 - `tests/draft-service.test.js` asserts the field round-trips through create → update → fetch
 
-### US-15.2: Filter home-screen drafts by year
+### US-15.2: Filter home-screen drafts by year ✅ COMPLETED
 **As a** drafter, **I want** the home screen to group leagues by season year and let me filter to a specific year, **so that** my history doesn't get cluttered as years go by.
 
 **Acceptance criteria:**
@@ -1089,7 +1089,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Section headers display the year for each group when "All years" is active
 - Empty state per year reads "No drafts in <year> yet"
 
-### US-15.3: Clone a completed draft from a previous year
+### US-15.3: Clone a completed draft from a previous year ✅ COMPLETED
 **As a** drafter, **I want** to start a new year's draft pre-populated from a completed prior-year draft (same teams, same league settings, same keepers), **so that** league setup is one click instead of a dozen.
 
 **Acceptance criteria:**

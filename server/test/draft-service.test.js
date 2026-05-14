@@ -583,3 +583,59 @@ describe('US-7.5: state consistency invariants', () => {
         assertBudgetConservation(snap);
     });
 });
+
+describe('US-15.1 seasonYear round-trips through create → update → fetch', () => {
+    it('defaults to current year when not provided', async () => {
+        const DraftSession = require('../models/draft-session-model');
+        const session = await DraftSession.create({
+            draftSessionId: `test-year-default-${Date.now()}`,
+            leagueId: new mongoose.Types.ObjectId(),
+            createdBy: new mongoose.Types.ObjectId(),
+            leagueSettings: { numberOfTeams: 10, salaryCap: 260 },
+            teams: [],
+        });
+        const plain = session.toObject();
+        expect(plain.leagueSettings.seasonYear).toBe(new Date().getFullYear());
+    });
+
+    it('persists an explicit seasonYear', async () => {
+        const DraftSession = require('../models/draft-session-model');
+        const session = await DraftSession.create({
+            draftSessionId: `test-year-explicit-${Date.now()}`,
+            leagueId: new mongoose.Types.ObjectId(),
+            createdBy: new mongoose.Types.ObjectId(),
+            leagueSettings: { numberOfTeams: 10, salaryCap: 260, seasonYear: 2028 },
+            teams: [],
+        });
+        const fetched = await DraftSession.findOne({ draftSessionId: session.draftSessionId }).lean();
+        expect(fetched.leagueSettings.seasonYear).toBe(2028);
+    });
+
+    it('sanitizeLeagueSettings accepts seasonYear ≥ 2000', () => {
+        const { sanitizeLeagueSettings } = require('../services/draft-defaults');
+        const result = sanitizeLeagueSettings({ numberOfTeams: 10, salaryCap: 260, seasonYear: 2031 });
+        expect(result.seasonYear).toBe(2031);
+    });
+
+    it('sanitizeLeagueSettings rejects year < 2000 and falls back to current year', () => {
+        const { sanitizeLeagueSettings } = require('../services/draft-defaults');
+        const result = sanitizeLeagueSettings({ numberOfTeams: 10, salaryCap: 260, seasonYear: 1990 });
+        expect(result.seasonYear).toBe(new Date().getFullYear());
+    });
+
+    it('serializeSession includes seasonYear', () => {
+        const { serializeSession } = require('../services/draft-defaults');
+        const fakeSession = {
+            draftSessionId: 'fake',
+            name: 'Test',
+            status: 'setup',
+            leagueId: new mongoose.Types.ObjectId().toString(),
+            leagueSettings: { seasonYear: 2026, numberOfTeams: 10, salaryCap: 260, rosterSlots: new Map() },
+            teams: [],
+            draftHistory: [],
+            purchasedPlayerIds: [],
+        };
+        const serialized = serializeSession(fakeSession);
+        expect(serialized.leagueSettings.seasonYear).toBe(2026);
+    });
+});

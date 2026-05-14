@@ -52,12 +52,17 @@ const normalizeSession = (draftSession) => {
     const numberOfTeams = clampInt(leagueSettings.numberOfTeams || 12, 2, 30);
     const salaryCap = clampInt(leagueSettings.salaryCap || 260, 1);
 
+    // US-15.1: default to current year, accept any stored year >= 2000
+    const rawYear = leagueSettings.seasonYear;
+    const seasonYear = rawYear && Number(rawYear) >= 2000 ? Number(rawYear) : new Date().getFullYear();
+
     return {
         numberOfTeams,
         salaryCap,
         rosterSlots,
         scoringType: leagueSettings.scoringType || '5x5 Roto',
         draftType: leagueSettings.draftType || 'AUCTION',
+        seasonYear,
         teams: buildTeams(numberOfTeams, salaryCap, rosterSlots, draftSession?.teams || [])
     };
 };
@@ -108,7 +113,8 @@ export default function DraftSessionSetupScreen() {
             salaryCap: formState.salaryCap,
             rosterSlots: formState.rosterSlots,
             scoringType: formState.scoringType,
-            draftType: 'AUCTION'
+            draftType: 'AUCTION',
+            seasonYear: formState.seasonYear  // US-15.1
         },
         teams: formState.teams.map((team) => ({
             teamId: team.teamId,
@@ -241,6 +247,20 @@ export default function DraftSessionSetupScreen() {
                                 min="1"
                                 value={formState.salaryCap}
                                 onChange={(e) => handleSalaryCapChange(e.target.value)}
+                            />
+                        </label>
+                        {/* US-15.1: season year tag */}
+                        <label>
+                            <span>Season Year</span>
+                            <input
+                                type="number"
+                                min="2000"
+                                max={new Date().getFullYear() + 5}
+                                value={formState.seasonYear}
+                                onChange={(e) => {
+                                    const yr = Number(e.target.value);
+                                    if (yr >= 2000) setFormState((prev) => ({ ...prev, seasonYear: yr }));
+                                }}
                             />
                         </label>
                         <label>
