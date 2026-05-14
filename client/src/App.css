@@ -2867,6 +2867,20 @@ body {
   gap: 8px;
 }
 
+/* US-21.1: injury and depth chart context rows */
+.player-info-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.player-info-depth-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .player-info-notes-textarea {
   width: 100%;
   box-sizing: border-box;

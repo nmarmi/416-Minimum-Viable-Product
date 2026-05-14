@@ -69,6 +69,9 @@ export const recordPurchase = async (draftSessionId, payload) => request(`/${dra
 export const undoPurchase = async (draftSessionId, purchaseId) => request(`/${draftSessionId}/purchases/${purchaseId}`, "DELETE");
 export const editPurchase = async (draftSessionId, purchaseId, payload) => request(`/${draftSessionId}/purchases/${purchaseId}`, "PUT", payload);
 export const setPlayerNote = async (draftSessionId, playerId, note) => request(`/${draftSessionId}/player-notes/${playerId}`, "PUT", { note });
+// US-21.1: single player detail panel
+export const getSessionPlayer = async (draftSessionId, playerId) =>
+    request(`/${draftSessionId}/players/${encodeURIComponent(playerId)}`, "GET");
 // US-18.2: move purchased player to different position slot
 export const movePosition = async (draftSessionId, purchaseId, positionFilled, eligiblePositions = []) =>
     request(`/${draftSessionId}/purchases/${purchaseId}/position`, "PUT", { positionFilled, eligiblePositions });

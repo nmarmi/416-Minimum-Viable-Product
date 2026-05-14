@@ -723,6 +723,26 @@ const moveMinor = async (req, res) => {
     }
 };
 
+// US-21.1: single player details — proxies to Player Data API, keeps key server-side
+const getSessionPlayer = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+
+        const { playerId } = req.params;
+        if (!licensedApi.hasConfig()) {
+            return res.status(200).json({ success: false, errorMessage: 'Player Data API not configured.' });
+        }
+
+        const player = await licensedApi.getPlayer(playerId);
+        if (!player) return res.status(404).json({ success: false, errorMessage: 'Player not found.' });
+        return res.status(200).json({ success: true, player: toPlayerStub(player) });
+    } catch (err) {
+        console.error('[draft] getSessionPlayer error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to fetch player.' });
+    }
+};
+
 module.exports = {
     getMyDraftSessions,
     createDraftSession,
@@ -734,6 +754,7 @@ module.exports = {
     editPurchase,
     movePosition,
     moveMinor,
+    getSessionPlayer,
     getSessionPlayers,
     getSessionValuations,
     getSessionRecommendations,

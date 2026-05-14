@@ -1260,7 +1260,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "Player Details — Stats, Age, Injury Status, Depth Chart, Transactions" (2pt) plus "Player Details — Depth Chart" (1pt), "Player Details — Transactions/Contract" (1pt), "Player Details — Injury/News" (1pt) from the Push category — 5pt total.
 
-### US-21.1: Single-player details surface
+### US-21.1: Single-player details surface ✅ COMPLETED
 **As a** drafter, **I want** to click any player and see their full picture in one panel, **so that** I'm not tab-switching mid-bid.
 
 **Acceptance criteria:**

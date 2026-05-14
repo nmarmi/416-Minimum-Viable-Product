@@ -8,6 +8,8 @@ router.get('/:draftSessionId', DraftSessionController.getDraftSession);
 router.put('/:draftSessionId', DraftSessionController.updateDraftSession);
 router.post('/:draftSessionId/start', DraftSessionController.startDraft);
 router.get('/:draftSessionId/players', DraftSessionController.getSessionPlayers);
+// US-21.1: single player detail — proxies to Player Data API, keeps key server-side
+router.get('/:draftSessionId/players/:playerId', DraftSessionController.getSessionPlayer);
 router.get('/:draftSessionId/valuations', DraftSessionController.getSessionValuations);
 router.get('/:draftSessionId/recommendations', DraftSessionController.getSessionRecommendations);
 router.post('/:draftSessionId/purchases', DraftSessionController.recordPurchase);

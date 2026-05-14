@@ -1889,6 +1889,7 @@ const DraftRoomScreen = () => {
             {selectedPlayer ? (
                 <PlayerInfoModal
                     player={selectedPlayer}
+                    draftSessionId={draftSessionId}
                     initialNote={draftSession?.playerNotes?.[getPlayerId(selectedPlayer)] || ''}
                     onClose={() => setSelectedPlayer(null)}
                     onSaveNote={handleSavePlayerNote}
