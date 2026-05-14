@@ -132,6 +132,17 @@ async function initializeDraft(draftSessionId) {
     session.draftHistory = [];
     session.nominationOrder = 0;
 
+    // US-19.2: remove minor league players from the auction pool before processing keepers
+    const minorPlayerIds = new Set();
+    for (const team of session.teams) {
+        for (const minor of (team.minorLeaguePlayers || [])) {
+            minorPlayerIds.add(String(minor.playerId));
+        }
+    }
+    if (minorPlayerIds.size > 0) {
+        session.availablePlayerIds = session.availablePlayerIds.filter((id) => !minorPlayerIds.has(id));
+    }
+
     // US-18.1: convert keepers into purchases at draft start
     const keeperErrors = [];
     for (const team of session.teams) {
@@ -533,6 +544,43 @@ async function movePosition(draftSessionId, purchaseId, { positionFilled: target
     return { success: true, session, snapshot: buildSnapshot(session) };
 }
 
+/**
+ * US-19.3: Move a minor league player from one team to another.
+ * Validates destination team has a free minor league slot.
+ */
+async function moveMinor(draftSessionId, playerId, { teamId: destTeamId }) {
+    const session = await DraftSession.findOne({ draftSessionId });
+    if (!session) return { success: false, errorMessage: 'Draft session not found.' };
+
+    const playerIdStr = String(playerId);
+    const maxSlots = Number(session.leagueSettings?.minorLeagueSlots ?? 6);
+
+    // Find source team
+    let sourceTeam = null;
+    let minorEntry = null;
+    for (const t of session.teams) {
+        const entry = (t.minorLeaguePlayers || []).find((m) => m.playerId === playerIdStr);
+        if (entry) { sourceTeam = t; minorEntry = entry; break; }
+    }
+    if (!sourceTeam) return { success: false, errorMessage: 'Player not found on any minor league roster.' };
+    if (sourceTeam.teamId === destTeamId) return { success: true, session, snapshot: buildSnapshot(session) };
+
+    const destTeam = session.teams.find((t) => t.teamId === destTeamId);
+    if (!destTeam) return { success: false, errorMessage: 'Destination team not found.' };
+
+    if ((destTeam.minorLeaguePlayers || []).length >= maxSlots) {
+        return { success: false, errorMessage: `${destTeam.teamName}'s minor league roster is full (${maxSlots} slots).` };
+    }
+
+    sourceTeam.minorLeaguePlayers = (sourceTeam.minorLeaguePlayers || []).filter((m) => m.playerId !== playerIdStr);
+    if (!destTeam.minorLeaguePlayers) destTeam.minorLeaguePlayers = [];
+    destTeam.minorLeaguePlayers.push(minorEntry);
+
+    session.markModified('teams');
+    await session.save();
+    return { success: true, session, snapshot: buildSnapshot(session) };
+}
+
 module.exports = {
     initializeDraft,
     recordPurchase,
@@ -541,5 +589,6 @@ module.exports = {
     getDraftSnapshot,
     setPlayerNote,
     movePosition,
+    moveMinor,
     buildSnapshot,
 };

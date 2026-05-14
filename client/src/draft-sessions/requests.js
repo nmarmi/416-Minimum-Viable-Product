@@ -72,6 +72,9 @@ export const setPlayerNote = async (draftSessionId, playerId, note) => request(`
 // US-18.2: move purchased player to different position slot
 export const movePosition = async (draftSessionId, purchaseId, positionFilled, eligiblePositions = []) =>
     request(`/${draftSessionId}/purchases/${purchaseId}/position`, "PUT", { positionFilled, eligiblePositions });
+// US-19.3: move minor league player to a different team
+export const moveMinor = async (draftSessionId, playerId, teamId) =>
+    request(`/${draftSessionId}/minors/${encodeURIComponent(playerId)}`, "PUT", { teamId });
 
 const draftSessionsApi = {
     createDraftSession,

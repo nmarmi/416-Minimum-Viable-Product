@@ -54,7 +54,9 @@ const buildTeams = (numberOfTeams, salaryCap, rosterSlots, existingTeams = []) =
             teamName: existingTeam?.teamName || teamId,
             budgetRemaining: salaryCap,
             purchasedPlayers: Array.isArray(existingTeam?.purchasedPlayers) ? existingTeam.purchasedPlayers : [],
-            filledRosterSlots: buildFilledRosterSlots(rosterSlots)
+            filledRosterSlots: buildFilledRosterSlots(rosterSlots),
+            keepers: Array.isArray(existingTeam?.keepers) ? existingTeam.keepers : [],
+            minorLeaguePlayers: Array.isArray(existingTeam?.minorLeaguePlayers) ? existingTeam.minorLeaguePlayers : [],
         };
     });
 };
@@ -96,6 +98,7 @@ const normalizeSession = (draftSession) => {
         leagueScope,
         statCategories,
         positionCatalog,
+        minorLeagueSlots: Number(leagueSettings.minorLeagueSlots ?? 6),
         teams: buildTeams(numberOfTeams, salaryCap, rosterSlots, draftSession?.teams || [])
     };
 };
@@ -147,10 +150,11 @@ export default function DraftSessionSetupScreen() {
             rosterSlots:     formState.rosterSlots,
             scoringType:     formState.scoringType,
             draftType:       'AUCTION',
-            seasonYear:      formState.seasonYear,      // US-15.1
-            leagueScope:     formState.leagueScope,     // US-17.1
-            statCategories:  formState.statCategories,  // US-17.2
-            positionCatalog: formState.positionCatalog, // US-17.3
+            seasonYear:       formState.seasonYear,       // US-15.1
+            leagueScope:      formState.leagueScope,      // US-17.1
+            statCategories:   formState.statCategories,   // US-17.2
+            positionCatalog:  formState.positionCatalog,  // US-17.3
+            minorLeagueSlots: formState.minorLeagueSlots, // US-19.1
         },
         teams: formState.teams.map((team) => ({
             teamId: team.teamId,
@@ -286,6 +290,55 @@ export default function DraftSessionSetupScreen() {
         setKeeperPrice('');
         setKeeperYears('1');
         setKeeperPos('');
+    };
+
+    // US-19.1: minor league state
+    const [minorTeamId,    setMinorTeamId]    = useState('');
+    const [minorSearch,    setMinorSearch]     = useState('');
+    const [minorResults,   setMinorResults]    = useState([]);
+    const [minorPlayer,    setMinorPlayer]     = useState(null);
+    const [minorYears,     setMinorYears]      = useState('1');
+    const [minorSearching, setMinorSearching]  = useState(false);
+
+    const searchMinors = useCallback(async (term) => {
+        if (!term || term.length < 2) { setMinorResults([]); return; }
+        setMinorSearching(true);
+        const res = await getPlayers({ search: term, limit: 8 });
+        setMinorSearching(false);
+        if (res.status === 200 && res.data?.success) setMinorResults(res.data.players || []);
+    }, []);
+
+    const addMinor = () => {
+        if (!minorTeamId || !minorPlayer) return;
+        const maxSlots = formState.leagueSettings?.minorLeagueSlots ?? 6;
+        setFormState((prev) => ({
+            ...prev,
+            teams: prev.teams.map((team) => {
+                if (team.teamId !== minorTeamId) return team;
+                const existing = team.minorLeaguePlayers || [];
+                if (existing.length >= maxSlots || existing.some((m) => m.playerId === minorPlayer.playerId)) return team;
+                return {
+                    ...team,
+                    minorLeaguePlayers: [...existing, {
+                        playerId:   minorPlayer.playerId,
+                        playerName: minorPlayer.playerName || minorPlayer.name || minorPlayer.playerId,
+                        contractYears: Number(minorYears) || 1,
+                    }]
+                };
+            })
+        }));
+        setMinorPlayer(null); setMinorSearch(''); setMinorResults([]); setMinorYears('1');
+    };
+
+    const removeMinor = (teamId, playerId) => {
+        setFormState((prev) => ({
+            ...prev,
+            teams: prev.teams.map((team) =>
+                team.teamId === teamId
+                    ? { ...team, minorLeaguePlayers: (team.minorLeaguePlayers || []).filter((m) => m.playerId !== playerId) }
+                    : team
+            )
+        }));
     };
 
     const removeKeeper = (teamId, playerId) => {
@@ -583,6 +636,62 @@ export default function DraftSessionSetupScreen() {
                     })}
                     {formState.teams.every((t) => !(t.keepers || []).length) && (
                         <p className="draft-setup-keeper-empty">No keepers added yet.</p>
+                    )}
+
+                    {/* US-19.1: Minor League Rosters */}
+                    <div className="draft-setup-section-head" style={{ marginTop: 20 }}>
+                        <h3 style={{ fontSize: '0.95rem' }}>Minor League Rosters</h3>
+                        <p>Players on a minor league roster are excluded from the auction pool. ({formState.minorLeagueSlots} slots/team)</p>
+                    </div>
+
+                    <div className="draft-setup-keeper-form">
+                        <select className="draft-setup-keeper-select" value={minorTeamId} onChange={(e) => setMinorTeamId(e.target.value)}>
+                            <option value="">— Select team —</option>
+                            {formState.teams.map((t) => (
+                                <option key={t.teamId} value={t.teamId}>{t.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</option>
+                            ))}
+                        </select>
+                        <div className="draft-setup-keeper-search">
+                            <input type="text" placeholder="Search prospect…" value={minorSearch}
+                                onChange={(e) => { setMinorSearch(e.target.value); setMinorPlayer(null); searchMinors(e.target.value); }}
+                                autoComplete="off" />
+                            {minorPlayer && <span className="draft-setup-keeper-chosen">✓ {minorPlayer.playerName || minorPlayer.name}</span>}
+                            {minorResults.length > 0 && !minorPlayer && (
+                                <div className="draft-setup-keeper-dropdown">
+                                    {minorResults.map((p) => (
+                                        <button key={p.playerId} type="button"
+                                            onClick={() => { setMinorPlayer(p); setMinorSearch(p.name || p.playerName || p.playerId); setMinorResults([]); }}>
+                                            {p.name || p.playerName} <span>{p.mlbTeam} · {(p.positions || [p.position]).join('/')}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <input type="number" min="0" placeholder="Years" value={minorYears}
+                            onChange={(e) => setMinorYears(e.target.value)} className="draft-setup-keeper-num" style={{ width: 60 }} />
+                        <button type="button" className="home-dark-btn"
+                            onClick={addMinor} disabled={!minorTeamId || !minorPlayer}>+ Add Minor</button>
+                    </div>
+
+                    {formState.teams.map((team) => {
+                        const minors = team.minorLeaguePlayers || [];
+                        if (!minors.length) return null;
+                        return (
+                            <div key={`minors-${team.teamId}`} className="draft-setup-keeper-team">
+                                <strong>{team.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')} — Minors</strong>
+                                {minors.map((m) => (
+                                    <div key={m.playerId} className="draft-setup-keeper-row">
+                                        <span>{m.playerName}</span>
+                                        <span>{m.contractYears}yr</span>
+                                        <span style={{ color: '#a0aec0', fontSize: '0.75rem' }}>MiLB</span>
+                                        <button type="button" onClick={() => removeMinor(team.teamId, m.playerId)}>✕</button>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })}
+                    {formState.teams.every((t) => !(t.minorLeaguePlayers || []).length) && (
+                        <p className="draft-setup-keeper-empty">No minor league players added yet.</p>
                     )}
                 </article>
             </section>

@@ -784,3 +784,74 @@ describe('US-18 Keepers & Position Move', () => {
         expect(result.code).toBe('POSITION_INELIGIBLE');
     });
 });
+
+describe('US-19 Minor League Rosters', () => {
+    async function makeMinorSession() {
+        const DraftSession = require('../models/draft-session-model');
+        const sessionId = `minor-test-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+        const session = await DraftSession.create({
+            draftSessionId: sessionId,
+            leagueId: new mongoose.Types.ObjectId(),
+            createdBy: new mongoose.Types.ObjectId(),
+            status: 'setup',
+            leagueSettings: { numberOfTeams: 2, salaryCap: 100, rosterSlots: { OF: 2, SP: 1, BENCH: 1 }, minorLeagueSlots: 3 },
+            availablePlayerIds: ['mlb-1', 'mlb-2', 'mlb-prospect-99'],
+            teams: [
+                { teamId: 'fantasy-team-1', teamName: 'Team 1', budgetRemaining: 100,
+                  filledRosterSlots: new Map(), purchasedPlayers: [], keepers: [],
+                  minorLeaguePlayers: [{ playerId: 'mlb-prospect-99', playerName: 'Hot Prospect', contractYears: 3 }] },
+                { teamId: 'fantasy-team-2', teamName: 'Team 2', budgetRemaining: 100,
+                  filledRosterSlots: new Map(), purchasedPlayers: [], keepers: [], minorLeaguePlayers: [] },
+            ],
+        });
+        return { session, sessionId };
+    }
+
+    it('US-19.2: minor league players excluded from availablePlayerIds on draft start', async () => {
+        const { sessionId } = await makeMinorSession();
+        const result = await draftService.initializeDraft(sessionId);
+        expect(result.success).toBe(true);
+        expect(result.session.availablePlayerIds).not.toContain('mlb-prospect-99');
+        expect(result.session.availablePlayerIds).toContain('mlb-1');
+        expect(result.session.availablePlayerIds).toContain('mlb-2');
+    });
+
+    it('US-19.3: moveMinor transfers player to destination team', async () => {
+        const { sessionId } = await makeMinorSession();
+        const result = await draftService.moveMinor(sessionId, 'mlb-prospect-99', { teamId: 'fantasy-team-2' });
+        expect(result.success).toBe(true);
+        const t1 = result.session.teams.find((t) => t.teamId === 'fantasy-team-1');
+        const t2 = result.session.teams.find((t) => t.teamId === 'fantasy-team-2');
+        expect((t1.minorLeaguePlayers || []).some((m) => m.playerId === 'mlb-prospect-99')).toBe(false);
+        expect((t2.minorLeaguePlayers || []).some((m) => m.playerId === 'mlb-prospect-99')).toBe(true);
+    });
+
+    it('US-19.3: moveMinor rejects when destination is full', async () => {
+        const DraftSession = require('../models/draft-session-model');
+        const sessionId = `minor-full-${Date.now()}`;
+        await DraftSession.create({
+            draftSessionId: sessionId,
+            leagueId: new mongoose.Types.ObjectId(),
+            createdBy: new mongoose.Types.ObjectId(),
+            status: 'setup',
+            leagueSettings: { numberOfTeams: 2, salaryCap: 100, rosterSlots: { OF: 2 }, minorLeagueSlots: 1 },
+            availablePlayerIds: [],
+            teams: [
+                { teamId: 'fantasy-team-1', teamName: 'Team 1', budgetRemaining: 100,
+                  filledRosterSlots: new Map(), purchasedPlayers: [], keepers: [],
+                  minorLeaguePlayers: [{ playerId: 'mlb-a', playerName: 'Player A', contractYears: 1 }] },
+                { teamId: 'fantasy-team-2', teamName: 'Team 2', budgetRemaining: 100,
+                  filledRosterSlots: new Map(), purchasedPlayers: [], keepers: [],
+                  minorLeaguePlayers: [{ playerId: 'mlb-b', playerName: 'Player B', contractYears: 1 }] }, // 1 = full
+            ],
+        });
+        const result = await draftService.moveMinor(sessionId, 'mlb-a', { teamId: 'fantasy-team-2' });
+        expect(result.success).toBe(false);
+    });
+
+    it('US-19.1: sanitizeLeagueSettings passes minorLeagueSlots', () => {
+        const { sanitizeLeagueSettings } = require('../services/draft-defaults');
+        const result = sanitizeLeagueSettings({ minorLeagueSlots: 10 });
+        expect(result.minorLeagueSlots).toBe(10);
+    });
+});

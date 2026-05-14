@@ -696,6 +696,33 @@ const movePosition = async (req, res) => {
     }
 };
 
+// US-19.3: move a minor league player to a different team
+const moveMinor = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+
+        const { draftSessionId, playerId } = req.params;
+        const { teamId } = req.body || {};
+        if (!teamId) return res.status(400).json({ success: false, errorMessage: 'teamId is required.', code: 'MISSING_FIELDS' });
+
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) return res.status(404).json({ success: false, errorMessage: 'Draft session not found.' });
+
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league || String(league.owner) !== String(userId)) {
+            return res.status(403).json({ success: false, errorMessage: 'Only the league owner can move minors.' });
+        }
+
+        const result = await draftService.moveMinor(draftSessionId, playerId, { teamId });
+        if (!result.success) return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('[draft] moveMinor error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to move minor league player.' });
+    }
+};
+
 module.exports = {
     getMyDraftSessions,
     createDraftSession,
@@ -706,6 +733,7 @@ module.exports = {
     undoPurchase,
     editPurchase,
     movePosition,
+    moveMinor,
     getSessionPlayers,
     getSessionValuations,
     getSessionRecommendations,

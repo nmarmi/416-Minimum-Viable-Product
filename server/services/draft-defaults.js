@@ -129,6 +129,8 @@ function sanitizeLeagueSettings(input = {}, fallback = {}) {
         statCategories: resolvedInput.statCategories || resolvedFallback.statCategories || undefined,
         // US-17.3: custom position catalog (undefined = use defaults)
         positionCatalog: resolvedInput.positionCatalog || resolvedFallback.positionCatalog || undefined,
+        // US-19.1: minor league slots per team
+        minorLeagueSlots: Math.max(0, toPositiveInt(resolvedInput.minorLeagueSlots, resolvedFallback.minorLeagueSlots || 6)),
     };
 }
 
@@ -159,8 +161,9 @@ function serializeSession(session) {
             rosterSlots:     toPlainObject(plain.leagueSettings?.rosterSlots),
             seasonYear:      plain.leagueSettings?.seasonYear ?? new Date().getFullYear(),
             leagueScope:     plain.leagueSettings?.leagueScope     ?? 'MLB',
-            statCategories:  plain.leagueSettings?.statCategories  ?? null,
-            positionCatalog: plain.leagueSettings?.positionCatalog ?? null,
+            statCategories:    plain.leagueSettings?.statCategories  ?? null,
+            positionCatalog:   plain.leagueSettings?.positionCatalog ?? null,
+            minorLeagueSlots:  plain.leagueSettings?.minorLeagueSlots ?? 6,
         },
         teams: (plain.teams || []).map((team) => ({
             teamId: team.teamId,
@@ -178,6 +181,12 @@ function serializeSession(session) {
                 price:            k.price,
                 contractYears:    k.contractYears ?? 1,
                 positionAssigned: k.positionAssigned ?? null,
+            })),
+            // US-19.1: minor league roster
+            minorLeaguePlayers: (team.minorLeaguePlayers || []).map((m) => ({
+                playerId:      m.playerId,
+                playerName:    m.playerName,
+                contractYears: m.contractYears ?? 1,
             })),
         })),
         availablePlayerIds: plain.availablePlayerIds || [],

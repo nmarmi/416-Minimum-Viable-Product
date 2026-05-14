@@ -122,6 +122,15 @@ const TeamSchema = new Schema(
             type: [KeeperSchema],
             default: []
         },
+        // US-19.1: minor league roster — excluded from the auction pool
+        minorLeaguePlayers: {
+            type: [{
+                playerId:      { type: String, required: true, trim: true },
+                playerName:    { type: String, required: true, trim: true },
+                contractYears: { type: Number, default: 1, min: 0 },
+            }],
+            default: []
+        },
     },
     { _id: false }
 );
@@ -215,7 +224,9 @@ const DraftSessionSchema = new Schema(
             positionCatalog: {
                 hitter:  { type: [String], default: undefined },
                 pitcher: { type: [String], default: undefined }
-            }
+            },
+            // US-19.1: max minor league players per team (default 6)
+            minorLeagueSlots: { type: Number, default: 6 }
         },
         teams: {
             type: [TeamSchema],
