@@ -1337,7 +1337,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "Can View MLB Team Depth Charts" (2pt) — 2pt.
 
-### US-24.1: View MLB team depth charts
+### US-24.1: View MLB team depth charts ✅ COMPLETED
 **As a** drafter, **I want** a screen showing every MLB team's depth chart (already ingested per Player Data API US-4.3), **so that** I can scout playing time without leaving the kit.
 
 **Acceptance criteria:**

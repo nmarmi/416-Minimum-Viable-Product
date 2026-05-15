@@ -9,7 +9,14 @@ import PlayerCompareModal from './PlayerCompareModal';
 import PlayerInfoModal from './PlayerInfoModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
-const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'Settings'];
+const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'MLB Depth', 'Settings'];
+
+// US-24.1: all 30 MLB team abbreviations
+const MLB_TEAMS = [
+    'ARI','ATL','BAL','BOS','CHC','CIN','CLE','COL','CWS','DET',
+    'HOU','KC','LAA','LAD','MIA','MIL','MIN','NYM','NYY','ATH',
+    'PHI','PIT','SD','SEA','SF','STL','TB','TEX','TOR','WSH',
+];
 const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Depth', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 const DRAFT_STATUS_META = {
@@ -171,7 +178,10 @@ const DraftRoomScreen = () => {
     const [recommendations, setRecommendations] = useState([]);
     const [positionFilter, setPositionFilter] = useState(new Set());
     const [playerSort,  setPlayerSort]  = useState({ field: 'name',   dir: 'asc' });
-    const [compareSort, setCompareSort] = useState({ field: 'totalDollars', dir: 'desc' }); // US-23.2
+    const [compareSort,  setCompareSort]  = useState({ field: 'totalDollars', dir: 'desc' }); // US-23.2
+    const [mlbTeam,      setMlbTeam]      = useState(MLB_TEAMS[0]); // US-24.1
+    const [mlbPlayers,   setMlbPlayers]   = useState([]);
+    const [mlbLoading,   setMlbLoading]   = useState(false);
     const [startersOnly, setStartersOnly] = useState(false);
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
     const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
@@ -1752,13 +1762,138 @@ const DraftRoomScreen = () => {
         );
     };
 
+    // US-24.1: MLB depth charts grouped by position, ordered by rank
+    const renderMlbDepthTab = () => {
+        // Build a lookup: playerId → { fantasyTeamName, isMyTeam }
+        const fantasyOwnership = {};
+        (draftSession?.teams || []).forEach((team) => {
+            const isMine = team.teamId === draftSession?.myTeamId;
+            (team.purchasedPlayers || []).forEach((p) => {
+                fantasyOwnership[p.playerId] = { name: getTeamName(team), isMine };
+            });
+        });
+
+        const loadDepth = async (abbr) => {
+            setMlbLoading(true);
+            setMlbPlayers([]);
+            const { getPlayers } = await import('../players/requests.js');
+            const res = await getPlayers({ team: abbr, limit: 200 });
+            setMlbLoading(false);
+            if (res.status === 200 && res.data?.success) {
+                setMlbPlayers(res.data.players || []);
+            }
+        };
+
+        // Group by depthChartPosition, sort by depthChartRank within each group
+        const charted = mlbPlayers.filter((p) => p.depthChartRank != null && p.depthChartPosition);
+        const uncharted = mlbPlayers.filter((p) => p.depthChartRank == null || !p.depthChartPosition);
+        const grouped = {};
+        charted.forEach((p) => {
+            const grp = p.depthChartPosition || 'Other';
+            if (!grouped[grp]) grouped[grp] = [];
+            grouped[grp].push(p);
+        });
+        Object.values(grouped).forEach((arr) => arr.sort((a, b) => (a.depthChartRank || 99) - (b.depthChartRank || 99)));
+
+        // Position display order: hitters first, then pitchers
+        const HITTER_ORDER = ['C','1B','2B','3B','SS','LF','CF','RF','OF','DH'];
+        const PITCHER_ORDER = ['SP','CL','RP'];
+        const ALL_ORDER = [...HITTER_ORDER, ...PITCHER_ORDER];
+        const sortedGroups = [
+            ...ALL_ORDER.filter((k) => grouped[k]),
+            ...Object.keys(grouped).filter((k) => !ALL_ORDER.includes(k)).sort(),
+        ];
+
+        return (
+            <section className="draft-v2-module-grid one-col">
+                <article className="draft-v2-module-card full">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                        <h3 style={{ margin: 0 }}>MLB Depth Charts</h3>
+                        <select
+                            value={mlbTeam}
+                            className="draft-setup-keeper-select"
+                            onChange={(e) => { setMlbTeam(e.target.value); loadDepth(e.target.value); }}
+                        >
+                            {MLB_TEAMS.map((t) => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <button
+                            type="button"
+                            className="draft-v2-filter-btn"
+                            onClick={() => loadDepth(mlbTeam)}
+                            disabled={mlbLoading}
+                        >
+                            {mlbLoading ? 'Loading…' : 'Load Depth'}
+                        </button>
+                    </div>
+                    <p className="draft-v2-auction-muted" style={{ marginBottom: 12 }}>
+                        Players highlighted in green are on your fantasy team. Gray = on another team.
+                    </p>
+
+                    {mlbLoading && <p className="draft-v2-auction-muted">Fetching {mlbTeam} depth chart…</p>}
+
+                    {!mlbLoading && mlbPlayers.length === 0 && (
+                        <div className="draft-v2-empty-box">Select a team and click "Load Depth".</div>
+                    )}
+
+                    {sortedGroups.map((pos) => (
+                        <div key={pos} className="draft-v2-depth-group">
+                            <h4 className="draft-v2-depth-group-header">{pos}</h4>
+                            {grouped[pos].map((p) => {
+                                const pid = p.playerId || p.id;
+                                const ownership = fantasyOwnership[pid];
+                                return (
+                                    <div
+                                        key={pid}
+                                        className={`draft-v2-depth-player-row ${ownership ? (ownership.isMine ? 'depth-mine' : 'depth-taken') : ''}`}
+                                    >
+                                        <span className="draft-v2-depth-rank">#{p.depthChartRank}</span>
+                                        <span className="draft-v2-depth-name">{p.name || p.playerName}</span>
+                                        <span className="draft-v2-depth-pos-tag">{(p.positions || [p.position]).join('/')}</span>
+                                        {p.status && p.status !== 'active' && (
+                                            <span className="draft-v2-status-badge injured" style={{ fontSize: 10 }}>
+                                                {p.status.replace(/_/g, '-').toUpperCase()}
+                                            </span>
+                                        )}
+                                        {ownership && (
+                                            <span className={`draft-v2-depth-owner ${ownership.isMine ? 'depth-owner-mine' : ''}`}>
+                                                {ownership.name}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))}
+
+                    {!mlbLoading && uncharted.length > 0 && (
+                        <div className="draft-v2-depth-group">
+                            <h4 className="draft-v2-depth-group-header draft-v2-muted">Uncharted ({uncharted.length})</h4>
+                            {uncharted.map((p) => {
+                                const pid = p.playerId || p.id;
+                                const ownership = fantasyOwnership[pid];
+                                return (
+                                    <div key={pid} className={`draft-v2-depth-player-row depth-uncharted ${ownership ? (ownership.isMine ? 'depth-mine' : 'depth-taken') : ''}`}>
+                                        <span className="draft-v2-depth-rank">—</span>
+                                        <span className="draft-v2-depth-name">{p.name || p.playerName}</span>
+                                        {ownership && <span className={`draft-v2-depth-owner ${ownership.isMine ? 'depth-owner-mine' : ''}`}>{ownership.name}</span>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </article>
+            </section>
+        );
+    };
+
     const renderTabContent = () => {
         if (activeTab === 'Players') return renderPlayersTab();
         if (activeTab === 'Purchased') return renderPurchasedTab();
         if (activeTab === 'My Roster') return renderRosterTab();
         if (activeTab === 'Draft Board') return renderDraftBoardTab();
         if (activeTab === 'Teams')   return renderTeamsTab();
-        if (activeTab === 'Compare') return renderCompareTab();
+        if (activeTab === 'Compare')   return renderCompareTab();
+        if (activeTab === 'MLB Depth') return renderMlbDepthTab();
         return renderSettingsTab();
     };
 

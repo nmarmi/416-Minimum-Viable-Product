@@ -3365,6 +3365,36 @@ body {
 }
 .draft-setup-keeper-empty { color: #a0aec0; font-size: 0.83rem; text-align: center; padding: 12px 0; }
 
+/* US-24.1: MLB depth chart view */
+.draft-v2-depth-group { margin-bottom: 16px; }
+.draft-v2-depth-group-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4a5568;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+.draft-v2-depth-player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 4px;
+  border-radius: 5px;
+  font-size: 0.84rem;
+}
+.draft-v2-depth-player-row:hover { background: #f7f9fc; }
+.draft-v2-depth-rank { color: #a0aec0; font-size: 0.75rem; min-width: 24px; text-align: right; }
+.draft-v2-depth-name { flex: 1; font-weight: 500; }
+.draft-v2-depth-pos-tag { color: #718096; font-size: 0.73rem; }
+.draft-v2-depth-owner { font-size: 0.73rem; color: #718096; margin-left: auto; }
+.depth-owner-mine { color: #2f9e5a; font-weight: 600; }
+.depth-mine  { background: rgba(47, 158, 90, 0.07); }
+.depth-taken { background: rgba(0,0,0,0.02); }
+.depth-uncharted .draft-v2-depth-name { color: #a0aec0; }
+
 /* US-23.2: my-team highlight in comparison table */
 .draft-v2-compare-my-team-row td {
   background: rgba(47, 158, 90, 0.06);
