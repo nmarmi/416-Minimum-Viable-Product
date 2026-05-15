@@ -9,7 +9,7 @@ import PlayerCompareModal from './PlayerCompareModal';
 import PlayerInfoModal from './PlayerInfoModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
-const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Settings'];
+const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'Settings'];
 const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Depth', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 const DRAFT_STATUS_META = {
@@ -158,6 +158,7 @@ const DraftRoomScreen = () => {
     const [editingPurchaseId, setEditingPurchaseId] = useState('');
     const [editingPrice, setEditingPrice] = useState('');
     const [editingWonBy, setEditingWonBy] = useState('');
+    const [editingPosition, setEditingPosition] = useState(''); // US-22.3
     const [editingOriginal, setEditingOriginal] = useState(null);
     const [editSubmitting, setEditSubmitting] = useState(false);
     const [editError, setEditError] = useState('');
@@ -169,7 +170,8 @@ const DraftRoomScreen = () => {
     const [valuationsMap, setValuationsMap] = useState({});
     const [recommendations, setRecommendations] = useState([]);
     const [positionFilter, setPositionFilter] = useState(new Set());
-    const [playerSort, setPlayerSort] = useState({ field: 'name', dir: 'asc' });
+    const [playerSort,  setPlayerSort]  = useState({ field: 'name',   dir: 'asc' });
+    const [compareSort, setCompareSort] = useState({ field: 'totalDollars', dir: 'desc' }); // US-23.2
     const [startersOnly, setStartersOnly] = useState(false);
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
     const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
@@ -222,14 +224,17 @@ const DraftRoomScreen = () => {
 
     // Natural sort direction for each stat field (first click)
     const STAT_DEFAULT_DIR = { dollar: 'desc', adp: 'asc', hr: 'desc', rbi: 'desc', r: 'desc', sb: 'desc', avg: 'desc', w: 'desc', sv: 'desc', k: 'desc', era: 'asc', whip: 'asc' };
+
+    // US-22.1/22.2: tri-state toggle — desc → asc → off (back to name)
     const handleColSort = (field) => {
         setPlayerSort((prev) => {
-            if (prev.field === field) return { field, dir: prev.dir === 'asc' ? 'desc' : 'asc' };
-            return { field, dir: STAT_DEFAULT_DIR[field] ?? 'asc' };
+            if (prev.field !== field) return { field, dir: STAT_DEFAULT_DIR[field] ?? 'desc' };
+            const next = prev.dir === 'desc' ? 'asc' : null; // null = off
+            return next ? { field, dir: next } : { field: 'name', dir: 'asc' };
         });
     };
     const sortIcon = (field) => {
-        if (playerSort.field !== field) return null;
+        if (playerSort.field !== field) return <span className="draft-v2-sort-icon-dim">⇅</span>;
         return playerSort.dir === 'asc' ? ' ▲' : ' ▼';
     };
 
@@ -414,6 +419,8 @@ const DraftRoomScreen = () => {
                     }
                 }
                 setValuationsMap(map);
+                // US-22.1: auto-default to $ Value desc when valuations first load
+                setPlayerSort((prev) => prev.field === 'name' ? { field: 'dollar', dir: 'desc' } : prev);
             }
         }).catch(() => {});
     }, [draftSessionId, availablePlayerIdsKey]);
@@ -738,6 +745,7 @@ const DraftRoomScreen = () => {
         setEditingPurchaseId(entry.purchaseId);
         setEditingPrice(String(entry.price));
         setEditingWonBy(entry.teamId);
+        setEditingPosition(entry.positionFilled || '');
         setEditingNotes(entry.notes || '');
         setEditingOriginal(entry);
         setEditError('');
@@ -747,6 +755,7 @@ const DraftRoomScreen = () => {
         setEditingPurchaseId('');
         setEditingPrice('');
         setEditingWonBy('');
+        setEditingPosition('');
         setEditingNotes('');
         setEditingOriginal(null);
         setEditError('');
@@ -797,6 +806,13 @@ const DraftRoomScreen = () => {
 
         setEditSubmitting(true);
         const res = await store.editPurchase(draftSessionId, purchaseId, { newPrice: parsedPrice, newTeamId: editingWonBy, newNotes: editingNotes });
+
+        // US-22.3: if a new position was selected, apply it via the movePosition endpoint
+        if (res?.status === 200 && res.data?.success && editingPosition && editingPosition !== editingOriginal?.positionFilled) {
+            const { movePosition } = await import('../draft-sessions/requests.js');
+            await movePosition(draftSessionId, purchaseId, editingPosition, []);
+            await store.loadDraftSession(draftSessionId);
+        }
         setEditSubmitting(false);
 
         if (res?.status === 200 && res.data?.success) {
@@ -1404,6 +1420,7 @@ const DraftRoomScreen = () => {
                                 <th>Auctioned By</th>
                                 <th>Won By</th>
                                 <th>Price</th>
+                                <th>Position</th>
                                 <th>Notes</th>
                                 <th>Actions</th>
                             </tr>
@@ -1449,6 +1466,23 @@ const DraftRoomScreen = () => {
                                                 </>
                                             ) : (
                                                 `$${entry.price}`
+                                            )}
+                                        </td>
+                                        {/* US-22.3: position slot editor */}
+                                        <td>
+                                            {editingPurchaseId === entry.purchaseId ? (
+                                                <select
+                                                    value={editingPosition}
+                                                    onChange={(e) => setEditingPosition(e.target.value)}
+                                                    style={{ fontSize: '0.8rem', padding: '3px 6px', borderRadius: 6, border: '1px solid #c9d2e3' }}
+                                                >
+                                                    <option value="">— keep current —</option>
+                                                    {Object.keys(draftSession?.leagueSettings?.rosterSlots || {}).map((pos) => (
+                                                        <option key={pos} value={pos}>{pos}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                entry.positionFilled || '—'
                                             )}
                                         </td>
                                         <td>
@@ -1595,12 +1629,136 @@ const DraftRoomScreen = () => {
         </section>
     );
 
+    // US-23.1 / US-23.2: side-by-side fantasy team comparison, sortable
+    const renderCompareTab = () => {
+        const teams = draftSession?.teams || [];
+        const rosterSlots = draftSession?.leagueSettings?.rosterSlots || {};
+        const totalSlots = Object.values(rosterSlots).reduce((s, n) => s + Number(n || 0), 0);
+        const myTeamId = draftSession?.myTeamId;
+
+        // Build a player stats lookup from the local player array
+        const statsByPlayerId = {};
+        players.forEach((p) => { statsByPlayerId[getPlayerId(p)] = p; });
+
+        const STAT_COLS = [
+            { key: 'hr',  label: 'HR' },
+            { key: 'rbi', label: 'RBI' },
+            { key: 'r',   label: 'R' },
+            { key: 'sb',  label: 'SB' },
+            { key: 'avg', label: 'AVG' },
+            { key: 'w',   label: 'W' },
+            { key: 'sv',  label: 'SV' },
+            { key: 'k',   label: 'K' },
+        ];
+
+        // Build rows: one per team
+        const rows = teams.map((team) => {
+            const spent = (team.purchasedPlayers || []).reduce((s, p) => s + Number(p.price || 0), 0);
+            const remaining = team.budgetRemaining ?? 0;
+            const slotsMap = team.filledRosterSlots instanceof Map
+                ? Object.fromEntries(team.filledRosterSlots.entries())
+                : (team.filledRosterSlots || {});
+            const filledSlots = Object.values(slotsMap).reduce((s, v) => s + Number(v || 0), 0);
+            const totalDollars = (team.purchasedPlayers || []).reduce((s, p) => {
+                const val = Number(valuationsMap[p.playerId] || 0);
+                return s + val;
+            }, 0);
+            const stats = {};
+            STAT_COLS.forEach(({ key }) => { stats[key] = 0; });
+            (team.purchasedPlayers || []).forEach((p) => {
+                const playerData = statsByPlayerId[p.playerId];
+                if (!playerData) return;
+                STAT_COLS.forEach(({ key }) => {
+                    stats[key] += Number(playerData[key] || 0);
+                });
+            });
+            return { team, spent, remaining, filledSlots, totalSlots, totalDollars, stats };
+        });
+
+        // US-23.2: sort
+        const { field, dir } = compareSort;
+        const sorted = [...rows].sort((a, b) => {
+            let va, vb;
+            if (field === 'name')        { va = getTeamName(a.team); vb = getTeamName(b.team); }
+            else if (field === 'spent')  { va = a.spent;        vb = b.spent; }
+            else if (field === 'remaining') { va = a.remaining; vb = b.remaining; }
+            else if (field === 'slots')  { va = a.filledSlots;  vb = b.filledSlots; }
+            else if (field === 'totalDollars') { va = a.totalDollars; vb = b.totalDollars; }
+            else { va = a.stats[field] ?? 0; vb = b.stats[field] ?? 0; }
+            if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+            return dir === 'asc' ? va - vb : vb - va;
+        });
+
+        const cycleSort = (col) => {
+            setCompareSort((prev) => {
+                if (prev.field !== col) return { field: col, dir: 'desc' };
+                if (prev.dir === 'desc') return { field: col, dir: 'asc' };
+                return { field: 'totalDollars', dir: 'desc' }; // back to default
+            });
+        };
+        const sortIcon = (col) => compareSort.field === col ? (compareSort.dir === 'desc' ? ' ▼' : ' ▲') : '';
+
+        return (
+            <section className="draft-v2-module-grid one-col">
+                <article className="draft-v2-module-card full">
+                    <h3>Team Comparison</h3>
+                    <p className="draft-v2-auction-muted">Click any column header to sort. Your team is highlighted.</p>
+                    <div className="draft-v2-table-shell">
+                        <div className="draft-v2-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th className="draft-v2-th-sortable" onClick={() => cycleSort('name')}>Team{sortIcon('name')}</th>
+                                        <th className="draft-v2-th-sortable" onClick={() => cycleSort('spent')}>Spent{sortIcon('spent')}</th>
+                                        <th className="draft-v2-th-sortable" onClick={() => cycleSort('remaining')}>Budget Left{sortIcon('remaining')}</th>
+                                        <th className="draft-v2-th-sortable" onClick={() => cycleSort('slots')}>Slots{sortIcon('slots')}</th>
+                                        {STAT_COLS.map(({ key, label }) => (
+                                            <th key={key} className="draft-v2-th-sortable" onClick={() => cycleSort(key)}>{label}{sortIcon(key)}</th>
+                                        ))}
+                                        <th className="draft-v2-th-sortable" onClick={() => cycleSort('totalDollars')}>Total ${sortIcon('totalDollars')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sorted.map(({ team, spent, remaining, filledSlots, totalDollars, stats }) => (
+                                        <tr key={team.teamId}
+                                            className={team.teamId === myTeamId ? 'draft-v2-compare-my-team-row' : ''}
+                                        >
+                                            <td>
+                                                <strong>{getTeamName(team)}</strong>
+                                                {team.teamId === myTeamId
+                                                    ? <span className="draft-v2-status-badge active" style={{ marginLeft: 6, fontSize: 10 }}>Mine</span>
+                                                    : null}
+                                            </td>
+                                            <td>${Math.round(spent)}</td>
+                                            <td>${Math.round(remaining)}</td>
+                                            <td>{filledSlots}/{totalSlots}</td>
+                                            {STAT_COLS.map(({ key }) => (
+                                                <td key={key}>
+                                                    {key === 'avg'
+                                                        ? (stats[key] > 0 ? (stats[key] / Math.max(1, (team.purchasedPlayers || []).length)).toFixed(3) : '--')
+                                                        : Math.round(stats[key]) || '--'}
+                                                </td>
+                                            ))}
+                                            <td><strong>${Math.round(totalDollars)}</strong></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {rows.length === 0 && <div className="draft-v2-empty-box">No teams configured yet.</div>}
+                </article>
+            </section>
+        );
+    };
+
     const renderTabContent = () => {
         if (activeTab === 'Players') return renderPlayersTab();
         if (activeTab === 'Purchased') return renderPurchasedTab();
         if (activeTab === 'My Roster') return renderRosterTab();
         if (activeTab === 'Draft Board') return renderDraftBoardTab();
-        if (activeTab === 'Teams') return renderTeamsTab();
+        if (activeTab === 'Teams')   return renderTeamsTab();
+        if (activeTab === 'Compare') return renderCompareTab();
         return renderSettingsTab();
     };
 
@@ -1734,7 +1892,21 @@ const DraftRoomScreen = () => {
                         aria-label="Undo"
                         disabled={!draftSession?.draftHistory?.length}
                         onClick={handleUndoLastPurchase}
+                        title="Undo last purchase"
                     >⟲</button>
+                    {/* US-22.4: Redo button */}
+                    <button
+                        type="button"
+                        className="draft-v2-icon-btn"
+                        aria-label="Redo"
+                        disabled={!(draftSession?.undoStackSize > 0)}
+                        onClick={async () => {
+                            const res = await store.redoPurchase(draftSessionId);
+                            if (!res?.data?.success) showToast('error', res?.data?.errorMessage || 'Redo failed.');
+                            else showToast('success', 'Purchase re-applied.');
+                        }}
+                        title="Redo last undo"
+                    >↻</button>
                     <button type="button" className="draft-v2-icon-btn" aria-label="Export">⬇︎</button>
                 </div>
             </header>

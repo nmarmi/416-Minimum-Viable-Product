@@ -696,6 +696,22 @@ const movePosition = async (req, res) => {
     }
 };
 
+// US-22.4: redo — re-apply the top of the undo stack
+const redoPurchase = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+
+        const { draftSessionId } = req.params;
+        const result = await draftService.redoPurchase(draftSessionId);
+        if (!result.success) return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('[draft] redoPurchase error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to redo.' });
+    }
+};
+
 // US-19.3: move a minor league player to a different team
 const moveMinor = async (req, res) => {
     try {
@@ -753,6 +769,7 @@ module.exports = {
     undoPurchase,
     editPurchase,
     movePosition,
+    redoPurchase,
     moveMinor,
     getSessionPlayer,
     getSessionPlayers,

@@ -270,6 +270,8 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
         notes: notes || '',
         nominationOrder: session.nominationOrder
     });
+    // US-22.4: any new purchase clears the redo stack
+    session.undoStack = [];
 
     session.markModified('teams');
     await session.save();
@@ -312,6 +314,10 @@ async function undoPurchase(draftSessionId, purchaseId) {
         const current = team.filledRosterSlots.get(entry.positionFilled) || 0;
         team.filledRosterSlots.set(entry.positionFilled, Math.max(current - 1, 0));
     }
+
+    // US-22.4: push onto redo stack before removing
+    if (!session.undoStack) session.undoStack = [];
+    session.undoStack = [...session.undoStack.slice(-9), { ...entry.toObject ? entry.toObject() : entry }];
 
     session.draftHistory = session.draftHistory.filter((h) => h.purchaseId !== purchaseId);
 
@@ -417,6 +423,8 @@ async function editPurchase(draftSessionId, purchaseId, { newPrice, newTeamId, n
         entry.notes = String(newNotes);
     }
 
+    // US-22.4: editing clears the redo stack (can't redo after an edit)
+    session.undoStack = [];
     session.markModified('teams');
     session.markModified('draftHistory');
     await session.save();
@@ -587,11 +595,66 @@ async function moveMinor(draftSessionId, playerId, { teamId: destTeamId }) {
     return { success: true, session, snapshot: buildSnapshot(session) };
 }
 
+/**
+ * US-22.4: Re-apply the most recently undone purchase from the undo stack.
+ */
+async function redoPurchase(draftSessionId) {
+    const session = await DraftSession.findOne({ draftSessionId });
+    if (!session) return { success: false, errorMessage: 'Draft session not found.' };
+
+    const inactive = rejectInactive(session);
+    if (inactive) return inactive;
+
+    const stack = session.undoStack || [];
+    if (!stack.length) return { success: false, errorMessage: 'Nothing to redo.' };
+
+    const entry = stack[stack.length - 1];
+    const playerIdStr = String(entry.playerId);
+
+    if (!session.availablePlayerIds.includes(playerIdStr)) {
+        return { success: false, errorMessage: 'Player is no longer available for redo.' };
+    }
+
+    const rosterSlots = toPlainObject(session.leagueSettings?.rosterSlots || {});
+    const team = session.teams.find((t) => t.teamId === entry.teamId);
+    if (!team) return { success: false, errorMessage: 'Team not found.' };
+
+    const filledSlots = toPlainObject(team.filledRosterSlots);
+    const openSlots = countTotalSlots(rosterSlots) - countFilledSlots(filledSlots);
+    const maxBid = openSlots > 0 ? team.budgetRemaining - (openSlots - 1) : 0;
+    if (entry.price > maxBid) return { success: false, errorMessage: 'Insufficient budget to redo this purchase.' };
+
+    const slotKey = entry.positionFilled || findSlotForPosition(rosterSlots, filledSlots, '');
+    session.availablePlayerIds = session.availablePlayerIds.filter((id) => id !== playerIdStr);
+    session.purchasedPlayerIds.push(playerIdStr);
+    team.budgetRemaining -= entry.price;
+    team.purchasedPlayers.push({ playerId: playerIdStr, price: entry.price });
+    if (slotKey) team.filledRosterSlots.set(slotKey, (team.filledRosterSlots.get(slotKey) || 0) + 1);
+    session.nominationOrder = (session.nominationOrder || 0) + 1;
+    session.draftHistory.push({
+        purchaseId: DraftSession.generatePurchaseId(),
+        playerId: playerIdStr,
+        playerName: entry.playerName,
+        teamId: entry.teamId,
+        price: entry.price,
+        positionFilled: slotKey,
+        notes: entry.notes || '',
+        nominationOrder: session.nominationOrder,
+    });
+
+    // Pop the redo stack
+    session.undoStack = stack.slice(0, -1);
+    session.markModified('teams');
+    await session.save();
+    return { success: true, session, snapshot: buildSnapshot(session) };
+}
+
 module.exports = {
     initializeDraft,
     recordPurchase,
     undoPurchase,
     editPurchase,
+    redoPurchase,
     getDraftSnapshot,
     setPlayerNote,
     movePosition,

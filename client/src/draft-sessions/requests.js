@@ -66,7 +66,9 @@ export const getSessionPlayers = async (draftSessionId, params = {}) => {
     return request(`/${draftSessionId}/players${qs ? `?${qs}` : ''}`, 'GET');
 };
 export const recordPurchase = async (draftSessionId, payload) => request(`/${draftSessionId}/purchases`, "POST", payload);
-export const undoPurchase = async (draftSessionId, purchaseId) => request(`/${draftSessionId}/purchases/${purchaseId}`, "DELETE");
+export const undoPurchase   = async (draftSessionId, purchaseId) => request(`/${draftSessionId}/purchases/${purchaseId}`, "DELETE");
+// US-22.4: redo last undo
+export const redoPurchase   = async (draftSessionId) => request(`/${draftSessionId}/redo`, "POST");
 export const editPurchase = async (draftSessionId, purchaseId, payload) => request(`/${draftSessionId}/purchases/${purchaseId}`, "PUT", payload);
 export const setPlayerNote = async (draftSessionId, playerId, note) => request(`/${draftSessionId}/player-notes/${playerId}`, "PUT", { note });
 // US-21.1: single player detail panel

@@ -3365,6 +3365,12 @@ body {
 }
 .draft-setup-keeper-empty { color: #a0aec0; font-size: 0.83rem; text-align: center; padding: 12px 0; }
 
+/* US-23.2: my-team highlight in comparison table */
+.draft-v2-compare-my-team-row td {
+  background: rgba(47, 158, 90, 0.06);
+  border-bottom-color: #c6f6d5;
+}
+
 /* US-20.1: note indicator on player rows */
 .draft-v2-note-indicator {
   font-size: 13px;

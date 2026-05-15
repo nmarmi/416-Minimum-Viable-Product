@@ -252,6 +252,15 @@ function GlobalStoreContextProvider(props) {
         return res;
     };
 
+    // US-22.4: redo — re-apply the top of the undo stack
+    store.redoPurchase = async function (draftSessionId) {
+        const res = await draftSessionsRequestSender.redoPurchase(draftSessionId);
+        if (res.status === 200 && res.data?.success) {
+            storeReducer({ type: GlobalStoreActionType.RECORD_PURCHASE, payload: res.data.draftSession });
+        }
+        return res;
+    };
+
     store.editPurchase = async function (draftSessionId, purchaseId, updates) {
         const res = await draftSessionsRequestSender.editPurchase(draftSessionId, purchaseId, updates);
         if (res.status === 200 && res.data?.success) {

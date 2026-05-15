@@ -14,6 +14,8 @@ router.get('/:draftSessionId/valuations', DraftSessionController.getSessionValua
 router.get('/:draftSessionId/recommendations', DraftSessionController.getSessionRecommendations);
 router.post('/:draftSessionId/purchases', DraftSessionController.recordPurchase);
 router.delete('/:draftSessionId/purchases/:purchaseId', DraftSessionController.undoPurchase);
+// US-22.4: redo — re-applies the top of the undo stack
+router.post('/:draftSessionId/redo', DraftSessionController.redoPurchase);
 router.put('/:draftSessionId/purchases/:purchaseId', DraftSessionController.editPurchase);
 // US-18.2: move a purchased player to a different position slot
 router.put('/:draftSessionId/purchases/:purchaseId/position', DraftSessionController.movePosition);

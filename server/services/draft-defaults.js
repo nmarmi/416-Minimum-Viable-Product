@@ -204,7 +204,8 @@ function serializeSession(session) {
             isKeeper:        entry.isKeeper || false,       // US-18.1
             contractYears:   entry.contractYears ?? null,   // US-18.1
         })),
-        playerNotes: toPlainObject(plain.playerNotes),
+        playerNotes:  toPlainObject(plain.playerNotes),
+        undoStackSize: (plain.undoStack || []).length, // client only needs the count
     };
 }
 

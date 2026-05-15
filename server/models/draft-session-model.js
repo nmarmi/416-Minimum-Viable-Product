@@ -248,6 +248,12 @@ const DraftSessionSchema = new Schema(
             type: Map,
             of: String,
             default: {}
+        },
+        // US-22.4: redo stack — stores purchase snapshots that were undone
+        // Cleared on any new mutation (record/edit). Max depth 10.
+        undoStack: {
+            type: [DraftPurchaseSchema],
+            default: []
         }
     },
     { timestamps: true }

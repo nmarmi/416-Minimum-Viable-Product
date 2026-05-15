@@ -822,7 +822,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 ## Epic 9: Client State Architecture
 
-### US-9.1: Create DraftContext for client-side draft state
+### US-9.1: Create DraftContext for client-side draft state ⚠️ SUPERSEDED — GlobalStoreContext holds the draft session instead
 **As a** developer, **I want** a React context that holds the active draft session state, **so that** all views read from a single source of truth.
 
 **Acceptance criteria:**
@@ -831,7 +831,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Actions call API endpoints and update local state on success
 - All draft views consume this context
 
-### US-9.2: Refactor DraftRoomScreen to consume DraftContext
+### US-9.2: Refactor DraftRoomScreen to consume DraftContext ⚠️ SUPERSEDED — DraftRoomScreen reads from GlobalStoreContext directly
 **As a** developer, **I want** `DraftRoomScreen` refactored to read from `DraftContext`, **so that** UI logic is separated from business logic.
 
 **Acceptance criteria:**
@@ -1207,7 +1207,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "User can enter minor league player rosters" (2pt), "Minor league player not eligible for draft" (2pt), "Minor league players can be moved from one team to another" (2pt) — 6pt total.
 
-### US-19.1: Enter minor league rosters per team
+### US-19.1: Enter minor league rosters per team ✅ COMPLETED
 **As a** drafter in a dynasty league, **I want** to keep a separate minor league roster per team, **so that** prospects don't sit in the auction pool.
 
 **Acceptance criteria:**
@@ -1215,7 +1215,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - "Minors" sub-section in the Keepers tab — separate from major-league keepers, no price field
 - Hard cap configurable via `leagueSettings.minorLeagueSlots` (default 6)
 
-### US-19.2: Minor league players are excluded from the auction pool
+### US-19.2: Minor league players are excluded from the auction pool ✅ COMPLETED
 **As a** drafter, **I want** any player on any team's minor league roster filtered out of the available player list, **so that** they can't be re-drafted.
 
 **Acceptance criteria:**
@@ -1223,7 +1223,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Players tab autocomplete + table both honor the exclusion
 - Test asserts: a player on team1's minor roster does not appear in `availablePlayerIds`
 
-### US-19.3: Move minor league players between teams
+### US-19.3: Move minor league players between teams ✅ COMPLETED
 **As a** drafter, **I want** to move minor league players from one team to another (trade simulation), **so that** the dynasty league moves stay reflected in the kit.
 
 **Acceptance criteria:**
@@ -1275,7 +1275,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "Sorting Players List by $" (2pt), "Sorting Players List by Stats" (2pt), "Move player to new position" (2pt), "Undo/Redo for all draft Editing" — Redo half (1pt) — 7pt total.
 
-### US-22.1: Sort the player list by $ value
+### US-22.1: Sort the player list by $ value ✅ COMPLETED
 **As a** drafter, **I want** the Players tab table sortable by projected $ value (asc/desc), **so that** I can scan high-value targets fast.
 
 **Acceptance criteria:**
@@ -1283,7 +1283,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Active sort indicator in the header
 - Default sort: $ Value descending after valuations load
 
-### US-22.2: Sort the player list by stats
+### US-22.2: Sort the player list by stats ✅ COMPLETED
 **As a** drafter, **I want** to sort by HR, RBI, AVG, ERA, WHIP, K, etc., **so that** I can drill into category-specific scouting.
 
 **Acceptance criteria:**
@@ -1291,14 +1291,14 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Sort persists across position filter / search changes; clicking a different column resets to descending
 - Empty/null stat values sort last regardless of direction
 
-### US-22.3: Move a recorded purchase to a new position
+### US-22.3: Move a recorded purchase to a new position ✅ COMPLETED
 **As a** drafter, **I want** to change the slot a purchased player occupies (e.g. an OF/UTIL eligible player from OF → UTIL), **so that** my filled slots reflect my actual lineup.
 
 **Acceptance criteria:**
 - Implementation reuses US-18.2 endpoint for active status
 - Edit modal in the Draft History row exposes a "Position" dropdown alongside "Team" and "Price"
 
-### US-22.4: Redo for all draft editing
+### US-22.4: Redo for all draft editing ✅ COMPLETED
 **As a** drafter, **I want** a Redo affordance that re-applies the most recent undo, **so that** an accidental Undo click is one tap to recover from.
 
 **Acceptance criteria:**
@@ -1314,7 +1314,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "Fantasy Team Tabular Comparison" (2pt), "Fantasy Team Tabular Comparison — Sortable by Estimated Rankings/Money/etc." (2pt) — 4pt total.
 
-### US-23.1: Side-by-side team comparison view
+### US-23.1: Side-by-side team comparison view ✅ COMPLETED
 **As a** drafter, **I want** a single screen comparing every fantasy team across budget, slots filled, total spend, projected category totals, **so that** I can see who's winning the auction.
 
 **Acceptance criteria:**
@@ -1323,7 +1323,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - Stat columns derived from each team's purchased players' projected stats (Player Data API `/valuations`)
 - Updates live as purchases land
 
-### US-23.2: Sortable comparison table
+### US-23.2: Sortable comparison table ✅ COMPLETED
 **As a** drafter, **I want** to sort the comparison by any column (rank, money, projected category total), **so that** I can see who leads in any single dimension.
 
 **Acceptance criteria:**
