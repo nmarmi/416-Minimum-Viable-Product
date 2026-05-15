@@ -1353,7 +1353,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > **Rubric mapping:** "Draft Kit show updated pushed state" (2pt), "Draft Kit employs notification system to alert user of pushed state" (2pt) — 4pt total. (The Player Data API counterpart is its new Epic 13.)
 
-### US-25.1: Receive and apply pushed updates
+### US-25.1: Receive and apply pushed updates ✅ COMPLETED
 **As a** drafter, **I want** the kit to apply server-pushed updates (an injury just landed, a transaction happened) without me clicking refresh, **so that** my view is always current.
 
 **Acceptance criteria:**
@@ -1362,7 +1362,7 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 - On event, the affected player's row in every visible table re-renders with the new status; the player detail panel updates if open
 - Connection auto-reconnects with exponential backoff on disconnect
 
-### US-25.2: Toast feed for pushed events
+### US-25.2: Toast feed for pushed events ✅ COMPLETED
 **As a** drafter, **I want** a non-blocking toast/notification when something newsworthy lands during my draft, **so that** I notice the change.
 
 **Acceptance criteria:**

@@ -739,6 +739,58 @@ const moveMinor = async (req, res) => {
     }
 };
 
+// US-25.1: proxy the Player Data API SSE push stream so the browser API key stays server-side
+const streamEvents = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+
+        if (!licensedApi.hasConfig()) {
+            return res.status(503).json({ success: false, errorMessage: 'Player Data API not configured.' });
+        }
+
+        const session = await DraftSession.findOne({ draftSessionId: req.params.draftSessionId });
+        if (!session) return res.status(404).json({ success: false, errorMessage: 'Session not found.' });
+
+        // Pass `since` through for client reconnection
+        const since = req.query.since || '0';
+        const playerIds = (session.availablePlayerIds || []).slice(0, 300).join(',');
+        const qs = `since=${since}${playerIds ? `&playerIds=${encodeURIComponent(playerIds)}` : ''}`;
+
+        const apiBase = (process.env.PLAYER_API_URL || '').replace(/\/$/, '');
+        const apiKey  = process.env.PLAYER_API_KEY || '';
+        const upstream = `${apiBase}/api/v1/events/stream?${qs}`;
+
+        res.setHeader('Content-Type',  'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection',    'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+
+        const abortController = new AbortController();
+        req.on('close', () => abortController.abort());
+
+        const upstreamRes = await fetch(upstream, {
+            headers: { 'X-API-Key': apiKey, 'Authorization': `Bearer ${apiKey}` },
+            signal: abortController.signal,
+        });
+
+        const reader = upstreamRes.body.getReader();
+        const dec    = new TextDecoder();
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(dec.decode(value, { stream: true }));
+        }
+        res.end();
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error('[events] SSE proxy error:', err.message);
+            try { res.write('event: error\ndata: {"message":"Stream ended"}\n\n'); res.end(); } catch (_) {}
+        }
+    }
+};
+
 // US-21.1: single player details — proxies to Player Data API, keeps key server-side
 const getSessionPlayer = async (req, res) => {
     try {
@@ -771,6 +823,7 @@ module.exports = {
     movePosition,
     redoPurchase,
     moveMinor,
+    streamEvents,
     getSessionPlayer,
     getSessionPlayers,
     getSessionValuations,

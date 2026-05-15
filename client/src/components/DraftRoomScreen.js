@@ -182,6 +182,10 @@ const DraftRoomScreen = () => {
     const [mlbTeam,      setMlbTeam]      = useState(MLB_TEAMS[0]); // US-24.1
     const [mlbPlayers,   setMlbPlayers]   = useState([]);
     const [mlbLoading,   setMlbLoading]   = useState(false);
+    // US-25: push notifications
+    const [pushEvents,   setPushEvents]   = useState([]);   // last 50 events
+    const [showFeed,     setShowFeed]     = useState(false);
+    const [mutePush,     setMutePush]     = useState(() => localStorage.getItem('draftiq-mute-push') === '1');
     const [startersOnly, setStartersOnly] = useState(false);
     const [purchasedSort, setPurchasedSort] = useState('order'); // 'order' | 'price' | 'team'
     const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
@@ -201,13 +205,13 @@ const DraftRoomScreen = () => {
         [draftSession?.availablePlayerIds]
     );
 
-    const showToast = useCallback((type, message) => {
-        setToast({ type, message, id: Date.now() });
+    const showToast = useCallback((type, message, duration = 4000) => {
+        setToast({ type, message, id: Date.now(), duration });
     }, []);
 
     useEffect(() => {
         if (!toast) return undefined;
-        const timeoutId = setTimeout(() => setToast(null), 4000);
+        const timeoutId = setTimeout(() => setToast(null), toast.duration || 4000);
         return () => clearTimeout(timeoutId);
     }, [toast]);
 
@@ -458,6 +462,74 @@ const DraftRoomScreen = () => {
     useEffect(() => {
         postUsage({ event: 'draft_room_open', metadata: draftSessionId ? { draftSessionId } : {} }).catch(() => {});
     }, [draftSessionId]);
+
+    // US-25.1: subscribe to SSE push stream with exponential backoff reconnect
+    useEffect(() => {
+        if (!draftSessionId) return;
+        let es = null;
+        let retryMs = 2000;
+        let retryTimer = null;
+        let lastEventId = '0';
+        let cancelled = false;
+
+        const connect = () => {
+            const url = `/draft-sessions/${draftSessionId}/events?since=${lastEventId}`;
+            es = new EventSource(url, { withCredentials: true });
+
+            const handleEvent = (type) => (e) => {
+                if (cancelled) return;
+                try {
+                    const data = JSON.parse(e.data);
+                    if (e.lastEventId) lastEventId = e.lastEventId;
+                    retryMs = 2000; // reset backoff on successful message
+
+                    const label = type === 'player.injury'
+                        ? `🚨 ${data.playerId} → ${data.newValue || data.status || 'status change'}`
+                        : type === 'player.transaction'
+                        ? `🔄 ${data.playerId} — ${data.newValue?.typeDesc || 'transaction'}`
+                        : `📊 ${data.playerId} — depth chart updated`;
+
+                    const event = { id: data.id, type, playerId: data.playerId, label, ts: Date.now(), data };
+                    setPushEvents((prev) => [event, ...prev].slice(0, 50));
+
+                    // Update the local player row if this player is in our list
+                    if (data.newValue) {
+                        setPlayers((prev) => prev.map((p) => {
+                            const pid = getPlayerId(p);
+                            if (pid !== data.playerId) return p;
+                            if (type === 'player.injury') return { ...p, status: data.newValue };
+                            if (type === 'player.depthChart') return { ...p, depthChartRank: data.newValue?.rank ?? p.depthChartRank, depthChartPosition: data.newValue?.position ?? p.depthChartPosition };
+                            return p;
+                        }));
+                    }
+
+                    // US-25.2: show toast unless muted
+                    if (!mutePush) showToast('info', label, 8000);
+                } catch (_) {}
+            };
+
+            ['player.injury', 'player.transaction', 'player.depthChart'].forEach((t) => {
+                es.addEventListener(t, handleEvent(t));
+            });
+
+            es.onerror = () => {
+                es.close();
+                if (!cancelled) {
+                    retryTimer = setTimeout(() => {
+                        retryMs = Math.min(retryMs * 2, 30000);
+                        connect();
+                    }, retryMs);
+                }
+            };
+        };
+
+        connect();
+        return () => {
+            cancelled = true;
+            clearTimeout(retryTimer);
+            es?.close();
+        };
+    }, [draftSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const searchDraftBoardPlayers = useCallback(async (searchTerm) => {
         const trimmed = String(searchTerm || '').trim();
@@ -1981,6 +2053,48 @@ const DraftRoomScreen = () => {
                 )}
 
                 <div className="draft-v2-header-actions">
+                    {/* US-25.2: notification bell */}
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            type="button"
+                            className="draft-v2-icon-btn"
+                            onClick={() => setShowFeed((v) => !v)}
+                            title="Push notifications"
+                            style={{ position: 'relative' }}
+                        >
+                            🔔
+                            {pushEvents.length > 0 && (
+                                <span className="draft-v2-notif-badge">{Math.min(pushEvents.length, 9)}</span>
+                            )}
+                        </button>
+                        {showFeed && (
+                            <div className="draft-v2-notif-feed">
+                                <div className="draft-v2-notif-feed-header">
+                                    <span>Notifications ({pushEvents.length})</span>
+                                    <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <input type="checkbox" checked={mutePush}
+                                            onChange={(e) => {
+                                                const v = e.target.checked;
+                                                setMutePush(v);
+                                                localStorage.setItem('draftiq-mute-push', v ? '1' : '0');
+                                            }}
+                                        /> Mute toasts
+                                    </label>
+                                    <button type="button" onClick={() => { setPushEvents([]); setShowFeed(false); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#718096' }}>✕</button>
+                                </div>
+                                {pushEvents.length === 0
+                                    ? <p className="draft-v2-notif-empty">No notifications yet.</p>
+                                    : pushEvents.map((ev) => (
+                                        <div key={ev.id} className={`draft-v2-notif-row draft-v2-notif-${ev.type.replace(/\./g, '-')}`}
+                                            onClick={() => { setShowFeed(false); /* could open player detail */ }}>
+                                            <span>{ev.label}</span>
+                                            <span className="draft-v2-notif-ts">{new Date(ev.ts).toLocaleTimeString()}</span>
+                                        </div>
+                                    ))
+                                }
+                            </div>
+                        )}
+                    </div>
                     {draftSession?.teams?.length > 0 && (
                         <div className="draft-v2-team-chip" ref={teamPickerRef}>
                             <button

@@ -2922,6 +2922,70 @@ body {
   background: #b42318;
 }
 
+.draft-toast.info {
+  background: #1e3a8a;
+}
+
+/* US-25.2: notification feed */
+.draft-v2-notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #e53e3e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 3px;
+}
+.draft-v2-notif-feed {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 340px;
+  max-height: 380px;
+  overflow-y: auto;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  z-index: 200;
+}
+.draft-v2-notif-feed-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+  position: sticky;
+  top: 0;
+  background: #1e293b;
+}
+.draft-v2-notif-empty { color: #64748b; font-size: 0.82rem; text-align: center; padding: 16px; }
+.draft-v2-notif-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 14px;
+  font-size: 0.81rem;
+  color: #e2e8f0;
+  border-bottom: 1px solid #1e293b;
+  cursor: pointer;
+  gap: 8px;
+}
+.draft-v2-notif-row:hover { background: #273450; }
+.draft-v2-notif-ts { color: #64748b; font-size: 0.73rem; white-space: nowrap; }
+.draft-v2-notif-player-injury  { border-left: 3px solid #e53e3e; }
+.draft-v2-notif-player-transaction { border-left: 3px solid #3b82f6; }
+.draft-v2-notif-player-depthChart  { border-left: 3px solid #8b5cf6; }
+
 /* ----- Undo confirmation modal ----- */
 .undo-confirm-overlay {
   position: fixed;
