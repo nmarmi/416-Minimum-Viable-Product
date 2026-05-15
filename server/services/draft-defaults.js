@@ -205,7 +205,18 @@ function serializeSession(session) {
             contractYears:   entry.contractYears ?? null,   // US-18.1
         })),
         playerNotes:  toPlainObject(plain.playerNotes),
-        undoStackSize: (plain.undoStack || []).length, // client only needs the count
+        undoStackSize: (plain.undoStack || []).length,
+        // US-26: taxi draft
+        taxiDraftOrder:      plain.taxiDraftOrder      || [],
+        taxiNominationOrder: plain.taxiNominationOrder || 0,
+        taxiHistory:         (plain.taxiHistory || []).map((h) => ({
+            taxiPickId:      h.taxiPickId,
+            playerId:        h.playerId,
+            playerName:      h.playerName,
+            teamId:          h.teamId,
+            nominationOrder: h.nominationOrder,
+            timestamp:       h.timestamp,
+        })),
     };
 }
 

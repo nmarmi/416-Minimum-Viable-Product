@@ -99,6 +99,7 @@ const normalizeSession = (draftSession) => {
         statCategories,
         positionCatalog,
         minorLeagueSlots: Number(leagueSettings.minorLeagueSlots ?? 6),
+        taxiDraftOrder: draftSession?.taxiDraftOrder ?? [],
         teams: buildTeams(numberOfTeams, salaryCap, rosterSlots, draftSession?.teams || [])
     };
 };
@@ -156,9 +157,14 @@ export default function DraftSessionSetupScreen() {
             positionCatalog:  formState.positionCatalog,  // US-17.3
             minorLeagueSlots: formState.minorLeagueSlots, // US-19.1
         },
+        taxiDraftOrder: formState.taxiDraftOrder.length > 0
+            ? formState.taxiDraftOrder
+            : formState.teams.map((t) => t.teamId),
         teams: formState.teams.map((team) => ({
-            teamId: team.teamId,
-            teamName: String(team.teamName || '').trim() || team.teamId
+            teamId:             team.teamId,
+            teamName:           String(team.teamName || '').trim() || team.teamId,
+            keepers:            team.keepers            || [],
+            minorLeaguePlayers: team.minorLeaguePlayers || [],
         }))
     });
 
@@ -693,6 +699,46 @@ export default function DraftSessionSetupScreen() {
                     {formState.teams.every((t) => !(t.minorLeaguePlayers || []).length) && (
                         <p className="draft-setup-keeper-empty">No minor league players added yet.</p>
                     )}
+                </article>
+
+                {/* US-26.1/26.2: Taxi Draft Order */}
+                <article className="home-card draft-setup-card">
+                    <div className="draft-setup-section-head">
+                        <h3>Taxi Draft Order</h3>
+                        <p>Set the pick order for the taxi draft. Use ↑ ↓ to reorder. Defaults to team creation order.</p>
+                    </div>
+                    {(() => {
+                        const order = formState.taxiDraftOrder.length > 0
+                            ? formState.taxiDraftOrder
+                            : formState.teams.map((t) => t.teamId);
+                        const setOrder = (newOrder) => setFormState((prev) => ({ ...prev, taxiDraftOrder: newOrder }));
+                        return (
+                            <div className="draft-setup-team-list">
+                                {order.map((teamId, idx) => {
+                                    const team = formState.teams.find((t) => t.teamId === teamId);
+                                    const displayName = (team?.teamName || teamId).replace(/^fantasy-team-(\d+)$/, 'Team $1');
+                                    return (
+                                        <div key={teamId} className="draft-setup-taxi-order-row">
+                                            <span className="draft-setup-taxi-rank">{idx + 1}</span>
+                                            <span className="draft-setup-taxi-name">{displayName}</span>
+                                            <button type="button" disabled={idx === 0}
+                                                onClick={() => {
+                                                    const next = [...order];
+                                                    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                                                    setOrder(next);
+                                                }}>↑</button>
+                                            <button type="button" disabled={idx === order.length - 1}
+                                                onClick={() => {
+                                                    const next = [...order];
+                                                    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                                                    setOrder(next);
+                                                }}>↓</button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })()}
                 </article>
             </section>
         </main>

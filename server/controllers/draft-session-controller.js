@@ -166,8 +166,21 @@ const updateDraftSession = async (req, res) => {
         const incomingTeams = Array.isArray(req.body?.teams) ? req.body.teams : session.teams;
         const nextTeams = buildTeams(nextSettings.numberOfTeams, nextSettings.salaryCap, nextSettings.rosterSlots, incomingTeams);
 
+        // US-18.1 / US-19.1: carry keepers and minor league players from the incoming payload
+        nextTeams.forEach((team) => {
+            const src = incomingTeams.find((t) => t.teamId === team.teamId);
+            if (!src) return;
+            if (Array.isArray(src.keepers))            team.keepers            = src.keepers;
+            if (Array.isArray(src.minorLeaguePlayers)) team.minorLeaguePlayers = src.minorLeaguePlayers;
+        });
+
         session.leagueSettings = nextSettings;
         session.teams = nextTeams;
+
+        // US-26.1/26.2: persist taxi draft order when provided
+        if (Array.isArray(req.body?.taxiDraftOrder)) {
+            session.taxiDraftOrder = req.body.taxiDraftOrder;
+        }
 
         // US-6.5: persist the user's chosen "my team" so the sidebar / roster
         // tab can bind to it across sessions. Accepts an explicit null to clear.
@@ -739,6 +752,66 @@ const moveMinor = async (req, res) => {
     }
 };
 
+// US-26.1/26.2: set taxi draft order
+const setTaxiOrder = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        const { draftSessionId } = req.params;
+        const { taxiDraftOrder } = req.body || {};
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) return res.status(404).json({ success: false, errorMessage: 'Session not found.' });
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league || String(league.owner) !== String(userId)) return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        const result = await draftService.setTaxiOrder(draftSessionId, taxiDraftOrder);
+        if (!result.success) return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('[taxi] setTaxiOrder error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to update taxi order.' });
+    }
+};
+
+// US-26.3: record a taxi pick
+const recordTaxiPick = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        const { draftSessionId } = req.params;
+        const { teamId, playerId, playerName } = req.body || {};
+        if (!teamId || !playerId) return res.status(400).json({ success: false, errorMessage: 'teamId and playerId required.', code: 'MISSING_FIELDS' });
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) return res.status(404).json({ success: false, errorMessage: 'Session not found.' });
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league || String(league.owner) !== String(userId)) return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        const result = await draftService.recordTaxiPick(draftSessionId, { teamId, playerId, playerName: playerName || playerId });
+        if (!result.success) return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        return res.status(201).json({ success: true, draftSession: serializeSession(result.session), outOfOrder: result.outOfOrder, taxiPickId: result.taxiPickId });
+    } catch (err) {
+        console.error('[taxi] recordTaxiPick error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to record taxi pick.' });
+    }
+};
+
+// US-26.6: undo a taxi pick
+const undoTaxiPick = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        const { draftSessionId, taxiPickId } = req.params;
+        const session = await DraftSession.findOne({ draftSessionId });
+        if (!session) return res.status(404).json({ success: false, errorMessage: 'Session not found.' });
+        const league = await getLeagueForUser(session.leagueId, userId);
+        if (!league || String(league.owner) !== String(userId)) return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
+        const result = await draftService.undoTaxiPick(draftSessionId, taxiPickId);
+        if (!result.success) return res.status(400).json({ success: false, errorMessage: result.errorMessage });
+        return res.status(200).json({ success: true, draftSession: serializeSession(result.session) });
+    } catch (err) {
+        console.error('[taxi] undoTaxiPick error:', err.message);
+        return res.status(500).json({ success: false, errorMessage: 'Unable to undo taxi pick.' });
+    }
+};
+
 // US-25.1: proxy the Player Data API SSE push stream so the browser API key stays server-side
 const streamEvents = async (req, res) => {
     try {
@@ -824,6 +897,9 @@ module.exports = {
     redoPurchase,
     moveMinor,
     streamEvents,
+    setTaxiOrder,
+    recordTaxiPick,
+    undoTaxiPick,
     getSessionPlayer,
     getSessionPlayers,
     getSessionValuations,

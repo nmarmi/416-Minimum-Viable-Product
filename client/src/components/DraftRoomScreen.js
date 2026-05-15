@@ -9,7 +9,7 @@ import PlayerCompareModal from './PlayerCompareModal';
 import PlayerInfoModal from './PlayerInfoModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
-const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'MLB Depth', 'Settings'];
+const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'MLB Depth', 'Taxi', 'Settings'];
 
 // US-24.1: all 30 MLB team abbreviations
 const MLB_TEAMS = [
@@ -182,6 +182,13 @@ const DraftRoomScreen = () => {
     const [mlbTeam,      setMlbTeam]      = useState(MLB_TEAMS[0]); // US-24.1
     const [mlbPlayers,   setMlbPlayers]   = useState([]);
     const [mlbLoading,   setMlbLoading]   = useState(false);
+    // US-26: taxi draft
+    const [taxiTeamId,   setTaxiTeamId]   = useState('');
+    const [taxiSearch,   setTaxiSearch]   = useState('');
+    const [taxiResults,  setTaxiResults]  = useState([]);
+    const [taxiPlayer,   setTaxiPlayer]   = useState(null);
+    const [taxiWarning,  setTaxiWarning]  = useState('');
+    const [taxiLoading,  setTaxiLoading]  = useState(false);
     // US-25: push notifications
     const [pushEvents,   setPushEvents]   = useState([]);   // last 50 events
     const [showFeed,     setShowFeed]     = useState(false);
@@ -1958,6 +1965,132 @@ const DraftRoomScreen = () => {
         );
     };
 
+    // US-26: Taxi Draft tab
+    const renderTaxiTab = () => {
+        const teams        = draftSession?.teams || [];
+        const taxiOrder    = draftSession?.taxiDraftOrder || [];
+        const taxiHistory  = draftSession?.taxiHistory    || [];
+        const taxiCounter  = draftSession?.taxiNominationOrder || 0;
+        const nextTeamId   = taxiOrder.length ? taxiOrder[taxiCounter % taxiOrder.length] : null;
+        const nextTeam     = teams.find((t) => t.teamId === nextTeamId);
+
+        // Build rostered player set for search filtering
+        const rosteredIds = new Set([
+            ...(draftSession?.purchasedPlayerIds || []),
+            ...teams.flatMap((t) => (t.minorLeaguePlayers || []).map((m) => m.playerId)),
+        ]);
+
+        const searchTaxi = async (term) => {
+            if (!term || term.length < 2) { setTaxiResults([]); return; }
+            const { getSessionPlayers } = await import('../draft-sessions/requests.js');
+            const res = await getSessionPlayers(draftSessionId, { search: term, limit: 12, status: 'all' });
+            if (res.status === 200 && res.data?.success) {
+                setTaxiResults((res.data.players || []).filter((p) => !rosteredIds.has(getPlayerId(p))));
+            }
+        };
+
+        const doTaxiPick = async () => {
+            if (!taxiTeamId || !taxiPlayer) return;
+            setTaxiLoading(true);
+            setTaxiWarning('');
+            const { recordTaxiPick } = await import('../draft-sessions/requests.js');
+            const res = await recordTaxiPick(draftSessionId, {
+                teamId: taxiTeamId,
+                playerId: getPlayerId(taxiPlayer),
+                playerName: getPlayerName(taxiPlayer),
+            });
+            setTaxiLoading(false);
+            if (res.status === 201 && res.data?.success) {
+                if (res.data.outOfOrder) setTaxiWarning('⚠️ Pick was out of order — recorded anyway.');
+                setTaxiPlayer(null); setTaxiSearch(''); setTaxiResults([]);
+                await store.loadDraftSession(draftSessionId);
+                showToast('success', `${getPlayerName(taxiPlayer)} → ${getTeamName(teams.find((t) => t.teamId === taxiTeamId))}`);
+            } else {
+                setTaxiWarning(res.data?.errorMessage || 'Could not record pick.');
+            }
+        };
+
+        const doUndoTaxiPick = async (taxiPickId) => {
+            const { undoTaxiPick } = await import('../draft-sessions/requests.js');
+            const res = await undoTaxiPick(draftSessionId, taxiPickId);
+            if (res.status === 200 && res.data?.success) {
+                await store.loadDraftSession(draftSessionId);
+                showToast('success', 'Taxi pick undone.');
+            } else {
+                showToast('error', res.data?.errorMessage || 'Could not undo pick.');
+            }
+        };
+
+        return (
+            <section className="draft-v2-module-grid one-col">
+                <article className="draft-v2-module-card full">
+                    <h3>Taxi Draft</h3>
+                    <p className="draft-v2-auction-muted" style={{ marginBottom: 12 }}>
+                        Record taxi (minor league) picks. Players added here are excluded from the main auction pool.
+                        {nextTeam ? <> Next pick: <strong>{getTeamName(nextTeam)}</strong> (round {Math.floor(taxiCounter / Math.max(1, taxiOrder.length)) + 1}).</> : null}
+                    </p>
+
+                    {/* Entry form */}
+                    <div className="draft-setup-keeper-form" style={{ marginBottom: 16 }}>
+                        <select value={taxiTeamId} onChange={(e) => setTaxiTeamId(e.target.value)} className="draft-setup-keeper-select">
+                            <option value="">— Team —</option>
+                            {teams.map((t) => <option key={t.teamId} value={t.teamId}>{getTeamName(t)}</option>)}
+                        </select>
+                        <div className="draft-setup-keeper-search">
+                            <input type="text" placeholder="Search prospect…" value={taxiSearch} autoComplete="off"
+                                onChange={(e) => { setTaxiSearch(e.target.value); setTaxiPlayer(null); searchTaxi(e.target.value); }} />
+                            {taxiPlayer && <span className="draft-setup-keeper-chosen">✓ {getPlayerName(taxiPlayer)}</span>}
+                            {taxiResults.length > 0 && !taxiPlayer && (
+                                <div className="draft-setup-keeper-dropdown">
+                                    {taxiResults.map((p) => (
+                                        <button key={getPlayerId(p)} type="button"
+                                            onClick={() => { setTaxiPlayer(p); setTaxiSearch(getPlayerName(p)); setTaxiResults([]); }}>
+                                            {getPlayerName(p)} <span>{getPlayerTeamLabel(p)} · {getPlayerPosition(p)}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <button type="button" className="home-dark-btn" disabled={!taxiTeamId || !taxiPlayer || taxiLoading} onClick={doTaxiPick}>
+                            {taxiLoading ? 'Recording…' : '+ Pick'}
+                        </button>
+                    </div>
+                    {taxiWarning && <p className="draft-v2-entry-error" style={{ marginBottom: 8 }}>{taxiWarning}</p>}
+
+                    {/* Taxi history */}
+                    {taxiHistory.length === 0 ? (
+                        <div className="draft-v2-empty-box">No taxi picks yet.</div>
+                    ) : (
+                        <div className="draft-v2-table-shell">
+                            <div className="draft-v2-table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr><th>#</th><th>Player</th><th>Team</th><th>Actions</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {[...taxiHistory].reverse().map((h) => (
+                                            <tr key={h.taxiPickId}>
+                                                <td style={{ color: '#94a3b8' }}>{h.nominationOrder + 1}</td>
+                                                <td>{h.playerName}</td>
+                                                <td>{getTeamName(teams.find((t) => t.teamId === h.teamId))}</td>
+                                                <td>
+                                                    <button type="button" className="draft-v2-filter-btn"
+                                                        style={{ color: '#e53e3e', fontSize: '0.78rem' }}
+                                                        onClick={() => doUndoTaxiPick(h.taxiPickId)}
+                                                    >Undo</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </article>
+            </section>
+        );
+    };
+
     const renderTabContent = () => {
         if (activeTab === 'Players') return renderPlayersTab();
         if (activeTab === 'Purchased') return renderPurchasedTab();
@@ -1966,6 +2099,7 @@ const DraftRoomScreen = () => {
         if (activeTab === 'Teams')   return renderTeamsTab();
         if (activeTab === 'Compare')   return renderCompareTab();
         if (activeTab === 'MLB Depth') return renderMlbDepthTab();
+        if (activeTab === 'Taxi')      return renderTaxiTab();
         return renderSettingsTab();
     };
 

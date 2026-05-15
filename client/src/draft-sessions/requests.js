@@ -80,6 +80,15 @@ export const movePosition = async (draftSessionId, purchaseId, positionFilled, e
 // US-19.3: move minor league player to a different team
 export const moveMinor = async (draftSessionId, playerId, teamId) =>
     request(`/${draftSessionId}/minors/${encodeURIComponent(playerId)}`, "PUT", { teamId });
+// US-26.1/26.2: set taxi draft order
+export const setTaxiOrder = async (draftSessionId, taxiDraftOrder) =>
+    request(`/${draftSessionId}/taxi/order`, "PUT", { taxiDraftOrder });
+// US-26.3: record a taxi pick
+export const recordTaxiPick = async (draftSessionId, payload) =>
+    request(`/${draftSessionId}/taxi/picks`, "POST", payload);
+// US-26.6: undo a taxi pick
+export const undoTaxiPick = async (draftSessionId, taxiPickId) =>
+    request(`/${draftSessionId}/taxi/picks/${encodeURIComponent(taxiPickId)}`, "DELETE");
 
 const draftSessionsApi = {
     createDraftSession,

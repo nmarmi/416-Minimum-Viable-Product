@@ -249,12 +249,27 @@ const DraftSessionSchema = new Schema(
             of: String,
             default: {}
         },
-        // US-22.4: redo stack — stores purchase snapshots that were undone
-        // Cleared on any new mutation (record/edit). Max depth 10.
+        // US-22.4: redo stack
         undoStack: {
             type: [DraftPurchaseSchema],
             default: []
-        }
+        },
+        // US-26.1: taxi draft pick order (teamId array)
+        taxiDraftOrder: { type: [String], default: [] },
+        // US-26.3: monotonic counter for taxi picks
+        taxiNominationOrder: { type: Number, default: 0 },
+        // US-26.3: taxi pick history — one entry per pick
+        taxiHistory: {
+            type: [{
+                taxiPickId:   { type: String, required: true },
+                playerId:     { type: String, required: true },
+                playerName:   { type: String, required: true },
+                teamId:       { type: String, required: true },
+                nominationOrder: { type: Number, required: true },
+                timestamp:    { type: Date, default: Date.now },
+            }],
+            default: []
+        },
     },
     { timestamps: true }
 );

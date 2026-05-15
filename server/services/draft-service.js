@@ -649,6 +649,74 @@ async function redoPurchase(draftSessionId) {
     return { success: true, session, snapshot: buildSnapshot(session) };
 }
 
+// US-26.1/26.2: set or replace the taxi draft order
+async function setTaxiOrder(draftSessionId, taxiDraftOrder) {
+    const session = await DraftSession.findOne({ draftSessionId });
+    if (!session) return { success: false, errorMessage: 'Draft session not found.' };
+    if (!Array.isArray(taxiDraftOrder)) return { success: false, errorMessage: 'taxiDraftOrder must be an array.' };
+    session.taxiDraftOrder = taxiDraftOrder;
+    session.markModified('taxiDraftOrder');
+    await session.save();
+    return { success: true, session, snapshot: buildSnapshot(session) };
+}
+
+// US-26.3/26.4/26.5: record a taxi pick
+async function recordTaxiPick(draftSessionId, { teamId, playerId, playerName }) {
+    const session = await DraftSession.findOne({ draftSessionId });
+    if (!session) return { success: false, errorMessage: 'Draft session not found.' };
+
+    const pidStr = String(playerId);
+    const alreadyInMain   = (session.purchasedPlayerIds || []).includes(pidStr);
+    const alreadyInMinors = session.teams.some((t) => (t.minorLeaguePlayers || []).some((m) => m.playerId === pidStr));
+    if (alreadyInMain || alreadyInMinors) return { success: false, errorMessage: 'Player is already rostered.' };
+
+    const team = session.teams.find((t) => t.teamId === teamId);
+    if (!team) return { success: false, errorMessage: 'Team not found.' };
+
+    const maxSlots = Number(session.leagueSettings?.minorLeagueSlots ?? 6);
+    if ((team.minorLeaguePlayers || []).length >= maxSlots) {
+        return { success: false, errorMessage: `${team.teamName}'s taxi roster is full (${maxSlots} slots).` };
+    }
+
+    const order = session.taxiDraftOrder || [];
+    const nominationOrder = session.taxiNominationOrder || 0;
+    const expectedTeamId  = order.length ? order[nominationOrder % order.length] : null;
+    const outOfOrder      = Boolean(expectedTeamId && expectedTeamId !== teamId);
+
+    const taxiPickId = `taxi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    if (!team.minorLeaguePlayers) team.minorLeaguePlayers = [];
+    team.minorLeaguePlayers.push({ playerId: pidStr, playerName, contractYears: 1 });
+
+    session.availablePlayerIds = (session.availablePlayerIds || []).filter((id) => id !== pidStr);
+    session.taxiNominationOrder = nominationOrder + 1;
+    if (!session.taxiHistory) session.taxiHistory = [];
+    session.taxiHistory.push({ taxiPickId, playerId: pidStr, playerName, teamId, nominationOrder, timestamp: new Date() });
+
+    session.markModified('teams');
+    await session.save();
+    return { success: true, session, snapshot: buildSnapshot(session), outOfOrder, taxiPickId };
+}
+
+// US-26.6: undo a taxi pick
+async function undoTaxiPick(draftSessionId, taxiPickId) {
+    const session = await DraftSession.findOne({ draftSessionId });
+    if (!session) return { success: false, errorMessage: 'Draft session not found.' };
+
+    const entry = (session.taxiHistory || []).find((h) => h.taxiPickId === taxiPickId);
+    if (!entry) return { success: false, errorMessage: 'Taxi pick not found.' };
+
+    const team = session.teams.find((t) => t.teamId === entry.teamId);
+    if (team) team.minorLeaguePlayers = (team.minorLeaguePlayers || []).filter((m) => m.playerId !== entry.playerId);
+
+    if (!(session.availablePlayerIds || []).includes(entry.playerId)) session.availablePlayerIds.push(entry.playerId);
+    session.taxiHistory = (session.taxiHistory || []).filter((h) => h.taxiPickId !== taxiPickId);
+    session.taxiNominationOrder = Math.max(0, (session.taxiNominationOrder || 1) - 1);
+
+    session.markModified('teams');
+    await session.save();
+    return { success: true, session, snapshot: buildSnapshot(session) };
+}
+
 module.exports = {
     initializeDraft,
     recordPurchase,
@@ -659,5 +727,8 @@ module.exports = {
     setPlayerNote,
     movePosition,
     moveMinor,
+    setTaxiOrder,
+    recordTaxiPick,
+    undoTaxiPick,
     buildSnapshot,
 };

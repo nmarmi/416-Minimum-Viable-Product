@@ -1379,35 +1379,35 @@ Work is sequenced so each layer builds on the previous one with no blocked work.
 
 > Taxi Draft = a separate, ordered draft for minor-league / supplemental rosters that runs after the main auction. Distinct from Epic 19 (entering existing minor league players); this is the *act of drafting* into those slots.
 
-### US-26.1: Specify the taxi draft order
+### US-26.1: Specify the taxi draft order ✅ COMPLETED
 **Acceptance criteria:**
 - `DraftSession.taxiDraftOrder: string[]` — array of `teamId` in pick order
 - Setup screen Taxi tab exposes a drag-to-reorder list of teams; defaults to the team creation order
 - Persisted via `PUT /draft-sessions/:id/taxi/order`
 
-### US-26.2: Edit the taxi draft order before/during taxi
+### US-26.2: Edit the taxi draft order before/during taxi ✅ COMPLETED
 **Acceptance criteria:**
 - Same endpoint accepts updated order at any time before the taxi draft enters `completed`
 - UI confirms reorders that change "next pick" mid-round
 
-### US-26.3: Enter players into taxi rosters in any order
+### US-26.3: Enter players into taxi rosters in any order ✅ COMPLETED
 **Acceptance criteria:**
 - New `POST /draft-sessions/:id/taxi/picks` with `{ teamId, playerId }` records a taxi pick
 - Picks don't have to follow `taxiDraftOrder` strictly — kit warns if out-of-order but allows the override (real-room flexibility)
 - Picks debit the team's `minorLeaguePlayers[]` and increment a `taxiNominationOrder` counter
 
-### US-26.4: Find players for taxi entry
+### US-26.4: Find players for taxi entry ✅ COMPLETED
 **Acceptance criteria:**
 - Taxi entry form has the same autocomplete as the main draft entry form (US-4.1)
 - Suggestions filter to players NOT in any team's main or minor league roster
 - Optional "Prospects only" toggle filters by `mlbStatus === 'minors'`
 
-### US-26.5: Taxi-entered players are removed from main draft eligibility
+### US-26.5: Taxi-entered players are removed from main draft eligibility ✅ COMPLETED
 **Acceptance criteria:**
 - After a taxi pick, the player is added to `team.minorLeaguePlayers[]` and removed from the main draft's `availablePlayerIds` (per US-19.2 mechanics)
 - Reversing a taxi pick restores availability
 
-### US-26.6: Edit taxi rosters
+### US-26.6: Edit taxi rosters ✅ COMPLETED
 **Acceptance criteria:**
 - Each taxi pick has Undo + Edit (move to another team / replace player) actions
 - Undo restores availability and decrements `taxiNominationOrder`

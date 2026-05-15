@@ -12,6 +12,12 @@ router.get('/:draftSessionId/players', DraftSessionController.getSessionPlayers)
 router.get('/:draftSessionId/players/:playerId', DraftSessionController.getSessionPlayer);
 // US-25.1: SSE push stream proxy
 router.get('/:draftSessionId/events', DraftSessionController.streamEvents);
+// US-26.1/26.2: taxi draft order
+router.put('/:draftSessionId/taxi/order', DraftSessionController.setTaxiOrder);
+// US-26.3: record a taxi pick
+router.post('/:draftSessionId/taxi/picks', DraftSessionController.recordTaxiPick);
+// US-26.6: undo a taxi pick
+router.delete('/:draftSessionId/taxi/picks/:taxiPickId', DraftSessionController.undoTaxiPick);
 router.get('/:draftSessionId/valuations', DraftSessionController.getSessionValuations);
 router.get('/:draftSessionId/recommendations', DraftSessionController.getSessionRecommendations);
 router.post('/:draftSessionId/purchases', DraftSessionController.recordPurchase);

@@ -3465,6 +3465,28 @@ body {
   border-bottom-color: #c6f6d5;
 }
 
+/* US-26.1: taxi draft order reorder rows */
+.draft-setup-taxi-order-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #edf0f6;
+  font-size: 0.875rem;
+}
+.draft-setup-taxi-rank { color: #94a3b8; font-size: 0.8rem; min-width: 20px; text-align: right; }
+.draft-setup-taxi-name { flex: 1; font-weight: 500; }
+.draft-setup-taxi-order-row button {
+  background: none;
+  border: 1px solid #c9d2e3;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #4a5568;
+}
+.draft-setup-taxi-order-row button:disabled { opacity: 0.3; cursor: default; }
+
 /* US-20.1: note indicator on player rows */
 .draft-v2-note-indicator {
   font-size: 13px;
