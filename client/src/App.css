@@ -3231,6 +3231,15 @@ body {
   color: #6b7280;
 }
 
+.draft-setup-page {
+  min-height: calc(100vh - 62px);
+  background: #c9d6ef;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 28px 40px;
+}
+
 .draft-setup-right {
   display: flex;
   flex-direction: column;
@@ -3245,6 +3254,32 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.draft-setup-collapsible-head {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  user-select: none;
+}
+
+.draft-setup-collapsible-head:focus-visible {
+  outline: 2px solid #3b5bdb;
+  border-radius: 4px;
+}
+
+.draft-setup-chevron {
+  font-size: 14px;
+  color: #5a6479;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.draft-setup-collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .draft-setup-header {
@@ -3493,6 +3528,16 @@ body {
   color: #4a5568;
 }
 .draft-setup-taxi-order-row button:disabled { opacity: 0.3; cursor: default; }
+
+.draft-setup-taxi-order-list {
+  display: block;
+  columns: 2;
+  column-gap: 16px;
+}
+
+.draft-setup-taxi-order-list .draft-setup-taxi-order-row {
+  break-inside: avoid;
+}
 
 /* US-20.1: note indicator on player rows */
 .draft-v2-note-indicator {

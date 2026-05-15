@@ -26,8 +26,10 @@ const LEAGUE_SCOPE_OPTIONS = [
 ];
 
 // US-17.2: stat options per side
-const HITTING_STAT_OPTIONS  = ['hr', 'r', 'rbi', 'sb', 'avg', 'obp', 'slg', 'h', 'ab', 'bb', 'k', 'cs'];
-const PITCHING_STAT_OPTIONS = ['w', 'k', 'sv', 'era', 'whip', 'hld', 'k9', 'ip', 'qs', 'l'];
+const HITTING_STAT_OPTIONS   = ['hr', 'r', 'rbi', 'sb', 'avg', 'obp', 'slg', 'h', 'ab', 'bb', 'k', 'cs'];
+const PITCHING_STAT_OPTIONS  = ['w', 'k', 'sv', 'era', 'whip', 'hld', 'k9', 'ip', 'qs', 'l'];
+const DEFAULT_HITTING_STATS  = ['r', 'hr', 'rbi', 'sb', 'avg'];
+const DEFAULT_PITCHING_STATS = ['k', 'w', 'sv', 'era', 'whip'];
 
 // US-17.3: default position catalogs
 const DEFAULT_HITTER_CATALOG  = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'DH'];
@@ -79,9 +81,10 @@ const normalizeSession = (draftSession) => {
         ? leagueSettings.leagueScope : 'MLB';
 
     // US-17.2: custom stat categories
-    const statCategories = leagueSettings.statCategories
-        ? { hitting: leagueSettings.statCategories.hitting || [], pitching: leagueSettings.statCategories.pitching || [] }
-        : null;
+    const statCategories = {
+        hitting:  leagueSettings.statCategories?.hitting  ?? [...DEFAULT_HITTING_STATS],
+        pitching: leagueSettings.statCategories?.pitching ?? [...DEFAULT_PITCHING_STATS],
+    };
 
     // US-17.3: custom position catalog
     const positionCatalog = leagueSettings.positionCatalog
@@ -251,6 +254,9 @@ export default function DraftSessionSetupScreen() {
     };
 
     // US-18.1: keepers state
+    const [keepersExpanded, setKeepersExpanded] = useState(false);
+    const [taxiExpanded,    setTaxiExpanded]    = useState(false);
+
     const [keeperTeamId,    setKeeperTeamId]    = useState('');
     const [keeperSearch,    setKeeperSearch]     = useState('');
     const [keeperResults,   setKeeperResults]    = useState([]);
@@ -303,7 +309,7 @@ export default function DraftSessionSetupScreen() {
     const [minorSearch,    setMinorSearch]     = useState('');
     const [minorResults,   setMinorResults]    = useState([]);
     const [minorPlayer,    setMinorPlayer]     = useState(null);
-    const [minorYears,     setMinorYears]      = useState('1');
+    const [minorYears,     setMinorYears]      = useState('');
     const [minorSearching, setMinorSearching]  = useState(false);
 
     const searchMinors = useCallback(async (term) => {
@@ -374,136 +380,132 @@ export default function DraftSessionSetupScreen() {
     }
 
     return (
-        <main className="app-home">
-            <section className="home-left-column">
-                <article className="home-card draft-setup-card">
-                    <div>
-                        <h2>Draft Settings</h2>
-                        <p>Configure before opening the draft room.</p>
-                    </div>
+        <main className="draft-setup-page">
+            {/* Draft Settings */}
+            <article className="home-card draft-setup-card">
+                <div>
+                    <h2>Draft Settings</h2>
+                    <p>Configure before opening the draft room.</p>
+                </div>
 
-                    <div className="draft-setup-grid">
-                        <label>
-                            <span>Number of Teams</span>
-                            <input
-                                type="number"
-                                min="2"
-                                max="30"
-                                value={formState.numberOfTeams}
-                                onChange={(e) => setFormState((prev) => ({ ...prev, numberOfTeams: e.target.value }))}
-                                onBlur={(e) => handleNumberOfTeamsChange(e.target.value)}
-                            />
-                        </label>
-                        <label>
-                            <span>Salary Cap</span>
-                            <input
-                                type="number"
-                                min="1"
-                                value={formState.salaryCap}
-                                onChange={(e) => handleSalaryCapChange(e.target.value)}
-                            />
-                        </label>
-                        {/* US-15.1: season year tag */}
-                        <label>
-                            <span>Season Year</span>
-                            <input
-                                type="number"
-                                min="2000"
-                                max={new Date().getFullYear() + 5}
-                                value={formState.seasonYear}
-                                onChange={(e) => {
-                                    const yr = Number(e.target.value);
-                                    if (yr >= 2000) setFormState((prev) => ({ ...prev, seasonYear: yr }));
-                                }}
-                            />
-                        </label>
-                        <label>
-                            <span>Scoring Type</span>
-                            <select
-                                value={formState.scoringType}
-                                onChange={(e) => setFormState((prev) => ({ ...prev, scoringType: e.target.value }))}
-                                className="pill-select native"
-                            >
-                                {SCORING_OPTIONS.map((option) => (
-                                    <option key={option}>{option}</option>
-                                ))}
-                            </select>
-                        </label>
+                <div className="draft-setup-grid">
+                    <label>
+                        <span>Number of Teams</span>
+                        <input
+                            type="number"
+                            min="2"
+                            max="30"
+                            value={formState.numberOfTeams}
+                            onChange={(e) => setFormState((prev) => ({ ...prev, numberOfTeams: e.target.value }))}
+                            onBlur={(e) => handleNumberOfTeamsChange(e.target.value)}
+                        />
+                    </label>
+                    <label>
+                        <span>Salary Cap</span>
+                        <input
+                            type="number"
+                            min="1"
+                            value={formState.salaryCap}
+                            onChange={(e) => handleSalaryCapChange(e.target.value)}
+                        />
+                    </label>
+                    <label>
+                        <span>Season Year</span>
+                        <input
+                            type="number"
+                            min="2000"
+                            max={new Date().getFullYear() + 5}
+                            value={formState.seasonYear}
+                            onChange={(e) => {
+                                const yr = Number(e.target.value);
+                                if (yr >= 2000) setFormState((prev) => ({ ...prev, seasonYear: yr }));
+                            }}
+                        />
+                    </label>
+                    <label>
+                        <span>Scoring Type</span>
+                        <select
+                            value={formState.scoringType}
+                            onChange={(e) => setFormState((prev) => ({ ...prev, scoringType: e.target.value }))}
+                            className="pill-select native"
+                        >
+                            {SCORING_OPTIONS.map((option) => (
+                                <option key={option}>{option}</option>
+                            ))}
+                        </select>
+                    </label>
 
-                        {/* US-17.1: league scope toggle */}
-                        <label>
-                            <span>League Scope</span>
-                            <div className="draft-setup-scope-row">
-                                {LEAGUE_SCOPE_OPTIONS.map(({ value, label }) => (
-                                    <button
-                                        key={value}
-                                        type="button"
-                                        className={`draft-setup-scope-btn ${formState.leagueScope === value ? 'active' : ''}`}
-                                        onClick={() => setFormState((prev) => ({ ...prev, leagueScope: value }))}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        </label>
+                    <label>
+                        <span>League Scope</span>
+                        <div className="draft-setup-scope-row">
+                            {LEAGUE_SCOPE_OPTIONS.map(({ value, label }) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    className={`draft-setup-scope-btn ${formState.leagueScope === value ? 'active' : ''}`}
+                                    onClick={() => setFormState((prev) => ({ ...prev, leagueScope: value }))}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </label>
 
-                        {/* US-17.2: custom stat categories */}
-                        <label className="draft-setup-full-width">
-                            <span>Hitting Stats</span>
-                            <div className="draft-setup-stat-chips">
-                                {HITTING_STAT_OPTIONS.map((stat) => {
-                                    const selected = formState.statCategories?.hitting?.includes(stat) ?? false;
-                                    return (
-                                        <button key={stat} type="button"
-                                            className={`draft-setup-stat-chip ${selected ? 'active' : ''}`}
-                                            onClick={() => setFormState((prev) => {
-                                                const cur = prev.statCategories?.hitting || [];
-                                                const next = selected ? cur.filter((s) => s !== stat) : [...cur, stat];
-                                                return { ...prev, statCategories: { ...prev.statCategories, hitting: next } };
-                                            })}
-                                        >{stat.toUpperCase()}</button>
-                                    );
-                                })}
-                            </div>
-                        </label>
-                        <label className="draft-setup-full-width">
-                            <span>Pitching Stats</span>
-                            <div className="draft-setup-stat-chips">
-                                {PITCHING_STAT_OPTIONS.map((stat) => {
-                                    const selected = formState.statCategories?.pitching?.includes(stat) ?? false;
-                                    return (
-                                        <button key={stat} type="button"
-                                            className={`draft-setup-stat-chip ${selected ? 'active' : ''}`}
-                                            onClick={() => setFormState((prev) => {
-                                                const cur = prev.statCategories?.pitching || [];
-                                                const next = selected ? cur.filter((s) => s !== stat) : [...cur, stat];
-                                                return { ...prev, statCategories: { ...prev.statCategories, pitching: next } };
-                                            })}
-                                        >{stat.toUpperCase()}</button>
-                                    );
-                                })}
-                            </div>
-                        </label>
+                    <label className="draft-setup-full-width">
+                        <span>Hitting Stats</span>
+                        <div className="draft-setup-stat-chips">
+                            {HITTING_STAT_OPTIONS.map((stat) => {
+                                const selected = formState.statCategories?.hitting?.includes(stat) ?? false;
+                                return (
+                                    <button key={stat} type="button"
+                                        className={`draft-setup-stat-chip ${selected ? 'active' : ''}`}
+                                        onClick={() => setFormState((prev) => {
+                                            const cur = prev.statCategories?.hitting || [];
+                                            const next = selected ? cur.filter((s) => s !== stat) : [...cur, stat];
+                                            return { ...prev, statCategories: { ...prev.statCategories, hitting: next } };
+                                        })}
+                                    >{stat.toUpperCase()}</button>
+                                );
+                            })}
+                        </div>
+                    </label>
+                    <label className="draft-setup-full-width">
+                        <span>Pitching Stats</span>
+                        <div className="draft-setup-stat-chips">
+                            {PITCHING_STAT_OPTIONS.map((stat) => {
+                                const selected = formState.statCategories?.pitching?.includes(stat) ?? false;
+                                return (
+                                    <button key={stat} type="button"
+                                        className={`draft-setup-stat-chip ${selected ? 'active' : ''}`}
+                                        onClick={() => setFormState((prev) => {
+                                            const cur = prev.statCategories?.pitching || [];
+                                            const next = selected ? cur.filter((s) => s !== stat) : [...cur, stat];
+                                            return { ...prev, statCategories: { ...prev.statCategories, pitching: next } };
+                                        })}
+                                    >{stat.toUpperCase()}</button>
+                                );
+                            })}
+                        </div>
+                    </label>
 
-                        {/* US-17.3: custom position catalog drives the roster slot rows */}
-                        <label className="draft-setup-full-width">
-                            <span>Hitter Positions</span>
-                            <div className="draft-setup-stat-chips">
-                                {[...new Set([...DEFAULT_HITTER_CATALOG, ...(formState.positionCatalog?.hitter || [])])].map((pos) => {
-                                    const inCatalog = (formState.positionCatalog?.hitter || DEFAULT_HITTER_CATALOG).includes(pos);
-                                    return (
-                                        <button key={pos} type="button"
-                                            className={`draft-setup-stat-chip ${inCatalog ? 'active' : ''}`}
-                                            onClick={() => setFormState((prev) => {
-                                                const cur = prev.positionCatalog?.hitter || [...DEFAULT_HITTER_CATALOG];
-                                                const next = inCatalog ? cur.filter((p) => p !== pos) : [...cur, pos];
-                                                return { ...prev, positionCatalog: { ...prev.positionCatalog, hitter: next } };
-                                            })}
-                                        >{pos}</button>
-                                    );
-                                })}
-                            </div>
-                        </label>
+                    <label className="draft-setup-full-width">
+                        <span>Hitter Positions</span>
+                        <div className="draft-setup-stat-chips">
+                            {[...new Set([...DEFAULT_HITTER_CATALOG, ...(formState.positionCatalog?.hitter || [])])].map((pos) => {
+                                const inCatalog = (formState.positionCatalog?.hitter || DEFAULT_HITTER_CATALOG).includes(pos);
+                                return (
+                                    <button key={pos} type="button"
+                                        className={`draft-setup-stat-chip ${inCatalog ? 'active' : ''}`}
+                                        onClick={() => setFormState((prev) => {
+                                            const cur = prev.positionCatalog?.hitter || [...DEFAULT_HITTER_CATALOG];
+                                            const next = inCatalog ? cur.filter((p) => p !== pos) : [...cur, pos];
+                                            return { ...prev, positionCatalog: { ...prev.positionCatalog, hitter: next } };
+                                        })}
+                                    >{pos}</button>
+                                );
+                            })}
+                        </div>
+                    </label>
 
                         {/* US-17.3: pitcher position catalog (bug fix — was missing from UI) */}
                         <label className="draft-setup-full-width">
@@ -524,243 +526,266 @@ export default function DraftSessionSetupScreen() {
                                 })}
                             </div>
                         </label>
-                        <label>
-                            <span>Draft Type</span>
-                            <input type="text" value={formState.draftType} readOnly className="draft-setup-readonly" />
-                        </label>
-                        <div className="draft-setup-summary">
-                            <span>Total Roster Size</span>
-                            <strong>{totalRosterSize}</strong>
-                        </div>
+                    <label>
+                        <span>Draft Type</span>
+                        <input type="text" value={formState.draftType} readOnly className="draft-setup-readonly" />
+                    </label>
+                    <div className="draft-setup-summary">
+                        <span>Total Roster Size</span>
+                        <strong>{totalRosterSize}</strong>
                     </div>
+                </div>
 
-                    <section className="draft-setup-section">
-                        <div className="draft-setup-section-head">
-                            <h3>Roster Slots</h3>
-                        </div>
-                        <div className="draft-setup-slot-grid">
-                            {Object.keys(DEFAULT_ROSTER_SLOTS).map((slot) => (
-                                <label key={slot}>
-                                    <span>{slot}</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={formState.rosterSlots[slot]}
-                                        onChange={(e) => handleRosterSlotChange(slot, e.target.value)}
-                                    />
-                                </label>
-                            ))}
-                        </div>
-                    </section>
-                </article>
-            </section>
-
-            <section className="home-right-column draft-setup-right">
-                <article className="home-card draft-setup-card">
+                <section className="draft-setup-section">
                     <div className="draft-setup-section-head">
-                        <h3>Fantasy Teams</h3>
-                        <p>Customize team names.</p>
+                        <h3>Roster Slots</h3>
                     </div>
-                    <div className="draft-setup-team-list">
-                        {formState.teams.map((team) => (
-                            <label key={team.teamId} className="draft-setup-team-row">
-                                <span>Team {team.teamId.replace('fantasy-team-', '')}</span>
+                    <div className="draft-setup-slot-grid">
+                        {Object.keys(DEFAULT_ROSTER_SLOTS).map((slot) => (
+                            <label key={slot}>
+                                <span>{slot}</span>
                                 <input
-                                    type="text"
-                                    value={team.teamName}
-                                    onChange={(e) => handleTeamNameChange(team.teamId, e.target.value)}
+                                    type="number"
+                                    min="0"
+                                    value={formState.rosterSlots[slot]}
+                                    onChange={(e) => handleRosterSlotChange(slot, e.target.value)}
                                 />
-                                <small>Budget: ${formState.salaryCap}</small>
                             </label>
                         ))}
                     </div>
-                    {formError ? <p className="league-error-msg">{formError}</p> : null}
-                    <div className="role-modal-actions draft-setup-actions">
-                        <button type="button" className="home-light-btn" onClick={handleCancel} disabled={saving || cancelling}>
-                            {cancelling ? 'Cancelling...' : 'Cancel'}
-                        </button>
-                        <button type="button" className="home-dark-btn" onClick={startDraft} disabled={saving || cancelling}>
-                            {saving ? 'Starting...' : 'Start Draft'}
-                        </button>
-                    </div>
-                </article>
+                </section>
+            </article>
 
-                {/* US-18.1: Keepers tab */}
-                <article className="home-card draft-setup-card">
-                    <div className="draft-setup-section-head">
+            {/* Fantasy Teams */}
+            <article className="home-card draft-setup-card">
+                <div className="draft-setup-section-head">
+                    <h3>Fantasy Teams</h3>
+                    <p>Customize team names.</p>
+                </div>
+                <div className="draft-setup-team-list">
+                    {formState.teams.map((team) => (
+                        <label key={team.teamId} className="draft-setup-team-row">
+                            <span>Team {team.teamId.replace('fantasy-team-', '')}</span>
+                            <input
+                                type="text"
+                                value={team.teamName}
+                                onChange={(e) => handleTeamNameChange(team.teamId, e.target.value)}
+                            />
+                            <small>Budget: ${formState.salaryCap}</small>
+                        </label>
+                    ))}
+                </div>
+            </article>
+
+            {/* US-18.1: Keepers — collapsible */}
+            <article className="home-card draft-setup-card">
+                <div
+                    className="draft-setup-collapsible-head"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setKeepersExpanded((v) => !v)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setKeepersExpanded((v) => !v); }}
+                >
+                    <div>
                         <h3>Keepers</h3>
                         <p>Pre-assign players before the draft starts. Their cost and slot are debited automatically at draft start.</p>
                     </div>
+                    <span className="draft-setup-chevron" aria-hidden="true">{keepersExpanded ? '▲' : '▼'}</span>
+                </div>
 
-                    {/* Add keeper form */}
-                    <div className="draft-setup-keeper-form">
-                        <select
-                            className="draft-setup-keeper-select"
-                            value={keeperTeamId}
-                            onChange={(e) => setKeeperTeamId(e.target.value)}
-                        >
-                            <option value="">— Select team —</option>
-                            {formState.teams.map((t) => (
-                                <option key={t.teamId} value={t.teamId}>{t.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</option>
-                            ))}
-                        </select>
+                {keepersExpanded && (
+                    <div className="draft-setup-collapsible-body">
+                        {/* Add keeper form */}
+                        <div className="draft-setup-keeper-form">
+                            <select
+                                className="draft-setup-keeper-select"
+                                value={keeperTeamId}
+                                onChange={(e) => setKeeperTeamId(e.target.value)}
+                            >
+                                <option value="">— Select team —</option>
+                                {formState.teams.map((t) => (
+                                    <option key={t.teamId} value={t.teamId}>{t.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</option>
+                                ))}
+                            </select>
 
-                        <div className="draft-setup-keeper-search">
-                            <input
-                                type="text"
-                                placeholder="Search player…"
-                                value={keeperSearch}
-                                onChange={(e) => { setKeeperSearch(e.target.value); setKeeperPlayer(null); searchKeepers(e.target.value); }}
-                                autoComplete="off"
-                            />
-                            {keeperPlayer && <span className="draft-setup-keeper-chosen">✓ {keeperPlayer.playerName || keeperPlayer.name}</span>}
-                            {keeperResults.length > 0 && !keeperPlayer && (
-                                <div className="draft-setup-keeper-dropdown">
-                                    {keeperResults.map((p) => (
-                                        <button key={p.playerId} type="button"
-                                            onClick={() => { setKeeperPlayer(p); setKeeperSearch(p.name || p.playerName || p.playerId); setKeeperResults([]); }}
-                                        >
-                                            {p.name || p.playerName} <span>{p.mlbTeam} · {(p.positions || [p.position]).join('/')}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            <div className="draft-setup-keeper-search">
+                                <input
+                                    type="text"
+                                    placeholder="Search player…"
+                                    value={keeperSearch}
+                                    onChange={(e) => { setKeeperSearch(e.target.value); setKeeperPlayer(null); searchKeepers(e.target.value); }}
+                                    autoComplete="off"
+                                />
+                                {keeperPlayer && <span className="draft-setup-keeper-chosen">✓ {keeperPlayer.playerName || keeperPlayer.name}</span>}
+                                {keeperResults.length > 0 && !keeperPlayer && (
+                                    <div className="draft-setup-keeper-dropdown">
+                                        {keeperResults.map((p) => (
+                                            <button key={p.playerId} type="button"
+                                                onClick={() => { setKeeperPlayer(p); setKeeperSearch(p.name || p.playerName || p.playerId); setKeeperResults([]); }}
+                                            >
+                                                {p.name || p.playerName} <span>{p.mlbTeam} · {(p.positions || [p.position]).join('/')}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <input type="number" min="1" placeholder="$ Price" value={keeperPrice}
+                                onChange={(e) => setKeeperPrice(e.target.value)} className="draft-setup-keeper-num" />
+                            <input type="number" min="0" placeholder="Years" value={keeperYears}
+                                onChange={(e) => setKeeperYears(e.target.value)} className="draft-setup-keeper-num" style={{ width: 60 }} />
+                            <select value={keeperPos} onChange={(e) => setKeeperPos(e.target.value)} className="draft-setup-keeper-select">
+                                <option value="">— Pos —</option>
+                                {rosterPositions.map((pos) => <option key={pos} value={pos}>{pos}</option>)}
+                            </select>
+                            <button type="button" className="home-dark-btn"
+                                onClick={addKeeper}
+                                disabled={!keeperTeamId || !keeperPlayer || !keeperPrice || Number(keeperPrice) < 1}
+                            >+ Add</button>
                         </div>
 
-                        <input type="number" min="1" placeholder="$ Price" value={keeperPrice}
-                            onChange={(e) => setKeeperPrice(e.target.value)} className="draft-setup-keeper-num" />
-                        <input type="number" min="0" placeholder="Years" value={keeperYears}
-                            onChange={(e) => setKeeperYears(e.target.value)} className="draft-setup-keeper-num" style={{ width: 60 }} />
-                        <select value={keeperPos} onChange={(e) => setKeeperPos(e.target.value)} className="draft-setup-keeper-select">
-                            <option value="">— Pos —</option>
-                            {rosterPositions.map((pos) => <option key={pos} value={pos}>{pos}</option>)}
-                        </select>
-                        <button type="button" className="home-dark-btn"
-                            onClick={addKeeper}
-                            disabled={!keeperTeamId || !keeperPlayer || !keeperPrice || Number(keeperPrice) < 1}
-                        >+ Add</button>
-                    </div>
-
-                    {/* Per-team keeper lists */}
-                    {formState.teams.map((team) => {
-                        const keepers = team.keepers || [];
-                        if (!keepers.length) return null;
-                        return (
-                            <div key={team.teamId} className="draft-setup-keeper-team">
-                                <strong>{team.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</strong>
-                                {keepers.map((k) => (
-                                    <div key={k.playerId} className="draft-setup-keeper-row">
-                                        <span>{k.playerName}</span>
-                                        <span>${k.price}</span>
-                                        <span>{k.contractYears}yr</span>
-                                        <span>{k.positionAssigned || '—'}</span>
-                                        <button type="button" onClick={() => removeKeeper(team.teamId, k.playerId)}>✕</button>
-                                    </div>
-                                ))}
-                            </div>
-                        );
-                    })}
-                    {formState.teams.every((t) => !(t.keepers || []).length) && (
-                        <p className="draft-setup-keeper-empty">No keepers added yet.</p>
-                    )}
-
-                    {/* US-19.1: Minor League Rosters */}
-                    <div className="draft-setup-section-head" style={{ marginTop: 20 }}>
-                        <h3 style={{ fontSize: '0.95rem' }}>Minor League Rosters</h3>
-                        <p>Players on a minor league roster are excluded from the auction pool. ({formState.minorLeagueSlots} slots/team)</p>
-                    </div>
-
-                    <div className="draft-setup-keeper-form">
-                        <select className="draft-setup-keeper-select" value={minorTeamId} onChange={(e) => setMinorTeamId(e.target.value)}>
-                            <option value="">— Select team —</option>
-                            {formState.teams.map((t) => (
-                                <option key={t.teamId} value={t.teamId}>{t.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</option>
-                            ))}
-                        </select>
-                        <div className="draft-setup-keeper-search">
-                            <input type="text" placeholder="Search prospect…" value={minorSearch}
-                                onChange={(e) => { setMinorSearch(e.target.value); setMinorPlayer(null); searchMinors(e.target.value); }}
-                                autoComplete="off" />
-                            {minorPlayer && <span className="draft-setup-keeper-chosen">✓ {minorPlayer.playerName || minorPlayer.name}</span>}
-                            {minorResults.length > 0 && !minorPlayer && (
-                                <div className="draft-setup-keeper-dropdown">
-                                    {minorResults.map((p) => (
-                                        <button key={p.playerId} type="button"
-                                            onClick={() => { setMinorPlayer(p); setMinorSearch(p.name || p.playerName || p.playerId); setMinorResults([]); }}>
-                                            {p.name || p.playerName} <span>{p.mlbTeam} · {(p.positions || [p.position]).join('/')}</span>
-                                        </button>
+                        {/* Per-team keeper lists */}
+                        {formState.teams.map((team) => {
+                            const keepers = team.keepers || [];
+                            if (!keepers.length) return null;
+                            return (
+                                <div key={team.teamId} className="draft-setup-keeper-team">
+                                    <strong>{team.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</strong>
+                                    {keepers.map((k) => (
+                                        <div key={k.playerId} className="draft-setup-keeper-row">
+                                            <span>{k.playerName}</span>
+                                            <span>${k.price}</span>
+                                            <span>{k.contractYears}yr</span>
+                                            <span>{k.positionAssigned || '—'}</span>
+                                            <button type="button" onClick={() => removeKeeper(team.teamId, k.playerId)}>✕</button>
+                                        </div>
                                     ))}
                                 </div>
-                            )}
+                            );
+                        })}
+                        {formState.teams.every((t) => !(t.keepers || []).length) && (
+                            <p className="draft-setup-keeper-empty">No keepers added yet.</p>
+                        )}
+
+                        {/* US-19.1: Minor League Rosters */}
+                        <div className="draft-setup-section-head" style={{ marginTop: 8 }}>
+                            <h3 style={{ fontSize: '0.95rem' }}>Minor League Rosters</h3>
+                            <p>Players on a minor league roster are excluded from the auction pool. ({formState.minorLeagueSlots} slots/team)</p>
                         </div>
-                        <input type="number" min="0" placeholder="Years" value={minorYears}
-                            onChange={(e) => setMinorYears(e.target.value)} className="draft-setup-keeper-num" style={{ width: 60 }} />
-                        <button type="button" className="home-dark-btn"
-                            onClick={addMinor} disabled={!minorTeamId || !minorPlayer}>+ Add Minor</button>
-                    </div>
 
-                    {formState.teams.map((team) => {
-                        const minors = team.minorLeaguePlayers || [];
-                        if (!minors.length) return null;
-                        return (
-                            <div key={`minors-${team.teamId}`} className="draft-setup-keeper-team">
-                                <strong>{team.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')} — Minors</strong>
-                                {minors.map((m) => (
-                                    <div key={m.playerId} className="draft-setup-keeper-row">
-                                        <span>{m.playerName}</span>
-                                        <span>{m.contractYears}yr</span>
-                                        <span style={{ color: '#a0aec0', fontSize: '0.75rem' }}>MiLB</span>
-                                        <button type="button" onClick={() => removeMinor(team.teamId, m.playerId)}>✕</button>
-                                    </div>
+                        <div className="draft-setup-keeper-form">
+                            <select className="draft-setup-keeper-select" value={minorTeamId} onChange={(e) => setMinorTeamId(e.target.value)}>
+                                <option value="">— Select team —</option>
+                                {formState.teams.map((t) => (
+                                    <option key={t.teamId} value={t.teamId}>{t.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')}</option>
                                 ))}
+                            </select>
+                            <div className="draft-setup-keeper-search">
+                                <input type="text" placeholder="Search prospect…" value={minorSearch}
+                                    onChange={(e) => { setMinorSearch(e.target.value); setMinorPlayer(null); searchMinors(e.target.value); }}
+                                    autoComplete="off" />
+                                {minorPlayer && <span className="draft-setup-keeper-chosen">✓ {minorPlayer.playerName || minorPlayer.name}</span>}
+                                {minorResults.length > 0 && !minorPlayer && (
+                                    <div className="draft-setup-keeper-dropdown">
+                                        {minorResults.map((p) => (
+                                            <button key={p.playerId} type="button"
+                                                onClick={() => { setMinorPlayer(p); setMinorSearch(p.name || p.playerName || p.playerId); setMinorResults([]); }}>
+                                                {p.name || p.playerName} <span>{p.mlbTeam} · {(p.positions || [p.position]).join('/')}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        );
-                    })}
-                    {formState.teams.every((t) => !(t.minorLeaguePlayers || []).length) && (
-                        <p className="draft-setup-keeper-empty">No minor league players added yet.</p>
-                    )}
-                </article>
+                            <input type="number" min="0" placeholder="Years" value={minorYears}
+                                onChange={(e) => setMinorYears(e.target.value)} className="draft-setup-keeper-num" style={{ width: 150 }} />
+                            <button type="button" className="home-dark-btn"
+                                onClick={addMinor} disabled={!minorTeamId || !minorPlayer}>+ Add Minor</button>
+                        </div>
 
-                {/* US-26.1/26.2: Taxi Draft Order */}
-                <article className="home-card draft-setup-card">
-                    <div className="draft-setup-section-head">
+                        {formState.teams.map((team) => {
+                            const minors = team.minorLeaguePlayers || [];
+                            if (!minors.length) return null;
+                            return (
+                                <div key={`minors-${team.teamId}`} className="draft-setup-keeper-team">
+                                    <strong>{team.teamName.replace(/^fantasy-team-(\d+)$/, 'Team $1')} — Minors</strong>
+                                    {minors.map((m) => (
+                                        <div key={m.playerId} className="draft-setup-keeper-row">
+                                            <span>{m.playerName}</span>
+                                            <span>{m.contractYears}yr</span>
+                                            <span style={{ color: '#a0aec0', fontSize: '0.75rem' }}>MiLB</span>
+                                            <button type="button" onClick={() => removeMinor(team.teamId, m.playerId)}>✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })}
+                        {formState.teams.every((t) => !(t.minorLeaguePlayers || []).length) && (
+                            <p className="draft-setup-keeper-empty">No minor league players added yet.</p>
+                        )}
+                    </div>
+                )}
+            </article>
+
+            {/* US-26.1/26.2: Taxi Draft Order — collapsible */}
+            <article className="home-card draft-setup-card">
+                <div
+                    className="draft-setup-collapsible-head"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setTaxiExpanded((v) => !v)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setTaxiExpanded((v) => !v); }}
+                >
+                    <div>
                         <h3>Taxi Draft Order</h3>
                         <p>Set the pick order for the taxi draft. Use ↑ ↓ to reorder. Defaults to team creation order.</p>
                     </div>
-                    {(() => {
-                        const order = formState.taxiDraftOrder.length > 0
-                            ? formState.taxiDraftOrder
-                            : formState.teams.map((t) => t.teamId);
-                        const setOrder = (newOrder) => setFormState((prev) => ({ ...prev, taxiDraftOrder: newOrder }));
-                        return (
-                            <div className="draft-setup-team-list">
-                                {order.map((teamId, idx) => {
-                                    const team = formState.teams.find((t) => t.teamId === teamId);
-                                    const displayName = (team?.teamName || teamId).replace(/^fantasy-team-(\d+)$/, 'Team $1');
-                                    return (
-                                        <div key={teamId} className="draft-setup-taxi-order-row">
-                                            <span className="draft-setup-taxi-rank">{idx + 1}</span>
-                                            <span className="draft-setup-taxi-name">{displayName}</span>
-                                            <button type="button" disabled={idx === 0}
-                                                onClick={() => {
-                                                    const next = [...order];
-                                                    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-                                                    setOrder(next);
-                                                }}>↑</button>
-                                            <button type="button" disabled={idx === order.length - 1}
-                                                onClick={() => {
-                                                    const next = [...order];
-                                                    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-                                                    setOrder(next);
-                                                }}>↓</button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        );
-                    })()}
-                </article>
-            </section>
+                    <span className="draft-setup-chevron" aria-hidden="true">{taxiExpanded ? '▲' : '▼'}</span>
+                </div>
+
+                {taxiExpanded && (() => {
+                    const order = formState.taxiDraftOrder.length > 0
+                        ? formState.taxiDraftOrder
+                        : formState.teams.map((t) => t.teamId);
+                    const setOrder = (newOrder) => setFormState((prev) => ({ ...prev, taxiDraftOrder: newOrder }));
+                    return (
+                        <div className="draft-setup-team-list draft-setup-taxi-order-list">
+                            {order.map((teamId, idx) => {
+                                const team = formState.teams.find((t) => t.teamId === teamId);
+                                const displayName = (team?.teamName || teamId).replace(/^fantasy-team-(\d+)$/, 'Team $1');
+                                return (
+                                    <div key={teamId} className="draft-setup-taxi-order-row">
+                                        <span className="draft-setup-taxi-rank">{idx + 1}</span>
+                                        <span className="draft-setup-taxi-name">{displayName}</span>
+                                        <button type="button" disabled={idx === 0}
+                                            onClick={() => {
+                                                const next = [...order];
+                                                [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                                                setOrder(next);
+                                            }}>↑</button>
+                                        <button type="button" disabled={idx === order.length - 1}
+                                            onClick={() => {
+                                                const next = [...order];
+                                                [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                                                setOrder(next);
+                                            }}>↓</button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                })()}
+            </article>
+
+            {/* Bottom actions */}
+            {formError ? <p className="league-error-msg">{formError}</p> : null}
+            <div className="role-modal-actions draft-setup-actions">
+                <button type="button" className="home-light-btn" onClick={handleCancel} disabled={saving || cancelling}>
+                    {cancelling ? 'Cancelling...' : 'Cancel'}
+                </button>
+                <button type="button" className="home-dark-btn" onClick={startDraft} disabled={saving || cancelling}>
+                    {saving ? 'Starting...' : 'Start Draft'}
+                </button>
+            </div>
         </main>
     );
 }
