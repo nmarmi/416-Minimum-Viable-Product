@@ -4,6 +4,7 @@ import { getSessionPlayer } from '../draft-sessions/requests';
 // US-21.1 rubric: fetch per-player transactions from Player Data API via server proxy
 async function fetchPlayerTransactions(draftSessionId, playerId) {
     try {
+        // eslint-disable-next-line no-unused-vars
         const { getSessionPlayers } = await import('../draft-sessions/requests.js');
         // Use the general session player endpoint since transactions come from the API
         const base = (window.__API_BASE__ || '');

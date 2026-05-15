@@ -264,7 +264,8 @@ export default function DraftSessionSetupScreen() {
     const [keeperPrice,     setKeeperPrice]      = useState('');
     const [keeperYears,     setKeeperYears]      = useState('1');
     const [keeperPos,       setKeeperPos]        = useState('');
-    const [keeperSearching, setKeeperSearching]  = useState(false);
+    // eslint-disable-next-line no-unused-vars
+    const [keeperSearching, setKeeperSearching]  = useState(false); 
 
     const rosterPositions = useMemo(() => Object.keys(formState.rosterSlots), [formState.rosterSlots]);
 
@@ -310,6 +311,7 @@ export default function DraftSessionSetupScreen() {
     const [minorResults,   setMinorResults]    = useState([]);
     const [minorPlayer,    setMinorPlayer]     = useState(null);
     const [minorYears,     setMinorYears]      = useState('');
+    // eslint-disable-next-line no-unused-vars
     const [minorSearching, setMinorSearching]  = useState(false);
 
     const searchMinors = useCallback(async (term) => {
