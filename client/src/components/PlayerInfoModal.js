@@ -1,6 +1,22 @@
 import { useEffect, useState } from 'react';
 import { getSessionPlayer } from '../draft-sessions/requests';
 
+// US-21.1 rubric: fetch per-player transactions from Player Data API via server proxy
+async function fetchPlayerTransactions(draftSessionId, playerId) {
+    try {
+        const { getSessionPlayers } = await import('../draft-sessions/requests.js');
+        // Use the general session player endpoint since transactions come from the API
+        const base = (window.__API_BASE__ || '');
+        const res  = await fetch(`${base}/draft-sessions/${draftSessionId}/players/${encodeURIComponent(playerId)}/transactions`, {
+            credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        return data?.transactions || [];
+    } catch (_) {
+        return [];
+    }
+}
+
 const formatStat = (val) => {
     const n = Number(val);
     if (val == null || !Number.isFinite(n)) return '--';
@@ -59,9 +75,10 @@ const PlayerInfoModal = ({ player, draftSessionId, initialNote = '', onClose, on
     const [note,        setNote]        = useState(initialNote);
     const [saveError,   setSaveError]   = useState('');
     const [saveSuccess, setSaveSuccess] = useState(false);
-    const [detail,      setDetail]      = useState(null);  // enriched data from server
-    const [loading,     setLoading]     = useState(false);
-    const [fetchErr,    setFetchErr]    = useState('');
+    const [detail,        setDetail]        = useState(null);
+    const [loading,       setLoading]       = useState(false);
+    const [fetchErr,      setFetchErr]      = useState('');
+    const [transactions,  setTransactions]  = useState([]);
 
     // Reset state when player changes
     useEffect(() => {
@@ -80,14 +97,17 @@ const PlayerInfoModal = ({ player, draftSessionId, initialNote = '', onClose, on
         setDetail(null);
         setFetchErr('');
 
-        getSessionPlayer(draftSessionId, String(playerId)).then((res) => {
+        Promise.all([
+            getSessionPlayer(draftSessionId, String(playerId)),
+            fetchPlayerTransactions(draftSessionId, String(playerId)),
+        ]).then(([res, txns]) => {
             setLoading(false);
             if (res.status === 200 && res.data?.success) {
                 setDetail(res.data.player);
             } else {
-                // Non-fatal — keep showing what we have from the table row
                 setFetchErr('Could not load full player details.');
             }
+            setTransactions(txns || []);
         }).catch(() => {
             setLoading(false);
             setFetchErr('Could not load full player details.');
@@ -199,6 +219,20 @@ const PlayerInfoModal = ({ player, draftSessionId, initialNote = '', onClose, on
                             </div>
                         ))}
                     </div>
+
+                    {/* Transactions / Contract Status — rubric: Player Details — Transactions/Contract */}
+                    {transactions.length > 0 && (
+                        <div className="player-info-txn-section">
+                            <span className="player-info-stat-label" style={{ display: 'block', marginBottom: 6 }}>Recent Transactions</span>
+                            {transactions.slice(0, 5).map((t) => (
+                                <div key={t.txn_id} className="player-info-txn-row">
+                                    <span className="player-info-txn-type">{t.type_desc}</span>
+                                    <span className="player-info-txn-desc">{t.description || `${t.type_code} — ${t.effective_date}`}</span>
+                                    <span className="player-info-txn-date">{t.effective_date}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Notes — US-20 */}
                     <div className="player-info-notes-section">

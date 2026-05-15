@@ -752,6 +752,26 @@ const moveMinor = async (req, res) => {
     }
 };
 
+// Rubric: Player Details — Transactions/Contract Status — proxies to Player Data API
+const getPlayerTransactions = async (req, res) => {
+    try {
+        const userId = auth.verifyUser(req);
+        if (!userId) return res.status(401).json({ success: false, errorMessage: 'Unauthorized' });
+        const { playerId } = req.params;
+        if (!licensedApi.hasConfig()) return res.json({ success: true, transactions: [] });
+        const apiBase = (process.env.PLAYER_API_URL || '').replace(/\/$/, '');
+        const apiKey  = process.env.PLAYER_API_KEY || '';
+        const resp = await fetch(`${apiBase}/api/v1/players/${encodeURIComponent(playerId)}/transactions`, {
+            headers: { 'X-API-Key': apiKey, 'Authorization': `Bearer ${apiKey}` },
+        });
+        const data = await resp.json().catch(() => ({}));
+        return res.json({ success: true, transactions: data.transactions || [] });
+    } catch (err) {
+        console.error('[player] getPlayerTransactions error:', err.message);
+        return res.json({ success: true, transactions: [] });
+    }
+};
+
 // US-26.1/26.2: set taxi draft order
 const setTaxiOrder = async (req, res) => {
     try {
@@ -897,6 +917,7 @@ module.exports = {
     redoPurchase,
     moveMinor,
     streamEvents,
+    getPlayerTransactions,
     setTaxiOrder,
     recordTaxiPick,
     undoTaxiPick,

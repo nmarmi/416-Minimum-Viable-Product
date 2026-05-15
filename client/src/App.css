@@ -2867,6 +2867,13 @@ body {
   gap: 8px;
 }
 
+/* Transactions/Contract section in player detail modal */
+.player-info-txn-section { margin-bottom: 12px; }
+.player-info-txn-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid #f0f2f8; font-size: 0.8rem; }
+.player-info-txn-type { font-weight: 600; color: #4a5568; white-space: nowrap; }
+.player-info-txn-desc { flex: 1; color: #6b7280; }
+.player-info-txn-date { color: #a0aec0; font-size: 0.73rem; white-space: nowrap; }
+
 /* US-21.1: injury and depth chart context rows */
 .player-info-status-row {
   display: flex;

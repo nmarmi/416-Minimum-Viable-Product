@@ -316,7 +316,7 @@ export default function DraftSessionSetupScreen() {
 
     const addMinor = () => {
         if (!minorTeamId || !minorPlayer) return;
-        const maxSlots = formState.leagueSettings?.minorLeagueSlots ?? 6;
+        const maxSlots = formState.minorLeagueSlots ?? 6;  // bug fix: was formState.leagueSettings?.minorLeagueSlots
         setFormState((prev) => ({
             ...prev,
             teams: prev.teams.map((team) => {
@@ -498,6 +498,26 @@ export default function DraftSessionSetupScreen() {
                                                 const cur = prev.positionCatalog?.hitter || [...DEFAULT_HITTER_CATALOG];
                                                 const next = inCatalog ? cur.filter((p) => p !== pos) : [...cur, pos];
                                                 return { ...prev, positionCatalog: { ...prev.positionCatalog, hitter: next } };
+                                            })}
+                                        >{pos}</button>
+                                    );
+                                })}
+                            </div>
+                        </label>
+
+                        {/* US-17.3: pitcher position catalog (bug fix — was missing from UI) */}
+                        <label className="draft-setup-full-width">
+                            <span>Pitcher Positions</span>
+                            <div className="draft-setup-stat-chips">
+                                {[...new Set([...DEFAULT_PITCHER_CATALOG, ...(formState.positionCatalog?.pitcher || [])])].map((pos) => {
+                                    const inCatalog = (formState.positionCatalog?.pitcher || DEFAULT_PITCHER_CATALOG).includes(pos);
+                                    return (
+                                        <button key={pos} type="button"
+                                            className={`draft-setup-stat-chip ${inCatalog ? 'active' : ''}`}
+                                            onClick={() => setFormState((prev) => {
+                                                const cur = prev.positionCatalog?.pitcher || [...DEFAULT_PITCHER_CATALOG];
+                                                const next = inCatalog ? cur.filter((p) => p !== pos) : [...cur, pos];
+                                                return { ...prev, positionCatalog: { ...prev.positionCatalog, pitcher: next } };
                                             })}
                                         >{pos}</button>
                                     );

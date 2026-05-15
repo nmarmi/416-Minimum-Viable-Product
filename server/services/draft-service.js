@@ -259,7 +259,8 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
         team.filledRosterSlots.set(slotKey, (team.filledRosterSlots.get(slotKey) || 0) + 1);
     }
 
-    session.nominationOrder = (session.nominationOrder || 0) + 1;
+    const thisNominationOrder = session.nominationOrder || 0;
+    session.nominationOrder = thisNominationOrder + 1;
     session.draftHistory.push({
         purchaseId: DraftSession.generatePurchaseId(),
         playerId: playerIdStr,
@@ -268,7 +269,7 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
         price,
         positionFilled: slotKey,
         notes: notes || '',
-        nominationOrder: session.nominationOrder
+        nominationOrder: thisNominationOrder  // 0-based: first pick = 0
     });
     // US-22.4: any new purchase clears the redo stack
     session.undoStack = [];
