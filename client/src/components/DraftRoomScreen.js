@@ -2,6 +2,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'r
 import { useHistory, useParams } from 'react-router-dom';
 import { getPlayers as getCatalogPlayers, postUsage } from '../players/requests';
 import { getSessionPlayers, getSessionValuations, getSessionRecommendations } from '../draft-sessions/requests';
+import { DRAFT_SESSIONS_API_BASE_URL } from '../config/api';
 import { GlobalStoreContext } from '../store';
 import GlossaryTerm from './GlossaryTerm';
 import GlossaryModal from './GlossaryModal';
@@ -480,7 +481,7 @@ const DraftRoomScreen = () => {
         let cancelled = false;
 
         const connect = () => {
-            const url = `/draft-sessions/${draftSessionId}/events?since=${lastEventId}`;
+            const url = `${DRAFT_SESSIONS_API_BASE_URL}/${draftSessionId}/events?since=${lastEventId}`;
             es = new EventSource(url, { withCredentials: true });
 
             const handleEvent = (type) => (e) => {
