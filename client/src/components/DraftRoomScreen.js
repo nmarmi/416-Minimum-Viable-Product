@@ -401,7 +401,7 @@ const DraftRoomScreen = () => {
         const requestId = ++loadPlayersRequestId.current;
         setPlayersLoading(true);
         setPlayersError('');
-        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 500 });
+        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 2000 });
         if (requestId !== loadPlayersRequestId.current) return false;
         setPlayersLoading(false);
         if (res.status === 200 && res.data?.success) {
