@@ -36,7 +36,7 @@ class PlayerPoolUnavailableError extends Error {
 }
 
 const STAT_FIELDS = [
-    'adp', 'ADP',
+    'age', 'playerAge', 'Age',
     'ab', 'r', 'h', 'single', 'double', 'triple',
     'hr', 'rbi', 'bb', 'k', 'sb', 'cs',
     'avg', 'obp', 'slg', 'fpts',
@@ -76,6 +76,7 @@ function toPlayerStub(raw = {}, dataAsOf = null) {
         depthChartRank: raw.depthChartRank ?? null,
         depthChartPosition: raw.depthChartPosition ?? null,
         dataAsOf: raw.dataAsOf || dataAsOf || null,
+        age: raw.age ?? raw.playerAge ?? raw.Age ?? raw.ageAdjustment?.age ?? null,
         ...copyDefinedFields(raw, STAT_FIELDS)
     };
 }
