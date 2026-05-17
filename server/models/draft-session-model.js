@@ -55,6 +55,8 @@ const DraftPurchaseSchema = new Schema(
             type: Number,
             required: true
         },
+        nominatingTeamId: { type: String, default: null },
+        mlbTeam: { type: String, default: '' },
         // US-18.1: marks keeper-converted entries
         isKeeper: { type: Boolean, default: false },
         contractYears: { type: Number, default: null },

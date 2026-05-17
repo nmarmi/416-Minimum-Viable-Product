@@ -192,17 +192,19 @@ function serializeSession(session) {
         availablePlayerIds: plain.availablePlayerIds || [],
         purchasedPlayerIds,
         draftHistory: (plain.draftHistory || []).map((entry) => ({
-            purchaseId:      entry.purchaseId,
-            playerId:        entry.playerId,
-            playerName:      entry.playerName,
-            teamId:          entry.teamId,
-            price:           entry.price,
-            positionFilled:  entry.positionFilled || null,
-            notes:           entry.notes || '',
-            timestamp:       entry.timestamp,
-            nominationOrder: entry.nominationOrder,
-            isKeeper:        entry.isKeeper || false,       // US-18.1
-            contractYears:   entry.contractYears ?? null,   // US-18.1
+            purchaseId:        entry.purchaseId,
+            playerId:          entry.playerId,
+            playerName:        entry.playerName,
+            teamId:            entry.teamId,
+            price:             entry.price,
+            positionFilled:    entry.positionFilled || null,
+            notes:             entry.notes || '',
+            timestamp:         entry.timestamp,
+            nominationOrder:   entry.nominationOrder,
+            nominatingTeamId:  entry.nominatingTeamId || null,
+            mlbTeam:           entry.mlbTeam || '',
+            isKeeper:          entry.isKeeper || false,       // US-18.1
+            contractYears:     entry.contractYears ?? null,   // US-18.1
         })),
         playerNotes:  toPlainObject(plain.playerNotes),
         undoStackSize: (plain.undoStack || []).length,

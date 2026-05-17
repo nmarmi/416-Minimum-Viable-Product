@@ -215,7 +215,7 @@ const recordPurchase = async (req, res) => {
         }
 
         const { draftSessionId } = req.params;
-        const { playerId, playerName, teamId, price, notes } = req.body || {};
+        const { playerId, playerName, teamId, price, notes, nominatingTeamId, mlbTeam } = req.body || {};
 
         if (!playerId || !teamId || price == null) {
             return res.status(400).json({ success: false, errorMessage: 'playerId, teamId, and price are required.' });
@@ -236,7 +236,7 @@ const recordPurchase = async (req, res) => {
             return res.status(403).json({ success: false, errorMessage: 'Unauthorized' });
         }
 
-        const result = await draftService.recordPurchase(draftSessionId, { playerId, playerName, teamId, price: parsedPrice, notes });
+        const result = await draftService.recordPurchase(draftSessionId, { playerId, playerName, teamId, price: parsedPrice, notes, nominatingTeamId, mlbTeam });
         if (!result.success) {
             return res.status(400).json({ success: false, errorMessage: result.errorMessage });
         }

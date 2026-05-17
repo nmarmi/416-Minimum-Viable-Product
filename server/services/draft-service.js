@@ -202,7 +202,7 @@ async function initializeDraft(draftSessionId) {
  * capacity. On success, moves the player from available to purchased, debits
  * the team, appends to history, and bumps `nominationOrder`.
  */
-async function recordPurchase(draftSessionId, { playerId, playerName, teamId, price, notes }) {
+async function recordPurchase(draftSessionId, { playerId, playerName, teamId, price, notes, nominatingTeamId, mlbTeam }) {
     const session = await DraftSession.findOne({ draftSessionId });
     if (!session) {
         return { success: false, errorMessage: 'Draft session not found.' };
@@ -269,7 +269,9 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
         price,
         positionFilled: slotKey,
         notes: notes || '',
-        nominationOrder: thisNominationOrder  // 0-based: first pick = 0
+        nominationOrder: thisNominationOrder,  // 0-based: first pick = 0
+        nominatingTeamId: nominatingTeamId || null,
+        mlbTeam: mlbTeam || '',
     });
     // US-22.4: any new purchase clears the redo stack
     session.undoStack = [];
@@ -641,6 +643,8 @@ async function redoPurchase(draftSessionId) {
         positionFilled: slotKey,
         notes: entry.notes || '',
         nominationOrder: session.nominationOrder,
+        nominatingTeamId: entry.nominatingTeamId || null,
+        mlbTeam: entry.mlbTeam || '',
     });
 
     // Pop the redo stack

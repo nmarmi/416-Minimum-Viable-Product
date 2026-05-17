@@ -155,6 +155,7 @@ const DraftRoomScreen = () => {
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [comparePlayers, setComparePlayers] = useState([]);
     const [entryPlayerId, setEntryPlayerId] = useState('');
+    const [entryPlayerTeam, setEntryPlayerTeam] = useState('');
     const [, setEntryPlayerSearch] = useState('');
     const [entryPlayerSuggestions, setEntryPlayerSuggestions] = useState([]);
     const [showEntrySuggestions, setShowEntrySuggestions] = useState(false);
@@ -629,6 +630,7 @@ const DraftRoomScreen = () => {
         setEntryPlayer(getPlayerName(player));
         const pid = getPlayerId(player);
         setEntryPlayerId(pid);
+        setEntryPlayerTeam(getPlayerTeamLabel(player));
         setEntryPlayerSearch(getPlayerName(player));
         setEntryPlayerSuggestions([]);
         setShowEntrySuggestions(false);
@@ -725,11 +727,14 @@ const DraftRoomScreen = () => {
             teamId: entryWonBy,
             price: purchasedPrice,
             notes: entryNotes,
+            nominatingTeamId: entryNominatedBy || null,
+            mlbTeam: entryPlayerTeam || '',
         });
         setEntrySubmitting(false);
         if (res.status === 200 && res.data?.success) {
             setEntryPlayer('');
             setEntryPlayerId('');
+            setEntryPlayerTeam('');
             setEntryPrice('');
             setEntryNotes('');
             setEntrySuccess('Purchase recorded.');
@@ -1475,6 +1480,7 @@ const DraftRoomScreen = () => {
                             <tr>
                                 <th>#</th>
                                 <th>Player</th>
+                                <th>MLB Team</th>
                                 <th>Auctioned By</th>
                                 <th>Won By</th>
                                 <th>Price</th>
@@ -1486,7 +1492,7 @@ const DraftRoomScreen = () => {
                         <tbody>
                             {(draftSession?.draftHistory || []).length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="draft-v2-empty-row">
+                                    <td colSpan={8} className="draft-v2-empty-row">
                                         No picks logged yet. Enter each completed draft result here during the live draft.
                                     </td>
                                 </tr>
@@ -1495,7 +1501,8 @@ const DraftRoomScreen = () => {
                                     <tr key={entry.purchaseId || entry.nominationOrder}>
                                         <td>{entry.nominationOrder}</td>
                                         <td>{entry.playerName}</td>
-                                        <td>--</td>
+                                        <td>{entry.mlbTeam || '--'}</td>
+                                        <td>{entry.nominatingTeamId ? getTeamName(draftSession.teams.find((t) => t.teamId === entry.nominatingTeamId)) : '--'}</td>
                                         <td>
                                             {editingPurchaseId === entry.purchaseId ? (
                                                 <select value={editingWonBy} onChange={(e) => { setEditingWonBy(e.target.value); setEditError(''); }}>
