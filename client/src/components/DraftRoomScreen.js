@@ -210,7 +210,6 @@ const DraftRoomScreen = () => {
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [savingPlayerNote, setSavingPlayerNote] = useState(false);
     const [editingNotes, setEditingNotes] = useState('');
-    const [rosterSortMode, setRosterSortMode] = useState('position'); // 'position' | 'price' | 'value'
     const [rosterTransferState, setRosterTransferState] = useState(null); // { purchaseId } | null
     const teamPickerRef = useRef(null);
     const sortMenuRef = useRef(null);
@@ -2136,17 +2135,6 @@ const DraftRoomScreen = () => {
             historyByTeam[h.teamId][pos].push(h);
         });
 
-        // Sort within each position group per current sort mode
-        Object.values(historyByTeam).forEach((byPos) => {
-            Object.values(byPos).forEach((arr) => {
-                if (rosterSortMode === 'price') {
-                    arr.sort((a, b) => b.price - a.price);
-                } else if (rosterSortMode === 'value') {
-                    arr.sort((a, b) => (Number(valuationsMap[b.playerId] ?? 0)) - (Number(valuationsMap[a.playerId] ?? 0)));
-                }
-            });
-        });
-
         // Build the full ordered row list for a team: one row per slot, blank if unfilled
         const buildRows = (teamId) => {
             const byPos = historyByTeam[teamId] || {};
@@ -2169,21 +2157,7 @@ const DraftRoomScreen = () => {
         return (
             <section className="draft-v2-module-grid one-col">
                 <article className="draft-v2-module-card full">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-                        <h3 style={{ margin: 0 }}>League Rosters</h3>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                            {['position', 'price', 'value'].map((mode) => (
-                                <button
-                                    key={mode}
-                                    type="button"
-                                    className={`draft-v2-filter-btn${rosterSortMode === mode ? ' active' : ''}`}
-                                    onClick={() => setRosterSortMode(mode)}
-                                >
-                                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <h3>League Rosters</h3>
                     <div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
                             {teams.map((team) => {
