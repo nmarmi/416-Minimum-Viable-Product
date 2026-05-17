@@ -19,7 +19,7 @@ const MLB_TEAMS = [
     'HOU','KC','LAA','LAD','MIA','MIL','MIN','NYM','NYY','ATH',
     'PHI','PIT','SD','SEA','SF','STL','TB','TEX','TOR','WSH',
 ];
-const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Depth', 'Value', 'Age', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
+const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Depth', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 const DRAFT_STATUS_META = {
     setup: { label: 'Setup', className: 'setup' },
@@ -218,9 +218,6 @@ const DraftRoomScreen = () => {
     const filtersMenuRef = useRef(null);
     const playerSearchRef = useRef(null);  // US-10.4: focus target after recording purchase
     const playersRef = useRef([]);
-    const playerCacheRef = useRef(new Map());
-    const notifFeedRef = useRef(null);
-    const loadPlayersRequestId = useRef(0);
 
     const draftSession = store.currentDraftSession;
     const availablePlayerIdsKey = useMemo(
@@ -238,21 +235,7 @@ const DraftRoomScreen = () => {
         return () => clearTimeout(timeoutId);
     }, [toast]);
 
-    useEffect(() => {
-        playersRef.current = players;
-        players.forEach((p) => {
-            const id = getPlayerId(p);
-            const name = p.name || p.playerName;
-            if (id && name) playerCacheRef.current.set(id, { name, team: p.mlbTeam || p.team });
-        });
-    }, [players]);
-
-    useEffect(() => {
-        if (!showFeed) return undefined;
-        const onDown = (e) => { if (!notifFeedRef.current?.contains(e.target)) setShowFeed(false); };
-        document.addEventListener('mousedown', onDown);
-        return () => document.removeEventListener('mousedown', onDown);
-    }, [showFeed]);
+    useEffect(() => { playersRef.current = players; }, [players]);
 
     useEffect(() => {
         if (!isTeamPickerOpen) return undefined;
@@ -276,7 +259,7 @@ const DraftRoomScreen = () => {
     }, [isFiltersMenuOpen]);
 
     // Natural sort direction for each stat field (first click)
-    const STAT_DEFAULT_DIR = { dollar: 'desc', age: 'asc', hr: 'desc', rbi: 'desc', r: 'desc', sb: 'desc', avg: 'desc', w: 'desc', sv: 'desc', k: 'desc', era: 'asc', whip: 'asc' };
+    const STAT_DEFAULT_DIR = { dollar: 'desc', adp: 'asc', hr: 'desc', rbi: 'desc', r: 'desc', sb: 'desc', avg: 'desc', w: 'desc', sv: 'desc', k: 'desc', era: 'asc', whip: 'asc' };
 
     // US-22.1/22.2: tri-state toggle — desc → asc → off (back to name)
     const handleColSort = (field) => {
@@ -375,7 +358,7 @@ const DraftRoomScreen = () => {
                 return null;
             }
             const statMap = {
-                age: () => pickFirstDefined(p, ['age', 'playerAge', 'Age']),
+                adp: () => pickFirstDefined(p, ['adp', 'ADP']),
                 hr:  () => p?.hr,
                 rbi: () => p?.rbi,
                 r:   () => p?.r,
@@ -414,11 +397,9 @@ const DraftRoomScreen = () => {
     }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort, valuationsMap]);
 
     const loadPlayers = useCallback(async () => {
-        const requestId = ++loadPlayersRequestId.current;
         setPlayersLoading(true);
         setPlayersError('');
-        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 2000 });
-        if (requestId !== loadPlayersRequestId.current) return false;
+        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 500 });
         setPlayersLoading(false);
         if (res.status === 200 && res.data?.success) {
             setPlayers(res.data.players || []);
@@ -516,18 +497,6 @@ const DraftRoomScreen = () => {
     // US-25.1: subscribe to SSE push stream with exponential backoff reconnect
     useEffect(() => {
         if (!draftSessionId) return;
-
-        // Prime the player cache so SSE events can show names regardless of which tab is active
-        getSessionPlayers(draftSessionId, { status: 'available', limit: 2000 }).then((res) => {
-            if (res.status === 200 && res.data?.success) {
-                for (const p of (res.data.players || [])) {
-                    const id = getPlayerId(p);
-                    const name = p.name || p.playerName;
-                    if (id && name) playerCacheRef.current.set(id, { name, team: p.mlbTeam || p.team });
-                }
-            }
-        }).catch(() => {});
-
         let es = null;
         let retryMs = 2000;
         let retryTimer = null;
@@ -545,9 +514,9 @@ const DraftRoomScreen = () => {
                     if (e.lastEventId) lastEventId = e.lastEventId;
                     retryMs = 2000; // reset backoff on successful message
 
-                    const cached = playerCacheRef.current.get(data.playerId);
-                    const rawName = data.playerName || data.name || cached?.name;
-                    const team = data.team || data.mlbTeam || cached?.team;
+                    const playerObj = playersRef.current.find((p) => getPlayerId(p) === data.playerId);
+                    const rawName = data.playerName || data.name || playerObj?.name || playerObj?.playerName;
+                    const team = data.team || data.mlbTeam || playerObj?.mlbTeam || playerObj?.team;
                     const displayPlayer = rawName
                         ? `${abbrevPlayerName(rawName)}${team ? ` (${team})` : ''}`
                         : data.playerId;
@@ -1162,7 +1131,7 @@ const DraftRoomScreen = () => {
                                 <th><GlossaryTerm term="Position eligibility">Pos</GlossaryTerm></th>
                                 <th>Depth</th>
                                 <th className="draft-v2-th-sortable" onClick={() => handleColSort('dollar')}><GlossaryTerm term="Value">$ Value</GlossaryTerm>{sortIcon('dollar')}</th>
-                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('age')}>Age{sortIcon('age')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('adp')}><GlossaryTerm term="ADP">ADP</GlossaryTerm>{sortIcon('adp')}</th>
                                 <th className="draft-v2-th-sortable" onClick={() => handleColSort('hr')}>HR{sortIcon('hr')}</th>
                                 <th className="draft-v2-th-sortable" onClick={() => handleColSort('rbi')}>RBI{sortIcon('rbi')}</th>
                                 <th className="draft-v2-th-sortable" onClick={() => handleColSort('r')}>R{sortIcon('r')}</th>
@@ -1223,7 +1192,7 @@ const DraftRoomScreen = () => {
                                             </span>
                                         </td>
                                         <td>{getPlayerValuation(player)}</td>
-                                        <td>{formatStat(pickFirstDefined(player, ['age', 'playerAge', 'Age']))}</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
                                         <td>{formatStat(player.hr)}</td>
                                         <td>{formatStat(player.rbi)}</td>
                                         <td>{formatStat(player.r)}</td>
@@ -1555,14 +1524,14 @@ const DraftRoomScreen = () => {
                     <span style={{ display: 'inline-flex', gap: 6 }}>
                         <button
                             type="button"
-                            className="draft-v2-icon-btn"
+                            className="draft-v2-undo-btn"
                             onClick={handleUndoLastPurchase}
                             disabled={!draftSession?.draftHistory?.length}
                             title="Undo last purchase"
                         >⟲</button>
                         <button
                             type="button"
-                            className="draft-v2-icon-btn"
+                            className="draft-v2-undo-btn"
                             onClick={handleRedoPurchase}
                             disabled={!(draftSession?.undoStackSize > 0)}
                             title="Redo last undone purchase"
@@ -2283,14 +2252,14 @@ const DraftRoomScreen = () => {
                         <span style={{ display: 'inline-flex', gap: 6 }}>
                             <button
                                 type="button"
-                                className="draft-v2-icon-btn"
+                                className="draft-v2-undo-btn"
                                 onClick={handleRosterUndo}
                                 disabled={!rosterUndoStack.length}
                                 title="Undo last roster change"
                             >⟲</button>
                             <button
                                 type="button"
-                                className="draft-v2-icon-btn"
+                                className="draft-v2-undo-btn"
                                 onClick={handleRosterRedo}
                                 disabled={!rosterRedoStack.length}
                                 title="Redo last undone roster change"
@@ -2557,7 +2526,7 @@ const DraftRoomScreen = () => {
                             )}
                         </button>
                         {showFeed && (
-                            <div className="draft-v2-notif-feed" ref={notifFeedRef}>
+                            <div className="draft-v2-notif-feed">
                                 <div className="draft-v2-notif-feed-header">
                                     <span>Notifications ({pushEvents.length})</span>
                                     <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -2574,7 +2543,8 @@ const DraftRoomScreen = () => {
                                 {pushEvents.length === 0
                                     ? <p className="draft-v2-notif-empty">No notifications yet.</p>
                                     : pushEvents.map((ev) => (
-                                        <div key={ev.id} className={`draft-v2-notif-row draft-v2-notif-${ev.type.replace(/\./g, '-')}`}>
+                                        <div key={ev.id} className={`draft-v2-notif-row draft-v2-notif-${ev.type.replace(/\./g, '-')}`}
+                                            onClick={() => { setShowFeed(false); /* could open player detail */ }}>
                                             <span>{ev.label}</span>
                                             <span className="draft-v2-notif-ts">{new Date(ev.ts).toLocaleTimeString()}</span>
                                         </div>

@@ -1748,6 +1748,34 @@ body {
   cursor: not-allowed;
 }
 
+/* Undo/redo buttons inside light-background tab cards */
+.draft-v2-undo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 17px;
+  cursor: pointer;
+  transition: background 0.13s, border-color 0.13s, color 0.13s, box-shadow 0.13s;
+}
+
+.draft-v2-undo-btn:hover:not(:disabled) {
+  background: #4338ca;
+  border-color: #4338ca;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(67, 56, 202, 0.25);
+}
+
+.draft-v2-undo-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
 .draft-v2-title-wrap h1 {
   margin: 0;
   font-size: 18px;
