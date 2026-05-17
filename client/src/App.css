@@ -3544,11 +3544,38 @@ body {
   background: #fff;
   cursor: grab;
   user-select: none;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.1s, border-color 0.1s, opacity 0.1s;
+  position: relative;
 }
 .draft-setup-taxi-order-row:active { cursor: grabbing; }
 .draft-setup-taxi-order-row:hover { background: #f7f9fc; border-color: #c9d2e3; }
 .draft-setup-taxi-order-row[draggable]:focus-visible { outline: 2px solid #4a90d9; outline-offset: 1px; }
+.draft-setup-taxi-order-row.is-dragging { opacity: 0.35; border-style: dashed; }
+
+/* blue drop-position indicators */
+.draft-setup-taxi-order-row.drop-before::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: #4a90d9;
+  pointer-events: none;
+}
+.draft-setup-taxi-order-row.drop-after::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: #4a90d9;
+  pointer-events: none;
+}
+
 .draft-setup-taxi-drag-handle { color: #b0bac9; font-size: 1rem; cursor: grab; }
 .draft-setup-taxi-rank { color: #94a3b8; font-size: 0.8rem; min-width: 20px; text-align: right; }
 .draft-setup-taxi-name { flex: 1; font-weight: 500; }

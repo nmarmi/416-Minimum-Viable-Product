@@ -256,6 +256,8 @@ export default function DraftSessionSetupScreen() {
     // US-18.1: keepers state
     const [keepersExpanded, setKeepersExpanded] = useState(false);
     const [taxiExpanded,    setTaxiExpanded]    = useState(false);
+    const [taxiDragIdx,     setTaxiDragIdx]     = useState(null);
+    const [taxiDropIdx,     setTaxiDropIdx]     = useState(null);
 
     const [keeperTeamId,    setKeeperTeamId]    = useState('');
     const [keeperSearch,    setKeeperSearch]     = useState('');
@@ -753,34 +755,60 @@ export default function DraftSessionSetupScreen() {
                     const handleDragStart = (e, idx) => {
                         e.dataTransfer.effectAllowed = 'move';
                         e.dataTransfer.setData('text/plain', String(idx));
+                        setTaxiDragIdx(idx);
                     };
-                    const handleDragOver = (e) => {
+                    const handleDragOver = (e, idx) => {
                         e.preventDefault();
                         e.dataTransfer.dropEffect = 'move';
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const newDropIdx = e.clientY < rect.top + rect.height / 2 ? idx : idx + 1;
+                        if (newDropIdx !== taxiDropIdx) setTaxiDropIdx(newDropIdx);
                     };
-                    const handleDrop = (e, toIdx) => {
+                    const handleDragEnd = () => {
+                        setTaxiDragIdx(null);
+                        setTaxiDropIdx(null);
+                    };
+                    const handleDrop = (e) => {
                         e.preventDefault();
                         const fromIdx = Number(e.dataTransfer.getData('text/plain'));
-                        if (fromIdx === toIdx) return;
+                        if (taxiDropIdx === null) { handleDragEnd(); return; }
                         const next = [...order];
                         const [moved] = next.splice(fromIdx, 1);
-                        next.splice(toIdx, 0, moved);
+                        const insertAt = taxiDropIdx > fromIdx ? taxiDropIdx - 1 : taxiDropIdx;
+                        next.splice(insertAt, 0, moved);
                         setOrder(next);
+                        handleDragEnd();
                     };
 
+                    // show the blue line above row `idx` when dropIdx===idx,
+                    // but suppress it when it's a visual no-op (directly above/below the dragged row)
+                    const showLineBefore = (idx) =>
+                        taxiDragIdx !== null &&
+                        taxiDropIdx === idx &&
+                        taxiDragIdx !== idx &&
+                        taxiDragIdx !== idx - 1;
+
                     return (
-                        <div className="draft-setup-team-list draft-setup-taxi-order-list">
+                        <div className="draft-setup-team-list draft-setup-taxi-order-list" onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) { setTaxiDropIdx(null); } }}>
                             {order.map((teamId, idx) => {
                                 const team = formState.teams.find((t) => t.teamId === teamId);
                                 const displayName = (team?.teamName || teamId).replace(/^fantasy-team-(\d+)$/, 'Team $1');
+                                const isBeingDragged = taxiDragIdx === idx;
+                                const isLastAndDropAfter = idx === order.length - 1 && taxiDragIdx !== null && taxiDropIdx === order.length && taxiDragIdx !== order.length - 1;
                                 return (
                                     <div
                                         key={teamId}
-                                        className="draft-setup-taxi-order-row"
+                                        className={[
+                                            'draft-setup-taxi-order-row',
+                                            isBeingDragged ? 'is-dragging' : '',
+                                            showLineBefore(idx) ? 'drop-before' : '',
+                                            isLastAndDropAfter ? 'drop-after' : '',
+                                        ].filter(Boolean).join(' ')}
                                         draggable
                                         onDragStart={(e) => handleDragStart(e, idx)}
-                                        onDragOver={handleDragOver}
-                                        onDrop={(e) => handleDrop(e, idx)}
+                                        onDragOver={(e) => handleDragOver(e, idx)}
+                                        onDragEnd={handleDragEnd}
+                                        onDrop={handleDrop}
                                     >
                                         <span className="draft-setup-taxi-drag-handle" aria-hidden="true">⠿</span>
                                         <span className="draft-setup-taxi-rank">{idx + 1}</span>
