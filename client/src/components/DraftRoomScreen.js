@@ -218,6 +218,8 @@ const DraftRoomScreen = () => {
     const filtersMenuRef = useRef(null);
     const playerSearchRef = useRef(null);  // US-10.4: focus target after recording purchase
     const playersRef = useRef([]);
+    const playerCacheRef = useRef(new Map());
+    const notifFeedRef = useRef(null);
     const loadPlayersRequestId = useRef(0);
 
     const draftSession = store.currentDraftSession;
@@ -236,7 +238,21 @@ const DraftRoomScreen = () => {
         return () => clearTimeout(timeoutId);
     }, [toast]);
 
-    useEffect(() => { playersRef.current = players; }, [players]);
+    useEffect(() => {
+        playersRef.current = players;
+        players.forEach((p) => {
+            const id = getPlayerId(p);
+            const name = p.name || p.playerName;
+            if (id && name) playerCacheRef.current.set(id, { name, team: p.mlbTeam || p.team });
+        });
+    }, [players]);
+
+    useEffect(() => {
+        if (!showFeed) return undefined;
+        const onDown = (e) => { if (!notifFeedRef.current?.contains(e.target)) setShowFeed(false); };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [showFeed]);
 
     useEffect(() => {
         if (!isTeamPickerOpen) return undefined;
@@ -2541,7 +2557,7 @@ const DraftRoomScreen = () => {
                             )}
                         </button>
                         {showFeed && (
-                            <div className="draft-v2-notif-feed">
+                            <div className="draft-v2-notif-feed" ref={notifFeedRef}>
                                 <div className="draft-v2-notif-feed-header">
                                     <span>Notifications ({pushEvents.length})</span>
                                     <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -2558,8 +2574,7 @@ const DraftRoomScreen = () => {
                                 {pushEvents.length === 0
                                     ? <p className="draft-v2-notif-empty">No notifications yet.</p>
                                     : pushEvents.map((ev) => (
-                                        <div key={ev.id} className={`draft-v2-notif-row draft-v2-notif-${ev.type.replace(/\./g, '-')}`}
-                                            onClick={() => { setShowFeed(false); /* could open player detail */ }}>
+                                        <div key={ev.id} className={`draft-v2-notif-row draft-v2-notif-${ev.type.replace(/\./g, '-')}`}>
                                             <span>{ev.label}</span>
                                             <span className="draft-v2-notif-ts">{new Date(ev.ts).toLocaleTimeString()}</span>
                                         </div>
