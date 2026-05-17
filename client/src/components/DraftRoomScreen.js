@@ -211,6 +211,8 @@ const DraftRoomScreen = () => {
     const [savingPlayerNote, setSavingPlayerNote] = useState(false);
     const [editingNotes, setEditingNotes] = useState('');
     const [rosterTransferState, setRosterTransferState] = useState(null); // { purchaseId } | null
+    const [rosterUndoStack, setRosterUndoStack] = useState([]);
+    const [rosterRedoStack, setRosterRedoStack] = useState([]);
     const teamPickerRef = useRef(null);
     const sortMenuRef = useRef(null);
     const filtersMenuRef = useRef(null);
@@ -810,10 +812,13 @@ const DraftRoomScreen = () => {
         if (!pendingUndo) return;
         setUndoSubmitting(true);
         setUndoError('');
-        const res = await store.undoPurchase(draftSessionId, pendingUndo.purchaseId);
+        const undoneId = pendingUndo.purchaseId;
+        const res = await store.undoPurchase(draftSessionId, undoneId);
         setUndoSubmitting(false);
         if (res?.status === 200 && res.data?.success) {
             setPendingUndo(null);
+            setRosterUndoStack((s) => s.filter((tx) => tx.purchaseId !== undoneId));
+            setRosterRedoStack((s) => s.filter((tx) => tx.purchaseId !== undoneId));
         } else {
             setUndoError(res?.data?.errorMessage || 'Unable to undo this purchase.');
         }
@@ -828,6 +833,19 @@ const DraftRoomScreen = () => {
     const handleUndoRowPurchase = async (purchaseId) => {
         const entry = (draftSession?.draftHistory || []).find((h) => h.purchaseId === purchaseId);
         openUndoDialog(entry);
+    };
+
+    const handleRedoPurchase = async () => {
+        const res = await store.redoPurchase(draftSessionId);
+        if (!res?.data?.success) {
+            showToast('error', res?.data?.errorMessage || 'Redo failed.');
+        } else {
+            showToast('success', 'Purchase re-applied.');
+            // The redone purchase is back in its original state; any roster ops for it are stale.
+            // We don't know the purchaseId from the response so clear the full roster stacks.
+            setRosterUndoStack([]);
+            setRosterRedoStack([]);
+        }
     };
 
     const handleStartEdit = (entry) => {
@@ -906,6 +924,8 @@ const DraftRoomScreen = () => {
 
         if (res?.status === 200 && res.data?.success) {
             handleCancelEdit();
+            setRosterUndoStack((s) => s.filter((tx) => tx.purchaseId !== purchaseId));
+            setRosterRedoStack((s) => s.filter((tx) => tx.purchaseId !== purchaseId));
         } else {
             setEditError(res?.data?.errorMessage || 'Failed to save edit.');
         }
@@ -1499,7 +1519,25 @@ const DraftRoomScreen = () => {
             </article>
 
             <article className="draft-v2-module-card full">
-                <h3>Draft Results Log</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <h3 style={{ margin: 0 }}>Draft Results Log</h3>
+                    <span style={{ display: 'inline-flex', gap: 6 }}>
+                        <button
+                            type="button"
+                            className="draft-v2-icon-btn"
+                            onClick={handleUndoLastPurchase}
+                            disabled={!draftSession?.draftHistory?.length}
+                            title="Undo last purchase"
+                        >⟲</button>
+                        <button
+                            type="button"
+                            className="draft-v2-icon-btn"
+                            onClick={handleRedoPurchase}
+                            disabled={!(draftSession?.undoStackSize > 0)}
+                            title="Redo last undone purchase"
+                        >↻</button>
+                    </span>
+                </div>
                 <div className="draft-v2-table-wrap">
                     <table>
                         <thead>
@@ -2098,6 +2136,58 @@ const DraftRoomScreen = () => {
         );
     };
 
+    const pushRosterTransaction = (tx) => {
+        setRosterUndoStack((s) => [...s, tx]);
+        setRosterRedoStack([]);
+    };
+
+    const handleRosterUndo = async () => {
+        if (!rosterUndoStack.length) return;
+        const tx = rosterUndoStack[rosterUndoStack.length - 1];
+        let res;
+        if (tx.type === 'movePosition') {
+            const { movePosition: movePosReq } = await import('../draft-sessions/requests.js');
+            res = await movePosReq(draftSessionId, tx.purchaseId, tx.oldPos, tx.rawPositions);
+        } else {
+            res = await store.editPurchase(draftSessionId, tx.purchaseId, { newTeamId: tx.oldTeamId });
+        }
+        if (res?.status === 200 && res.data?.success) {
+            await store.loadDraftSession(draftSessionId);
+            setRosterUndoStack((s) => s.slice(0, -1));
+            setRosterRedoStack((s) => [...s, tx]);
+        } else {
+            // Purchase was deleted (undone at draft board level) — drop the stale transaction
+            setRosterUndoStack((s) => s.slice(0, -1));
+            const isStale = res?.status === 404 || res?.data?.errorMessage?.toLowerCase().includes('not found');
+            showToast('error', isStale
+                ? `Cannot undo: ${tx.playerName || 'player'} was removed from the draft.`
+                : res?.data?.errorMessage || 'Could not undo roster change.');
+        }
+    };
+
+    const handleRosterRedo = async () => {
+        if (!rosterRedoStack.length) return;
+        const tx = rosterRedoStack[rosterRedoStack.length - 1];
+        let res;
+        if (tx.type === 'movePosition') {
+            const { movePosition: movePosReq } = await import('../draft-sessions/requests.js');
+            res = await movePosReq(draftSessionId, tx.purchaseId, tx.newPos, tx.rawPositions);
+        } else {
+            res = await store.editPurchase(draftSessionId, tx.purchaseId, { newTeamId: tx.newTeamId });
+        }
+        if (res?.status === 200 && res.data?.success) {
+            await store.loadDraftSession(draftSessionId);
+            setRosterRedoStack((s) => s.slice(0, -1));
+            setRosterUndoStack((s) => [...s, tx]);
+        } else {
+            setRosterRedoStack((s) => s.slice(0, -1));
+            const isStale = res?.status === 404 || res?.data?.errorMessage?.toLowerCase().includes('not found');
+            showToast('error', isStale
+                ? `Cannot redo: ${tx.playerName || 'player'} was removed from the draft.`
+                : res?.data?.errorMessage || 'Could not redo roster change.');
+        }
+    };
+
     const renderLeagueRostersTab = () => {
         const teams = draftSession?.teams || [];
         const draftHistory = draftSession?.draftHistory || [];
@@ -2157,7 +2247,25 @@ const DraftRoomScreen = () => {
         return (
             <section className="draft-v2-module-grid one-col">
                 <article className="draft-v2-module-card full">
-                    <h3>League Rosters</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <h3 style={{ margin: 0 }}>League Rosters</h3>
+                        <span style={{ display: 'inline-flex', gap: 6 }}>
+                            <button
+                                type="button"
+                                className="draft-v2-icon-btn"
+                                onClick={handleRosterUndo}
+                                disabled={!rosterUndoStack.length}
+                                title="Undo last roster change"
+                            >⟲</button>
+                            <button
+                                type="button"
+                                className="draft-v2-icon-btn"
+                                onClick={handleRosterRedo}
+                                disabled={!rosterRedoStack.length}
+                                title="Redo last undone roster change"
+                            >↻</button>
+                        </span>
+                    </div>
                     <div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
                             {teams.map((team) => {
@@ -2217,13 +2325,15 @@ const DraftRoomScreen = () => {
                                                                         style={{ fontSize: '0.72rem', padding: '1px 2px', minWidth: 48 }}
                                                                         onChange={async (e) => {
                                                                             const newPos = e.target.value;
-                                                                            if (!newPos || newPos === h.positionFilled) return;
+                                                                            const oldPos = h.positionFilled || '';
+                                                                            if (!newPos || newPos === oldPos) return;
                                                                             const { movePosition } = await import('../draft-sessions/requests.js');
                                                                             const res = await movePosition(draftSessionId, h.purchaseId, newPos, rawPositions);
                                                                             if (res.status === 200 && res.data?.success) {
+                                                                                pushRosterTransaction({ type: 'movePosition', purchaseId: h.purchaseId, playerName: h.playerName, oldPos, newPos, rawPositions });
                                                                                 await store.loadDraftSession(draftSessionId);
                                                                             } else {
-                                                                                e.target.value = h.positionFilled || '';
+                                                                                e.target.value = oldPos;
                                                                                 showToast('error', res.data?.errorMessage || 'Could not move player.');
                                                                             }
                                                                         }}
@@ -2252,9 +2362,11 @@ const DraftRoomScreen = () => {
                                                                                 defaultValue=""
                                                                                 onChange={async (e) => {
                                                                                     const newTeamId = e.target.value;
+                                                                                    const oldTeamId = team.teamId;
                                                                                     if (!newTeamId) return;
                                                                                     const res = await store.editPurchase(draftSessionId, h.purchaseId, { newTeamId });
                                                                                     if (res.status === 200 && res.data?.success) {
+                                                                                        pushRosterTransaction({ type: 'transferTeam', purchaseId: h.purchaseId, playerName: h.playerName, oldTeamId, newTeamId });
                                                                                         setRosterTransferState(null);
                                                                                     } else {
                                                                                         showToast('error', res.data?.errorMessage || 'Could not transfer player.');
@@ -2478,27 +2590,6 @@ const DraftRoomScreen = () => {
                             )}
                         </div>
                     )}
-                    <button
-                        type="button"
-                        className="draft-v2-icon-btn"
-                        aria-label="Undo"
-                        disabled={!draftSession?.draftHistory?.length}
-                        onClick={handleUndoLastPurchase}
-                        title="Undo last purchase"
-                    >⟲</button>
-                    {/* US-22.4: Redo button */}
-                    <button
-                        type="button"
-                        className="draft-v2-icon-btn"
-                        aria-label="Redo"
-                        disabled={!(draftSession?.undoStackSize > 0)}
-                        onClick={async () => {
-                            const res = await store.redoPurchase(draftSessionId);
-                            if (!res?.data?.success) showToast('error', res?.data?.errorMessage || 'Redo failed.');
-                            else showToast('success', 'Purchase re-applied.');
-                        }}
-                        title="Redo last undo"
-                    >↻</button>
                     <button type="button" className="draft-v2-icon-btn" aria-label="Export">⬇︎</button>
                 </div>
             </header>
