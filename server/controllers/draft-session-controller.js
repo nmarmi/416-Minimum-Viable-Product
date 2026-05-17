@@ -360,7 +360,7 @@ const getSessionPlayers = async (req, res) => {
 
         if (licensedApi.hasConfig()) {
             try {
-                const data = await licensedApi.getPlayerPool({ search, position, team });
+                const data = await licensedApi.getPlayers({ search, position, team, limit: 2000 });
                 upstreamPlayers = Array.isArray(data?.players) ? data.players : [];
                 dataAsOf = data?.dataAsOf || null;
                 staleWarnings = data?.staleWarnings || [];

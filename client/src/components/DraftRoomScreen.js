@@ -218,6 +218,7 @@ const DraftRoomScreen = () => {
     const filtersMenuRef = useRef(null);
     const playerSearchRef = useRef(null);  // US-10.4: focus target after recording purchase
     const playersRef = useRef([]);
+    const loadPlayersRequestId = useRef(0);
 
     const draftSession = store.currentDraftSession;
     const availablePlayerIdsKey = useMemo(
@@ -397,9 +398,11 @@ const DraftRoomScreen = () => {
     }, [players, injuryOnly, startersOnly, availableSet, positionFilter, playerSort, valuationsMap]);
 
     const loadPlayers = useCallback(async () => {
+        const requestId = ++loadPlayersRequestId.current;
         setPlayersLoading(true);
         setPlayersError('');
         const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 500 });
+        if (requestId !== loadPlayersRequestId.current) return false;
         setPlayersLoading(false);
         if (res.status === 200 && res.data?.success) {
             setPlayers(res.data.players || []);
