@@ -2181,12 +2181,12 @@ const DraftRoomScreen = () => {
                         </div>
                     </div>
                     <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
-                        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: 'max-content' }}>
+                        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 16, alignItems: 'flex-start' }}>
                             {teams.map((team) => {
                                 const rows = buildRows(team.teamId);
                                 const isMyTeam = team.teamId === myTeamId;
                                 return (
-                                    <div key={team.teamId} style={{ minWidth: 260 }}>
+                                    <div key={team.teamId} style={{ width: 280, flexShrink: 0 }}>
                                         <div style={{
                                             display: 'flex',
                                             justifyContent: 'space-between',
@@ -2201,23 +2201,24 @@ const DraftRoomScreen = () => {
                                             </strong>
                                             <span className="draft-v2-auction-muted" style={{ fontSize: '0.75rem' }}>${team.budgetRemaining ?? '--'}</span>
                                         </div>
-                                        <div className="draft-v2-table-wrap">
-                                            <table style={{ width: '100%' }}>
+                                        <div style={{ border: '1px solid #d5d8e1', background: '#fff' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                 <tbody>
                                                     {rows.map(({ pos, entry }, idx) => {
+                                                        const tdBase = { padding: '4px 6px', borderBottom: '1px solid #edf0f6', whiteSpace: 'nowrap' };
                                                         if (!entry) {
                                                             return (
                                                                 <tr key={`${pos}-${idx}`} style={{ opacity: 0.45 }}>
-                                                                    <td style={{ paddingRight: 4, whiteSpace: 'nowrap', fontSize: '0.75rem', color: '#8892a4', fontWeight: 600, width: 36 }}>{pos}</td>
-                                                                    <td colSpan={3} style={{ color: '#b0b8c8', fontSize: '0.75rem', fontStyle: 'italic' }}>—</td>
-                                                                    <td />
+                                                                    <td style={{ ...tdBase, fontSize: '0.75rem', color: '#8892a4', fontWeight: 600, width: 36 }}>{pos}</td>
+                                                                    <td colSpan={3} style={{ ...tdBase, color: '#b0b8c8', fontSize: '0.75rem', fontStyle: 'italic' }}>—</td>
+                                                                    <td style={tdBase} />
                                                                 </tr>
                                                             );
                                                         }
                                                         const h = entry;
                                                         return (
                                                             <tr key={h.purchaseId}>
-                                                                <td style={{ paddingRight: 4, whiteSpace: 'nowrap', width: 36 }}>
+                                                                <td style={{ ...tdBase, width: 36 }}>
                                                                     <select
                                                                         key={h.purchaseId + (h.positionFilled || '')}
                                                                         defaultValue={h.positionFilled || ''}
@@ -2242,16 +2243,16 @@ const DraftRoomScreen = () => {
                                                                         {!allSlotKeys.includes('BENCH') && <option value="BENCH">BENCH</option>}
                                                                     </select>
                                                                 </td>
-                                                                <td style={{ paddingRight: 6, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                                                                <td style={{ ...tdBase, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8rem' }}>
                                                                     {h.playerName}
                                                                 </td>
-                                                                <td style={{ paddingRight: 5, fontSize: '0.72rem', color: '#6b7894', whiteSpace: 'nowrap' }}>
+                                                                <td style={{ ...tdBase, fontSize: '0.72rem', color: '#6b7894' }}>
                                                                     {h.contractYears > 0 ? h.contractYears : '—'}
                                                                 </td>
-                                                                <td style={{ paddingRight: 4, fontWeight: 600, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                                                <td style={{ ...tdBase, fontWeight: 600, fontSize: '0.8rem' }}>
                                                                     ${h.price}
                                                                 </td>
-                                                                <td style={{ paddingLeft: 2, whiteSpace: 'nowrap' }}>
+                                                                <td style={{ ...tdBase, padding: '4px 2px' }}>
                                                                     {rosterTransferState?.purchaseId === h.purchaseId ? (
                                                                         <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
                                                                             <select
