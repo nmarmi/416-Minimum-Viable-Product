@@ -500,6 +500,18 @@ const DraftRoomScreen = () => {
     // US-25.1: subscribe to SSE push stream with exponential backoff reconnect
     useEffect(() => {
         if (!draftSessionId) return;
+
+        // Prime the player cache so SSE events can show names regardless of which tab is active
+        getSessionPlayers(draftSessionId, { status: 'available', limit: 2000 }).then((res) => {
+            if (res.status === 200 && res.data?.success) {
+                for (const p of (res.data.players || [])) {
+                    const id = getPlayerId(p);
+                    const name = p.name || p.playerName;
+                    if (id && name) playerCacheRef.current.set(id, { name, team: p.mlbTeam || p.team });
+                }
+            }
+        }).catch(() => {});
+
         let es = null;
         let retryMs = 2000;
         let retryTimer = null;
@@ -517,9 +529,9 @@ const DraftRoomScreen = () => {
                     if (e.lastEventId) lastEventId = e.lastEventId;
                     retryMs = 2000; // reset backoff on successful message
 
-                    const playerObj = playersRef.current.find((p) => getPlayerId(p) === data.playerId);
-                    const rawName = data.playerName || data.name || playerObj?.name || playerObj?.playerName;
-                    const team = data.team || data.mlbTeam || playerObj?.mlbTeam || playerObj?.team;
+                    const cached = playerCacheRef.current.get(data.playerId);
+                    const rawName = data.playerName || data.name || cached?.name;
+                    const team = data.team || data.mlbTeam || cached?.team;
                     const displayPlayer = rawName
                         ? `${abbrevPlayerName(rawName)}${team ? ` (${team})` : ''}`
                         : data.playerId;
