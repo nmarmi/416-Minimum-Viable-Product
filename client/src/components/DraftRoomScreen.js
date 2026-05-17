@@ -118,6 +118,12 @@ const formatDataAsOf = (value) => {
 };
 
 const getPlayerId = (player) => player.playerId || player.id || player._id || `${getPlayerName(player)}-${getPlayerTeamLabel(player)}`;
+const abbrevPlayerName = (fullName) => {
+    if (!fullName) return fullName;
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length < 2) return fullName;
+    return `${parts[0][0]}. ${parts.slice(1).join(' ')}`;
+};
 
 const buildRosterPlanner = (draftSession, teamId) => {
     const slots = draftSession?.leagueSettings?.rosterSlots || {};
@@ -207,6 +213,7 @@ const DraftRoomScreen = () => {
     const sortMenuRef = useRef(null);
     const filtersMenuRef = useRef(null);
     const playerSearchRef = useRef(null);  // US-10.4: focus target after recording purchase
+    const playersRef = useRef([]);
 
     const draftSession = store.currentDraftSession;
     const availablePlayerIdsKey = useMemo(
@@ -223,6 +230,8 @@ const DraftRoomScreen = () => {
         const timeoutId = setTimeout(() => setToast(null), toast.duration || 4000);
         return () => clearTimeout(timeoutId);
     }, [toast]);
+
+    useEffect(() => { playersRef.current = players; }, [players]);
 
     useEffect(() => {
         if (!isTeamPickerOpen) return undefined;
@@ -501,11 +510,17 @@ const DraftRoomScreen = () => {
                     if (e.lastEventId) lastEventId = e.lastEventId;
                     retryMs = 2000; // reset backoff on successful message
 
+                    const playerObj = playersRef.current.find((p) => getPlayerId(p) === data.playerId);
+                    const rawName = data.playerName || data.name || playerObj?.name || playerObj?.playerName;
+                    const team = data.team || data.mlbTeam || playerObj?.mlbTeam || playerObj?.team;
+                    const displayPlayer = rawName
+                        ? `${abbrevPlayerName(rawName)}${team ? ` (${team})` : ''}`
+                        : data.playerId;
                     const label = type === 'player.injury'
-                        ? `🚨 ${data.playerId} → ${data.newValue || data.status || 'status change'}`
+                        ? `🚨 ${displayPlayer} → ${data.newValue || data.status || 'status change'}`
                         : type === 'player.transaction'
-                        ? `🔄 ${data.playerId} — ${data.newValue?.typeDesc || 'transaction'}`
-                        : `📊 ${data.playerId} — depth chart updated`;
+                        ? `🔄 ${displayPlayer} — ${data.newValue?.typeDesc || 'transaction'}`
+                        : `📊 ${displayPlayer} — depth chart updated`;
 
                     const event = { id: data.id, type, playerId: data.playerId, label, ts: Date.now(), data };
                     setPushEvents((prev) => [event, ...prev].slice(0, 50));
