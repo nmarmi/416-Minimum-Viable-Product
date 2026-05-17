@@ -2181,7 +2181,7 @@ const DraftRoomScreen = () => {
                         </div>
                     </div>
                     <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
-                        <div style={{ display: 'inline-flex', gap: 16, alignItems: 'flex-start', minWidth: 'max-content' }}>
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: 'max-content' }}>
                             {teams.map((team) => {
                                 const rows = buildRows(team.teamId);
                                 const isMyTeam = team.teamId === myTeamId;
