@@ -10,7 +10,8 @@ import PlayerCompareModal from './PlayerCompareModal';
 import PlayerInfoModal from './PlayerInfoModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
-const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'MLB Depth', 'Taxi', 'Settings'];
+const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'League Rosters', 'MLB Depth', 'Taxi', 'Settings'];
+const POSITION_RANK = { C: 0, '1B': 1, '2B': 2, '3B': 3, SS: 4, CI: 5, MI: 6, OF: 7, UTIL: 8, U: 8, DH: 9, SP: 10, P: 11, RP: 12, BENCH: 13 };
 
 // US-24.1: all 30 MLB team abbreviations
 const MLB_TEAMS = [
@@ -209,6 +210,8 @@ const DraftRoomScreen = () => {
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [savingPlayerNote, setSavingPlayerNote] = useState(false);
     const [editingNotes, setEditingNotes] = useState('');
+    const [rosterSortMode, setRosterSortMode] = useState('position'); // 'position' | 'price' | 'value'
+    const [rosterTransferState, setRosterTransferState] = useState(null); // { purchaseId } | null
     const teamPickerRef = useRef(null);
     const sortMenuRef = useRef(null);
     const filtersMenuRef = useRef(null);
@@ -2096,14 +2099,192 @@ const DraftRoomScreen = () => {
         );
     };
 
+    const renderLeagueRostersTab = () => {
+        const teams = draftSession?.teams || [];
+        const draftHistory = draftSession?.draftHistory || [];
+        const rosterSlots = draftSession?.leagueSettings?.rosterSlots || {};
+        const myTeamId = draftSession?.myTeamId;
+
+        if (!teams.length) {
+            return (
+                <section className="draft-v2-module-grid one-col">
+                    <article className="draft-v2-module-card">
+                        <h3>League Rosters</h3>
+                        <p className="draft-v2-auction-muted">Configure the draft to populate teams.</p>
+                    </article>
+                </section>
+            );
+        }
+
+        const historyByTeam = {};
+        teams.forEach((t) => { historyByTeam[t.teamId] = []; });
+        draftHistory.forEach((h) => {
+            if (historyByTeam[h.teamId]) historyByTeam[h.teamId].push(h);
+        });
+
+        const allSlotKeys = Object.keys(rosterSlots);
+
+        const sortEntries = (entries) => {
+            const sorted = [...entries];
+            if (rosterSortMode === 'position') {
+                sorted.sort((a, b) => (POSITION_RANK[a.positionFilled] ?? 99) - (POSITION_RANK[b.positionFilled] ?? 99));
+            } else if (rosterSortMode === 'price') {
+                sorted.sort((a, b) => b.price - a.price);
+            } else {
+                sorted.sort((a, b) => (Number(valuationsMap[b.playerId] ?? 0)) - (Number(valuationsMap[a.playerId] ?? 0)));
+            }
+            return sorted;
+        };
+
+        return (
+            <section className="draft-v2-module-grid one-col">
+                <article className="draft-v2-module-card full">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                        <h3 style={{ margin: 0 }}>League Rosters</h3>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                            {['position', 'price', 'value'].map((mode) => (
+                                <button
+                                    key={mode}
+                                    type="button"
+                                    className={`draft-v2-filter-btn${rosterSortMode === mode ? ' active' : ''}`}
+                                    onClick={() => setRosterSortMode(mode)}
+                                >
+                                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {draftHistory.length === 0 ? (
+                        <div className="draft-v2-empty-box">No players drafted yet.</div>
+                    ) : (
+                        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', alignItems: 'flex-start', paddingBottom: 12 }}>
+                            {teams.map((team) => {
+                                const entries = sortEntries(historyByTeam[team.teamId] || []);
+                                const isMyTeam = team.teamId === myTeamId;
+                                return (
+                                    <div
+                                        key={team.teamId}
+                                        style={{
+                                            minWidth: 300,
+                                            flex: '0 0 auto',
+                                            background: 'var(--card-bg, #1e293b)',
+                                            border: isMyTeam ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
+                                            borderRadius: 8,
+                                            padding: 10,
+                                        }}
+                                    >
+                                        <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <strong style={{ fontSize: '0.9rem' }}>
+                                                {getTeamName(team)}
+                                                {isMyTeam && <span className="draft-v2-status-badge active" style={{ marginLeft: 6, fontSize: 10 }}>Mine</span>}
+                                            </strong>
+                                            <span className="draft-v2-auction-muted" style={{ fontSize: '0.78rem' }}>${team.budgetRemaining ?? '--'} left</span>
+                                        </div>
+                                        {entries.length === 0 ? (
+                                            <p className="draft-v2-auction-muted" style={{ fontSize: '0.78rem' }}>No players yet.</p>
+                                        ) : (
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                                <tbody>
+                                                    {entries.map((h) => (
+                                                        <tr key={h.purchaseId} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                            <td style={{ paddingRight: 4, paddingTop: 3, paddingBottom: 3, whiteSpace: 'nowrap' }}>
+                                                                <select
+                                                                    key={h.purchaseId + (h.positionFilled || '')}
+                                                                    defaultValue={h.positionFilled || ''}
+                                                                    className="draft-v2-move-select"
+                                                                    style={{ fontSize: '0.72rem', padding: '1px 2px', minWidth: 52 }}
+                                                                    onChange={async (e) => {
+                                                                        const newPos = e.target.value;
+                                                                        if (!newPos || newPos === h.positionFilled) return;
+                                                                        const { movePosition } = await import('../draft-sessions/requests.js');
+                                                                        const res = await movePosition(draftSessionId, h.purchaseId, newPos, allSlotKeys);
+                                                                        if (res.status === 200 && res.data?.success) {
+                                                                            await store.loadDraftSession(draftSessionId);
+                                                                        } else {
+                                                                            e.target.value = h.positionFilled || '';
+                                                                            showToast('error', res.data?.errorMessage || 'Could not move player.');
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    {allSlotKeys.map((pos) => (
+                                                                        <option key={pos} value={pos}>{pos}</option>
+                                                                    ))}
+                                                                    {!allSlotKeys.includes('BENCH') && <option value="BENCH">BENCH</option>}
+                                                                </select>
+                                                            </td>
+                                                            <td style={{ paddingRight: 6, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {h.playerName}
+                                                            </td>
+                                                            <td style={{ paddingRight: 6, color: '#94a3b8', fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+                                                                {h.contractYears > 0 ? h.contractYears : '—'}
+                                                            </td>
+                                                            <td style={{ paddingRight: 4, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                                ${h.price}
+                                                            </td>
+                                                            <td style={{ paddingLeft: 2, whiteSpace: 'nowrap' }}>
+                                                                {rosterTransferState?.purchaseId === h.purchaseId ? (
+                                                                    <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+                                                                        <select
+                                                                            className="draft-v2-move-select"
+                                                                            style={{ fontSize: '0.72rem', padding: '1px 2px' }}
+                                                                            defaultValue=""
+                                                                            onChange={async (e) => {
+                                                                                const newTeamId = e.target.value;
+                                                                                if (!newTeamId) return;
+                                                                                const res = await store.editPurchase(draftSessionId, h.purchaseId, { newTeamId });
+                                                                                if (res.status === 200 && res.data?.success) {
+                                                                                    setRosterTransferState(null);
+                                                                                } else {
+                                                                                    showToast('error', res.data?.errorMessage || 'Could not transfer player.');
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <option value="">To…</option>
+                                                                            {teams.filter((t) => t.teamId !== team.teamId).map((t) => (
+                                                                                <option key={t.teamId} value={t.teamId}>{getTeamName(t)}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="draft-v2-filter-btn"
+                                                                            style={{ fontSize: '0.68rem', padding: '1px 4px' }}
+                                                                            onClick={() => setRosterTransferState(null)}
+                                                                        >✕</button>
+                                                                    </span>
+                                                                ) : (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="draft-v2-filter-btn"
+                                                                        style={{ fontSize: '0.68rem', padding: '1px 4px', opacity: 0.6 }}
+                                                                        onClick={() => setRosterTransferState({ purchaseId: h.purchaseId })}
+                                                                        title="Transfer to another team"
+                                                                    >→</button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </article>
+            </section>
+        );
+    };
+
     const renderTabContent = () => {
         if (activeTab === 'Players') return renderPlayersTab();
         if (activeTab === 'Purchased') return renderPurchasedTab();
         if (activeTab === 'My Roster') return renderRosterTab();
         if (activeTab === 'Draft Board') return renderDraftBoardTab();
         if (activeTab === 'Teams')   return renderTeamsTab();
-        if (activeTab === 'Compare')   return renderCompareTab();
-        if (activeTab === 'MLB Depth') return renderMlbDepthTab();
+        if (activeTab === 'Compare')        return renderCompareTab();
+        if (activeTab === 'League Rosters') return renderLeagueRostersTab();
+        if (activeTab === 'MLB Depth')      return renderMlbDepthTab();
         if (activeTab === 'Taxi')      return renderTaxiTab();
         return renderSettingsTab();
     };
