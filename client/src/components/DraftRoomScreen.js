@@ -2235,9 +2235,6 @@ const DraftRoomScreen = () => {
                             )}
                         </div>
                     )}
-                    <span className={`league-status ${draftStatus.className}`}>
-                        {draftStatus.label}
-                    </span>
                     <button
                         type="button"
                         className="draft-v2-icon-btn"
