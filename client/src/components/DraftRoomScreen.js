@@ -2180,13 +2180,13 @@ const DraftRoomScreen = () => {
                             ))}
                         </div>
                     </div>
-                    <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
-                        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 16, alignItems: 'flex-start' }}>
+                    <div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
                             {teams.map((team) => {
                                 const rows = buildRows(team.teamId);
                                 const isMyTeam = team.teamId === myTeamId;
                                 return (
-                                    <div key={team.teamId} style={{ width: 280, flexShrink: 0 }}>
+                                    <div key={team.teamId}>
                                         <div style={{
                                             display: 'flex',
                                             justifyContent: 'space-between',
