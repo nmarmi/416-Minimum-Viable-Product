@@ -2122,6 +2122,10 @@ const DraftRoomScreen = () => {
         );
         const allSlotKeys = orderedSlotTypes;
 
+        // Build player lookup for eligibility checks
+        const playersByIdMap = {};
+        players.forEach((p) => { playersByIdMap[getPlayerId(p)] = p; });
+
         // Group draftHistory by teamId, then by positionFilled within each team
         const historyByTeam = {};
         teams.forEach((t) => { historyByTeam[t.teamId] = {}; });
@@ -2185,6 +2189,9 @@ const DraftRoomScreen = () => {
                             {teams.map((team) => {
                                 const rows = buildRows(team.teamId);
                                 const isMyTeam = team.teamId === myTeamId;
+                                const filledByPos = team?.filledRosterSlots instanceof Map
+                                    ? Object.fromEntries(team.filledRosterSlots.entries())
+                                    : (team?.filledRosterSlots || {});
                                 return (
                                     <div key={team.teamId}>
                                         <div style={{
@@ -2216,6 +2223,16 @@ const DraftRoomScreen = () => {
                                                             );
                                                         }
                                                         const h = entry;
+                                                        const playerObj = playersByIdMap[h.playerId];
+                                                        const rawPositions = playerObj
+                                                            ? (Array.isArray(playerObj.positions) ? playerObj.positions : String(playerObj.position || '').split('/').filter(Boolean))
+                                                            : [];
+                                                        const eligibleSlots = allSlotKeys.filter((slotPos) => {
+                                                            const isAlwaysEligible = slotPos === 'BENCH' || slotPos === 'UTIL';
+                                                            if (!isAlwaysEligible && rawPositions.length > 0 && !rawPositions.includes(slotPos)) return false;
+                                                            if (slotPos === h.positionFilled) return true;
+                                                            return Number(filledByPos[slotPos] || 0) < Number(rosterSlots[slotPos] || 0);
+                                                        });
                                                         return (
                                                             <tr key={h.purchaseId}>
                                                                 <td style={{ ...tdBase, width: 36 }}>
@@ -2228,7 +2245,7 @@ const DraftRoomScreen = () => {
                                                                             const newPos = e.target.value;
                                                                             if (!newPos || newPos === h.positionFilled) return;
                                                                             const { movePosition } = await import('../draft-sessions/requests.js');
-                                                                            const res = await movePosition(draftSessionId, h.purchaseId, newPos, allSlotKeys);
+                                                                            const res = await movePosition(draftSessionId, h.purchaseId, newPos, rawPositions);
                                                                             if (res.status === 200 && res.data?.success) {
                                                                                 await store.loadDraftSession(draftSessionId);
                                                                             } else {
@@ -2237,7 +2254,7 @@ const DraftRoomScreen = () => {
                                                                             }
                                                                         }}
                                                                     >
-                                                                        {allSlotKeys.map((p) => (
+                                                                        {eligibleSlots.map((p) => (
                                                                             <option key={p} value={p}>{p}</option>
                                                                         ))}
                                                                         {!allSlotKeys.includes('BENCH') && <option value="BENCH">BENCH</option>}
