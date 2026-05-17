@@ -669,52 +669,20 @@ const DraftRoomScreen = () => {
             setPlayerSuggestions([]);
             setShowPlayerSuggestions(false);
             setHighlightedPlayerIndex(-1);
-            await loadPlayers();
+            // loadPlayers useEffect fires automatically when playerSearch changes
             return;
         }
 
         await searchPlayerSuggestions(value);
-
-        const res = await fetchPlayerRows({ search: trimmed, limit: 500 });
-        if (res.status === 200 && res.data?.success) {
-            const filteredPlayers = (res.data.players || [])
-                .filter((player) => playerNameStartsWithSearch(getPlayerName(player), trimmed))
-                .sort((left, right) => getPlayerName(left).localeCompare(getPlayerName(right)));
-
-            setPlayers(filteredPlayers);
-            setPlayersTotal(filteredPlayers.length);
-            setPlayerDataAsOf(res.data.dataAsOf || null);
-            setPlayersError('');
-        } else {
-            setPlayers([]);
-            setPlayersTotal(0);
-            setPlayersError(res.data?.errorMessage || 'Failed to load players.');
-        }
+        // loadPlayers useEffect fires automatically when playerSearch changes
     };
 
-    const handleSelectPlayerSuggestion = async (player) => {
-        const selectedName = getPlayerName(player);
-
-        setPlayerSearch(selectedName);
+    const handleSelectPlayerSuggestion = (player) => {
+        setPlayerSearch(getPlayerName(player));
         setPlayerSuggestions([]);
         setShowPlayerSuggestions(false);
         setHighlightedPlayerIndex(-1);
-
-        const res = await fetchPlayerRows({ search: selectedName, limit: 500 });
-        if (res.status === 200 && res.data?.success) {
-            const matched = (res.data.players || [])
-                .filter((entry) => playerNameStartsWithSearch(getPlayerName(entry), selectedName))
-                .sort((left, right) => getPlayerName(left).localeCompare(getPlayerName(right)));
-
-            setPlayers(matched);
-            setPlayersTotal(matched.length);
-            setPlayerDataAsOf(res.data.dataAsOf || null);
-            setPlayersError('');
-        } else {
-            setPlayers([]);
-            setPlayersTotal(0);
-            setPlayersError(res.data?.errorMessage || 'Failed to load players.');
-        }
+        // loadPlayers useEffect fires automatically when playerSearch changes
     };
 
     const handlePlayerSearchKeyDown = (event) => {
