@@ -472,6 +472,15 @@ const DraftRoomScreen = () => {
         postUsage({ event: 'draft_room_open', metadata: draftSessionId ? { draftSessionId } : {} }).catch(() => {});
     }, [draftSessionId]);
 
+    // US-26: auto-populate taxi team when order advances
+    useEffect(() => {
+        const order = draftSession?.taxiDraftOrder || [];
+        const counter = draftSession?.taxiNominationOrder || 0;
+        if (order.length) {
+            setTaxiTeamId(order[counter % order.length]);
+        }
+    }, [draftSession?.taxiDraftOrder, draftSession?.taxiNominationOrder]);
+
     // US-25.1: subscribe to SSE push stream with exponential backoff reconnect
     useEffect(() => {
         if (!draftSessionId) return;
@@ -1977,7 +1986,6 @@ const DraftRoomScreen = () => {
             });
             setTaxiLoading(false);
             if (res.status === 201 && res.data?.success) {
-                if (res.data.outOfOrder) setTaxiWarning('⚠️ Pick was out of order — recorded anyway.');
                 setTaxiPlayer(null); setTaxiSearch(''); setTaxiResults([]);
                 await store.loadDraftSession(draftSessionId);
                 showToast('success', `${getPlayerName(taxiPlayer)} → ${getTeamName(teams.find((t) => t.teamId === taxiTeamId))}`);
@@ -2008,10 +2016,16 @@ const DraftRoomScreen = () => {
 
                     {/* Entry form */}
                     <div className="draft-setup-keeper-form" style={{ marginBottom: 16 }}>
-                        <select value={taxiTeamId} onChange={(e) => setTaxiTeamId(e.target.value)} className="draft-setup-keeper-select">
-                            <option value="">— Team —</option>
-                            {teams.map((t) => <option key={t.teamId} value={t.teamId}>{getTeamName(t)}</option>)}
-                        </select>
+                        {taxiOrder.length > 0 ? (
+                            <div className="draft-setup-keeper-select draft-taxi-locked-team">
+                                {nextTeam ? getTeamName(nextTeam) : '—'}
+                            </div>
+                        ) : (
+                            <select value={taxiTeamId} onChange={(e) => setTaxiTeamId(e.target.value)} className="draft-setup-keeper-select">
+                                <option value="">— Team —</option>
+                                {teams.map((t) => <option key={t.teamId} value={t.teamId}>{getTeamName(t)}</option>)}
+                            </select>
+                        )}
                         <div className="draft-setup-keeper-search">
                             <input type="text" placeholder="Search prospect…" value={taxiSearch} autoComplete="off"
                                 onChange={(e) => { setTaxiSearch(e.target.value); setTaxiPlayer(null); searchTaxi(e.target.value); }} />

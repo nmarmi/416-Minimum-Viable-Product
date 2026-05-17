@@ -3531,36 +3531,46 @@ body {
   border-bottom-color: #c6f6d5;
 }
 
-/* US-26.1: taxi draft order reorder rows */
+/* US-26.1: taxi draft order reorder rows (drag-and-drop) */
 .draft-setup-taxi-order-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid #edf0f6;
+  padding: 6px 8px;
+  border: 1px solid #edf0f6;
+  border-radius: 6px;
+  margin-bottom: 4px;
   font-size: 0.875rem;
+  background: #fff;
+  cursor: grab;
+  user-select: none;
+  transition: background 0.12s, border-color 0.12s;
 }
+.draft-setup-taxi-order-row:active { cursor: grabbing; }
+.draft-setup-taxi-order-row:hover { background: #f7f9fc; border-color: #c9d2e3; }
+.draft-setup-taxi-order-row[draggable]:focus-visible { outline: 2px solid #4a90d9; outline-offset: 1px; }
+.draft-setup-taxi-drag-handle { color: #b0bac9; font-size: 1rem; cursor: grab; }
 .draft-setup-taxi-rank { color: #94a3b8; font-size: 0.8rem; min-width: 20px; text-align: right; }
 .draft-setup-taxi-name { flex: 1; font-weight: 500; }
-.draft-setup-taxi-order-row button {
-  background: none;
-  border: 1px solid #c9d2e3;
-  border-radius: 4px;
-  padding: 2px 8px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: #4a5568;
-}
-.draft-setup-taxi-order-row button:disabled { opacity: 0.3; cursor: default; }
 
 .draft-setup-taxi-order-list {
-  display: block;
-  columns: 2;
-  column-gap: 16px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
 }
 
-.draft-setup-taxi-order-list .draft-setup-taxi-order-row {
-  break-inside: avoid;
+/* locked team display in draft room */
+.draft-taxi-locked-team {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: #eef3fb;
+  border: 1px solid #c9d2e3;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.9rem;
+  min-width: 140px;
 }
 
 /* US-20.1: note indicator on player rows */

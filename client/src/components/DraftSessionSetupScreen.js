@@ -739,7 +739,7 @@ export default function DraftSessionSetupScreen() {
                 >
                     <div>
                         <h3>Taxi Draft Order</h3>
-                        <p>Set the pick order for the taxi draft. Use ↑ ↓ to reorder. Defaults to team creation order.</p>
+                        <p>Set the pick order for the taxi draft. Drag rows to reorder. Order is strictly enforced during the draft (you can change this later).</p>
                     </div>
                     <span className="draft-setup-chevron" aria-hidden="true">{taxiExpanded ? '▲' : '▼'}</span>
                 </div>
@@ -749,27 +749,42 @@ export default function DraftSessionSetupScreen() {
                         ? formState.taxiDraftOrder
                         : formState.teams.map((t) => t.teamId);
                     const setOrder = (newOrder) => setFormState((prev) => ({ ...prev, taxiDraftOrder: newOrder }));
+
+                    const handleDragStart = (e, idx) => {
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', String(idx));
+                    };
+                    const handleDragOver = (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                    };
+                    const handleDrop = (e, toIdx) => {
+                        e.preventDefault();
+                        const fromIdx = Number(e.dataTransfer.getData('text/plain'));
+                        if (fromIdx === toIdx) return;
+                        const next = [...order];
+                        const [moved] = next.splice(fromIdx, 1);
+                        next.splice(toIdx, 0, moved);
+                        setOrder(next);
+                    };
+
                     return (
                         <div className="draft-setup-team-list draft-setup-taxi-order-list">
                             {order.map((teamId, idx) => {
                                 const team = formState.teams.find((t) => t.teamId === teamId);
                                 const displayName = (team?.teamName || teamId).replace(/^fantasy-team-(\d+)$/, 'Team $1');
                                 return (
-                                    <div key={teamId} className="draft-setup-taxi-order-row">
+                                    <div
+                                        key={teamId}
+                                        className="draft-setup-taxi-order-row"
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, idx)}
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, idx)}
+                                    >
+                                        <span className="draft-setup-taxi-drag-handle" aria-hidden="true">⠿</span>
                                         <span className="draft-setup-taxi-rank">{idx + 1}</span>
                                         <span className="draft-setup-taxi-name">{displayName}</span>
-                                        <button type="button" disabled={idx === 0}
-                                            onClick={() => {
-                                                const next = [...order];
-                                                [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-                                                setOrder(next);
-                                            }}>↑</button>
-                                        <button type="button" disabled={idx === order.length - 1}
-                                            onClick={() => {
-                                                const next = [...order];
-                                                [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-                                                setOrder(next);
-                                            }}>↓</button>
                                     </div>
                                 );
                             })}

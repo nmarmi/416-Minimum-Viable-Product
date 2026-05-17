@@ -686,7 +686,12 @@ async function recordTaxiPick(draftSessionId, { teamId, playerId, playerName }) 
     const order = session.taxiDraftOrder || [];
     const nominationOrder = session.taxiNominationOrder || 0;
     const expectedTeamId  = order.length ? order[nominationOrder % order.length] : null;
-    const outOfOrder      = Boolean(expectedTeamId && expectedTeamId !== teamId);
+
+    if (expectedTeamId && expectedTeamId !== teamId) {
+        const expectedTeam = session.teams.find((t) => t.teamId === expectedTeamId);
+        const expectedName = expectedTeam?.teamName || expectedTeamId;
+        return { success: false, errorMessage: `It's ${expectedName}'s pick — taxi order must be followed.` };
+    }
 
     const taxiPickId = `taxi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     if (!team.minorLeaguePlayers) team.minorLeaguePlayers = [];
@@ -699,7 +704,7 @@ async function recordTaxiPick(draftSessionId, { teamId, playerId, playerName }) 
 
     session.markModified('teams');
     await session.save();
-    return { success: true, session, snapshot: buildSnapshot(session), outOfOrder, taxiPickId };
+    return { success: true, session, snapshot: buildSnapshot(session), taxiPickId };
 }
 
 // US-26.6: undo a taxi pick
