@@ -226,7 +226,7 @@ describe('US-12.1 player pool hydration', () => {
             pooledAt: new Date('2026-05-11T01:00:00.000Z'),
         });
         vi.spyOn(licensedApi, 'hasConfig').mockReturnValue(true);
-        vi.spyOn(licensedApi, 'getPlayerPool').mockResolvedValue({
+        vi.spyOn(licensedApi, 'getPlayers').mockResolvedValue({
             players: [
                 {
                     playerId: 'mlb-1',
@@ -255,7 +255,7 @@ describe('US-12.1 player pool hydration', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(licensedApi.getPlayerPool).toHaveBeenCalledTimes(1);
+        expect(licensedApi.getPlayers).toHaveBeenCalledTimes(1);
         expect(res.body.players).toHaveLength(2);
         expect(res.body.players[0]).toMatchObject({
             playerId: 'mlb-1',
