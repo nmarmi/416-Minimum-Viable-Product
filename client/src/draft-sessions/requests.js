@@ -100,6 +100,7 @@ const draftSessionsApi = {
     getSessionPlayers,
     recordPurchase,
     undoPurchase,
+    redoPurchase,
     editPurchase,
     movePosition,
     setPlayerNote,
