@@ -2269,12 +2269,39 @@ body {
 }
 
 .draft-v2-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: 1px solid #d6d8de;
   border-radius: 999px;
   background: #fff;
   color: #454a5c;
   font-size: 16px;
   padding: 6px 12px;
+}
+
+.draft-v2-count-pill-sep {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  background: #d6d8de;
+  flex-shrink: 0;
+}
+
+.draft-v2-count-pill-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3b6fd4;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.draft-v2-count-pill-btn:disabled {
+  color: #9aa0b4;
+  cursor: default;
 }
 
 .draft-v2-search-actions {
@@ -2329,22 +2356,6 @@ body {
   align-items: center;
   gap: 8px;
   margin-bottom: 0;
-}
-
-.draft-v2-refresh-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.draft-v2-refresh-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.draft-v2-refresh-stack .draft-v2-filter-btn {
-  width: 100%;
 }
 
 .draft-v2-filter-btn {
