@@ -2632,7 +2632,6 @@ const DraftRoomScreen = () => {
                             )}
                         </div>
                     )}
-                    <button type="button" className="draft-v2-icon-btn" aria-label="Export">⬇︎</button>
                 </div>
             </header>
 
