@@ -12,6 +12,23 @@ import PlayerInfoModal from './PlayerInfoModal';
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
 const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'League Rosters', 'MLB Depth', 'Taxi', 'Settings'];
 const POSITION_RANK = { C: 0, '1B': 1, '2B': 2, '3B': 3, SS: 4, CI: 5, MI: 6, OF: 7, UTIL: 8, U: 8, DH: 9, SP: 10, P: 11, RP: 12, BENCH: 13 };
+const POS_COLOR = {
+    C:     { background: '#dbeafe', color: '#1d4ed8', borderColor: '#93c5fd' },
+    '1B':  { background: '#e0e7ff', color: '#3730a3', borderColor: '#a5b4fc' },
+    '2B':  { background: '#ede9fe', color: '#5b21b6', borderColor: '#c4b5fd' },
+    '3B':  { background: '#fce7f3', color: '#9d174d', borderColor: '#f9a8d4' },
+    SS:    { background: '#fce7f3', color: '#9d174d', borderColor: '#f9a8d4' },
+    CI:    { background: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' },
+    MI:    { background: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' },
+    OF:    { background: '#d1fae5', color: '#065f46', borderColor: '#6ee7b7' },
+    DH:    { background: '#fef9c3', color: '#713f12', borderColor: '#fde047' },
+    SP:    { background: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' },
+    P:     { background: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' },
+    RP:    { background: '#ffedd5', color: '#9a3412', borderColor: '#fdba74' },
+    UTIL:  { background: '#f1f5f9', color: '#475569', borderColor: '#cbd5e1' },
+    U:     { background: '#f1f5f9', color: '#475569', borderColor: '#cbd5e1' },
+    BENCH: { background: '#f3f4f6', color: '#6b7280', borderColor: '#d1d5db' },
+};
 
 // US-24.1: all 30 MLB team abbreviations
 const MLB_TEAMS = [
@@ -2315,14 +2332,15 @@ const DraftRoomScreen = () => {
                                                             if (slotPos === h.positionFilled) return true;
                                                             return Number(filledByPos[slotPos] || 0) < Number(rosterSlots[slotPos] || 0);
                                                         });
+                                                        const posColors = POS_COLOR[h.positionFilled] || { background: '#f3f4f6', color: '#6b7280', borderColor: '#d1d5db' };
                                                         return (
-                                                            <tr key={h.purchaseId}>
-                                                                <td style={{ ...tdBase, width: 36 }}>
+                                                            <tr key={h.purchaseId} className="draft-v2-league-player-row">
+                                                                <td style={{ ...tdBase, width: 42 }}>
                                                                     <select
                                                                         key={h.purchaseId + (h.positionFilled || '')}
                                                                         defaultValue={h.positionFilled || ''}
-                                                                        className="draft-v2-move-select"
-                                                                        style={{ fontSize: '0.72rem', padding: '1px 2px', minWidth: 48 }}
+                                                                        className="draft-v2-pos-select"
+                                                                        style={{ ...posColors }}
                                                                         onChange={async (e) => {
                                                                             const newPos = e.target.value;
                                                                             const oldPos = h.positionFilled || '';
@@ -2344,21 +2362,20 @@ const DraftRoomScreen = () => {
                                                                         {!allSlotKeys.includes('BENCH') && <option value="BENCH">BENCH</option>}
                                                                     </select>
                                                                 </td>
-                                                                <td style={{ ...tdBase, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8rem' }}>
+                                                                <td style={{ ...tdBase, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8rem', fontWeight: 500 }}>
                                                                     {h.playerName}
                                                                 </td>
                                                                 <td style={{ ...tdBase, fontSize: '0.72rem', color: '#6b7894' }}>
                                                                     {h.contractYears > 0 ? h.contractYears : '—'}
                                                                 </td>
-                                                                <td style={{ ...tdBase, fontWeight: 600, fontSize: '0.8rem' }}>
+                                                                <td style={{ ...tdBase, fontWeight: 700, fontSize: '0.8rem', color: '#16a34a' }}>
                                                                     ${h.price}
                                                                 </td>
-                                                                <td style={{ ...tdBase, padding: '4px 2px' }}>
+                                                                <td style={{ ...tdBase, padding: '3px 4px' }}>
                                                                     {rosterTransferState?.purchaseId === h.purchaseId ? (
-                                                                        <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+                                                                        <span className="draft-v2-transfer-active">
                                                                             <select
-                                                                                className="draft-v2-move-select"
-                                                                                style={{ fontSize: '0.72rem', padding: '1px 2px' }}
+                                                                                className="draft-v2-transfer-select"
                                                                                 defaultValue=""
                                                                                 onChange={async (e) => {
                                                                                     const newTeamId = e.target.value;
@@ -2373,26 +2390,25 @@ const DraftRoomScreen = () => {
                                                                                     }
                                                                                 }}
                                                                             >
-                                                                                <option value="">To…</option>
+                                                                                <option value="">Move to…</option>
                                                                                 {teams.filter((t) => t.teamId !== team.teamId).map((t) => (
                                                                                     <option key={t.teamId} value={t.teamId}>{getTeamName(t)}</option>
                                                                                 ))}
                                                                             </select>
                                                                             <button
                                                                                 type="button"
-                                                                                className="draft-v2-filter-btn"
-                                                                                style={{ fontSize: '0.68rem', padding: '1px 4px', height: 'auto' }}
+                                                                                className="draft-v2-transfer-cancel"
                                                                                 onClick={() => setRosterTransferState(null)}
+                                                                                title="Cancel"
                                                                             >✕</button>
                                                                         </span>
                                                                     ) : (
                                                                         <button
                                                                             type="button"
-                                                                            className="draft-v2-filter-btn"
-                                                                            style={{ fontSize: '0.68rem', padding: '1px 5px', height: 'auto', opacity: 0.7 }}
+                                                                            className="draft-v2-transfer-btn"
                                                                             onClick={() => setRosterTransferState({ purchaseId: h.purchaseId })}
                                                                             title="Transfer to another team"
-                                                                        >→</button>
+                                                                        >⇄</button>
                                                                     )}
                                                                 </td>
                                                             </tr>

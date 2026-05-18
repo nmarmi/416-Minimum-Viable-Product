@@ -3646,6 +3646,111 @@ body {
   cursor: pointer;
 }
 
+/* League Rosters: color-coded position select */
+.draft-v2-pos-select {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 3px;
+  border-radius: 6px;
+  border-width: 1px;
+  border-style: solid;
+  min-width: 46px;
+  cursor: pointer;
+  text-align: center;
+  letter-spacing: 0.03em;
+  transition: box-shadow 0.13s, opacity 0.13s;
+}
+.draft-v2-pos-select:hover {
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+  opacity: 0.9;
+}
+.draft-v2-pos-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22);
+}
+
+/* League Rosters: row hover highlight */
+.draft-v2-league-player-row:hover td {
+  background: #f0f6ff;
+  transition: background 0.12s;
+}
+
+/* League Rosters: transfer trigger button */
+.draft-v2-transfer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.13s, border-color 0.13s, color 0.13s, box-shadow 0.13s;
+  line-height: 1;
+}
+.draft-v2-transfer-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+/* League Rosters: active transfer inline panel */
+.draft-v2-transfer-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 2px 5px;
+}
+
+/* League Rosters: team destination select */
+.draft-v2-transfer-select {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 2px 4px;
+  border: 1px solid #93c5fd;
+  border-radius: 5px;
+  background: #fff;
+  color: #1d4ed8;
+  cursor: pointer;
+  max-width: 88px;
+  transition: border-color 0.12s;
+}
+.draft-v2-transfer-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+/* League Rosters: cancel transfer button */
+.draft-v2-transfer-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  border: 1px solid #93c5fd;
+  background: transparent;
+  color: #3b82f6;
+  font-size: 9px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.draft-v2-transfer-cancel:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
+
 .draft-setup-readonly {
   background: #f2f4f8 !important;
   color: #516078;
