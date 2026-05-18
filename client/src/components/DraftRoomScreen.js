@@ -227,7 +227,6 @@ const DraftRoomScreen = () => {
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [savingPlayerNote, setSavingPlayerNote] = useState(false);
     const [editingNotes, setEditingNotes] = useState('');
-    const [rosterTransferState, setRosterTransferState] = useState(null); // { purchaseId } | null
     const [rosterUndoStack, setRosterUndoStack] = useState([]);
     const [rosterRedoStack, setRosterRedoStack] = useState([]);
     const teamPickerRef = useRef(null);
