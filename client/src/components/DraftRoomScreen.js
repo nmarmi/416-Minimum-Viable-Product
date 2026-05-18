@@ -2309,15 +2309,22 @@ const DraftRoomScreen = () => {
                                         </div>
                                         <div style={{ border: '1px solid #d5d8e1', background: '#fff', overflow: 'hidden' }}>
                                             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                                <colgroup>
+                                                    <col style={{ width: 46 }} />
+                                                    <col />
+                                                    <col style={{ width: 18 }} />
+                                                    <col style={{ width: 34 }} />
+                                                    <col style={{ width: 30 }} />
+                                                </colgroup>
                                                 <tbody>
                                                     {rows.map(({ pos, entry }, idx) => {
-                                                        const tdBase = { padding: '4px 6px', borderBottom: '1px solid #edf0f6', whiteSpace: 'nowrap' };
+                                                        const tdBase = { padding: '4px 4px', borderBottom: '1px solid #edf0f6' };
                                                         if (!entry) {
                                                             return (
                                                                 <tr key={`${pos}-${idx}`} style={{ opacity: 0.45 }}>
-                                                                    <td style={{ ...tdBase, fontSize: '0.75rem', color: '#8892a4', fontWeight: 600, width: 42 }}>{pos}</td>
+                                                                    <td style={{ ...tdBase, fontSize: '0.75rem', color: '#8892a4', fontWeight: 600 }}>{pos}</td>
                                                                     <td colSpan={3} style={{ ...tdBase, color: '#b0b8c8', fontSize: '0.75rem', fontStyle: 'italic' }}>—</td>
-                                                                    <td style={{ ...tdBase, width: 28 }} />
+                                                                    <td style={tdBase} />
                                                                 </tr>
                                                             );
                                                         }
@@ -2362,7 +2369,7 @@ const DraftRoomScreen = () => {
                                                                         {!allSlotKeys.includes('BENCH') && <option value="BENCH">BENCH</option>}
                                                                     </select>
                                                                 </td>
-                                                                <td style={{ ...tdBase, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8rem', fontWeight: 500 }}>
+                                                                <td style={{ ...tdBase, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', fontWeight: 500 }}>
                                                                     {h.playerName}
                                                                 </td>
                                                                 <td style={{ ...tdBase, fontSize: '0.72rem', color: '#6b7894' }}>
