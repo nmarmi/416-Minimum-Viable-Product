@@ -318,7 +318,7 @@ const DraftRoomScreen = () => {
 
     // US-6.1: position filter for the player pool view.
     const availablePositions = useMemo(() => {
-        const set = new Set();
+        const set = new Set(['C', '1B', '2B', '3B', 'SS', 'OF', 'SP', 'RP']);
         for (const p of players || []) {
             const raw = String(p?.position || p?.positions || '');
             for (const tok of raw.split(/[,/]/).map((s) => s.trim()).filter(Boolean)) set.add(tok);
@@ -1891,7 +1891,6 @@ const DraftRoomScreen = () => {
                 <ul className="draft-v2-checklist">
                     <li>Draft session ID: <strong>{draftSession?.draftSessionId || '--'}</strong></li>
                     <li>Status: <strong>{draftSession?.status || 'legacy view'}</strong></li>
-                    <li>Started at: <strong>{draftSession?.startedAt ? new Date(draftSession.startedAt).toLocaleString() : '--'}</strong></li>
                 </ul>
             </article>
 
