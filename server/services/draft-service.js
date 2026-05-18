@@ -73,12 +73,14 @@ function buildSnapshotTeam(team) {
 async function resolvePlayerMeta(playerId, providedName) {
     let playerName = providedName;
     let position = null;
+    let mlbTeam = null;
 
     const dbPlayer = await Player.findOne({ playerId }).lean();
     if (dbPlayer) {
         playerName = playerName || dbPlayer.playerName;
         position = dbPlayer.position || null;
-        return { playerName, position };
+        mlbTeam = dbPlayer.team || null;
+        return { playerName, position, mlbTeam };
     }
 
     if (licensedApi.hasConfig()) {
@@ -89,18 +91,20 @@ async function resolvePlayerMeta(playerId, providedName) {
                 ? apiPlayer.positions
                 : (apiPlayer.position ? [apiPlayer.position] : []);
             position = positions.join(',') || null;
+            mlbTeam = apiPlayer.mlbTeam || apiPlayer.team || null;
         }
-        return { playerName, position };
+        return { playerName, position, mlbTeam };
     }
 
     if (playerName) {
         const namePlayer = await Player.findOne({ playerName: playerName.trim() }).lean();
         if (namePlayer) {
             position = namePlayer.position || null;
+            mlbTeam = namePlayer.team || null;
         }
     }
 
-    return { playerName, position };
+    return { playerName, position, mlbTeam };
 }
 
 /**
@@ -245,8 +249,9 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
         return { success: false, errorMessage: 'Team has insufficient budget.' };
     }
 
-    const { playerName: resolvedName, position } = await resolvePlayerMeta(playerIdStr, playerName);
+    const { playerName: resolvedName, position, mlbTeam: resolvedTeam } = await resolvePlayerMeta(playerIdStr, playerName);
     const finalName = resolvedName || playerIdStr;
+    const finalMlbTeam = mlbTeam || resolvedTeam || '';
 
     const slotKey = findSlotForPosition(rosterSlots, filledSlots, position);
 
@@ -272,7 +277,7 @@ async function recordPurchase(draftSessionId, { playerId, playerName, teamId, pr
         notes: notes || '',
         nominationOrder: thisNominationOrder,  // 0-based: first pick = 0
         nominatingTeamId: nominatingTeamId || null,
-        mlbTeam: mlbTeam || '',
+        mlbTeam: finalMlbTeam,
     });
     // US-22.4: any new purchase clears the redo stack
     session.undoStack = [];
