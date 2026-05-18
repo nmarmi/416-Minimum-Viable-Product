@@ -323,6 +323,7 @@ async function undoPurchase(draftSessionId, purchaseId) {
     session.undoStack = [...session.undoStack.slice(-9), { ...entry.toObject ? entry.toObject() : entry }];
 
     session.draftHistory = session.draftHistory.filter((h) => h.purchaseId !== purchaseId);
+    session.nominationOrder = Math.max((session.nominationOrder || 0) - 1, 0);
 
     session.markModified('teams');
     await session.save();
