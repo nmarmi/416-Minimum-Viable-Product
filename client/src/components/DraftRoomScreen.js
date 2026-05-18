@@ -37,6 +37,7 @@ const MLB_TEAMS = [
     'PHI','PIT','SD','SEA','SF','STL','TB','TEX','TOR','WSH',
 ];
 const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Depth', 'Value', 'Age', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
+const PAGE_SIZE = 50;
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 const DRAFT_STATUS_META = {
     setup: { label: 'Setup', className: 'setup' },
@@ -169,9 +170,9 @@ const DraftRoomScreen = () => {
     const [players, setPlayers] = useState([]);
     const [playersTotal, setPlayersTotal] = useState(0);
     const [playersLoading, setPlayersLoading] = useState(false);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [hasMorePlayers, setHasMorePlayers] = useState(false);
+
     const [playersError, setPlayersError] = useState('');
+    const [playersPage, setPlayersPage] = useState(0);
     const [playerDataAsOf, setPlayerDataAsOf] = useState(null);
     const [injuryOnly, setInjuryOnly] = useState(false);
     const [playerSearch, setPlayerSearch] = useState('');
@@ -418,35 +419,19 @@ const DraftRoomScreen = () => {
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
         setPlayersError('');
-        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 200 });
+        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 500 });
         setPlayersLoading(false);
         if (res.status === 200 && res.data?.success) {
-            const fetched = res.data.players || [];
-            setPlayers(fetched);
+            setPlayers(res.data.players || []);
             setPlayersTotal(res.data.total ?? 0);
             setPlayerDataAsOf(res.data.dataAsOf || null);
             setPlayersError('');
-            setHasMorePlayers(fetched.length === 200);
             return true;
         } else {
             setPlayersError(res.data?.errorMessage || 'Failed to load players.');
             setPlayers([]);
             setPlayersTotal(0);
-            setHasMorePlayers(false);
             return false;
-        }
-    }, [fetchPlayerRows, playerSearch]);
-
-    const handleLoadMore = useCallback(async () => {
-        setLoadingMore(true);
-        const offset = playersRef.current.length;
-        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 200, offset });
-        setLoadingMore(false);
-        if (res.status === 200 && res.data?.success) {
-            const fetched = res.data.players || [];
-            setPlayers((prev) => [...prev, ...fetched]);
-            setPlayersTotal(res.data.total ?? 0);
-            setHasMorePlayers(fetched.length === 200);
         }
     }, [fetchPlayerRows, playerSearch]);
 
@@ -528,6 +513,8 @@ const DraftRoomScreen = () => {
             setTaxiTeamId(order[counter % order.length]);
         }
     }, [draftSession?.taxiDraftOrder, draftSession?.taxiNominationOrder]);
+
+    useEffect(() => { setPlayersPage(0); }, [playerSearch, positionFilter, injuryOnly, startersOnly, playerSort]);
 
     // US-25.1: subscribe to SSE push stream with exponential backoff reconnect
     useEffect(() => {
@@ -1207,7 +1194,7 @@ const DraftRoomScreen = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                displayedPlayers.map((player) => (
+                                displayedPlayers.slice(playersPage * PAGE_SIZE, (playersPage + 1) * PAGE_SIZE).map((player) => (
                                     <tr
                                         key={getPlayerId(player)}
                                         className={isInCompare(player) ? 'draft-v2-tr-compare-selected' : ''}
@@ -1265,15 +1252,24 @@ const DraftRoomScreen = () => {
                     </table>
                 </div>
             </div>
-            {!playersLoading && !playersError && hasMorePlayers && (
-                <div className="draft-v2-load-more">
+            {displayedPlayers.length > PAGE_SIZE && (
+                <div className="draft-v2-pagination">
                     <button
-                        type="button"
                         className="draft-v2-filter-btn"
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
+                        onClick={() => setPlayersPage((p) => p - 1)}
+                        disabled={playersPage === 0}
                     >
-                        {loadingMore ? 'Loading...' : 'Load more players'}
+                        ← Prev
+                    </button>
+                    <span className="draft-v2-pagination-info">
+                        Page {playersPage + 1} of {Math.ceil(displayedPlayers.length / PAGE_SIZE)}
+                    </span>
+                    <button
+                        className="draft-v2-filter-btn"
+                        onClick={() => setPlayersPage((p) => p + 1)}
+                        disabled={(playersPage + 1) * PAGE_SIZE >= displayedPlayers.length}
+                    >
+                        Next →
                     </button>
                 </div>
             )}
