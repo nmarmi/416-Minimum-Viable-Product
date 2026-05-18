@@ -471,7 +471,9 @@ function buildSnapshot(session) {
             positionFilled: entry.positionFilled || null,
             notes: entry.notes || '',
             timestamp: entry.timestamp,
-            nominationOrder: entry.nominationOrder
+            nominationOrder: entry.nominationOrder,
+            nominatingTeamId: entry.nominatingTeamId || null,
+            mlbTeam: entry.mlbTeam || '',
         })),
         playerNotes: toPlainObject(plain.playerNotes)
     };
