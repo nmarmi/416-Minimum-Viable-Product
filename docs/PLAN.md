@@ -81,7 +81,7 @@
 | 2 | **Players API (server)** | `GET /players` with optional query params: `search`, `team`, `position`, `limit`, `offset`. Returns JSON array of players for the Draft Room. |
 | 3 | **CSV import script (server)** | Script (e.g. `node scripts/import-projections.js`) that reads `projections-NL.csv`, parses “Player” into name/position/team, and inserts into MongoDB. Run once (or when CSV updates). |
 | 4 | **Client: players API client** | Small module (e.g. `client/src/players/requests.js`) that calls `GET /players` with credentials, same pattern as leagues. |
-| 5 | **Draft Room: load and display players** | In `DraftRoomScreen`, on “Players” tab (or on mount): fetch players from API, store in state, render table rows. Map: Player, Team, Pos, Value (FPTS), HR, RBI, R, SB, AVG; show “--” for ADP, W, SV, K (if not used), ERA, WHIP as needed. Optional: wire search input to API or client-side filter. |
+| 5 | **Draft Room: load and display players** | In `DraftRoomScreen`, on “Players” tab (or on mount): fetch players from API, store in state, render table rows. Map: Player, Team, Pos, Value (FPTS), HR, RBI, R, SB, AVG; show W, SV, K (if not used), ERA, WHIP as needed. Optional: wire search input to API or client-side filter. |
 
 ### Phase 2 (later)
 

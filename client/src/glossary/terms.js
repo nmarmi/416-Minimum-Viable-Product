@@ -28,10 +28,6 @@ export const GLOSSARY_TERMS = [
     definition: 'A player\'s projected contribution in your league\'s scoring system. In the draft room, the $ Value column shows auction dollar values computed by the Player Data API using a z-score above-replacement model. Values refresh automatically as the draft progresses and will show -- until the API responds.',
   },
   {
-    term: 'ADP',
-    definition: 'Average Draft Position. The typical round or pick where a player is drafted across many leagues. Helps you see if someone is going earlier or later than usual.',
-  },
-  {
     term: 'FPTS',
     definition: 'Fantasy Points. A single number summarizing a player\'s projected (or actual) stats based on your league\'s scoring. Used to rank and value players.',
   },

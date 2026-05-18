@@ -259,7 +259,7 @@ const DraftRoomScreen = () => {
     }, [isFiltersMenuOpen]);
 
     // Natural sort direction for each stat field (first click)
-    const STAT_DEFAULT_DIR = { dollar: 'desc', adp: 'asc', hr: 'desc', rbi: 'desc', r: 'desc', sb: 'desc', avg: 'desc', w: 'desc', sv: 'desc', k: 'desc', era: 'asc', whip: 'asc' };
+    const STAT_DEFAULT_DIR = { dollar: 'desc', age: 'asc', hr: 'desc', rbi: 'desc', r: 'desc', sb: 'desc', avg: 'desc', w: 'desc', sv: 'desc', k: 'desc', era: 'asc', whip: 'asc' };
 
     // US-22.1/22.2: tri-state toggle — desc → asc → off (back to name)
     const handleColSort = (field) => {
