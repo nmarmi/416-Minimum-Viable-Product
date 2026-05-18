@@ -1566,6 +1566,36 @@ const DraftRoomScreen = () => {
     };
 
     const renderDraftBoardTab = () => (
+        (() => {
+            const playerTeamById = {};
+            (players || []).forEach((p) => {
+                const pid = String(getPlayerId(p) || '');
+                if (pid) playerTeamById[pid] = getPlayerTeamLabel(p) || '';
+                if (p?.playerId) playerTeamById[String(p.playerId)] = getPlayerTeamLabel(p) || '';
+            });
+            const resolveTeamNameById = (teamId) => {
+                if (!teamId) return '--';
+                const match = (draftSession?.teams || []).find((t) => t.teamId === teamId);
+                return match ? getTeamName(match) : String(teamId);
+            };
+            const resolveAuctionedBy = (entry) => {
+                return resolveTeamNameById(
+                    entry?.nominatingTeamId ||
+                    entry?.auctionedByTeamId ||
+                    entry?.nominatorTeamId ||
+                    entry?.auctionedBy ||
+                    entry?.nominator ||
+                    ''
+                );
+            };
+            const resolveMlbTeam = (entry) => {
+                if (entry?.mlbTeam) return entry.mlbTeam;
+                const fromHistory = (draftSession?.draftHistory || []).find((h) => h.playerId === entry?.playerId)?.mlbTeam;
+                if (fromHistory) return fromHistory;
+                return playerTeamById[String(entry?.playerId || '')] || '--';
+            };
+
+            return (
         <section className="draft-v2-module-grid two-col">
             <article className="draft-v2-module-card full">
                 <h3>Draft Entry</h3>
@@ -1709,8 +1739,8 @@ const DraftRoomScreen = () => {
                                     <tr key={entry.purchaseId || entry.nominationOrder}>
                                         <td>{entry.nominationOrder}</td>
                                         <td>{entry.playerName}</td>
-                                        <td>{entry.mlbTeam || '--'}</td>
-                                        <td>{entry.nominatingTeamId ? getTeamName(draftSession.teams.find((t) => t.teamId === entry.nominatingTeamId)) : '--'}</td>
+                                        <td>{resolveMlbTeam(entry)}</td>
+                                        <td>{resolveAuctionedBy(entry)}</td>
                                         <td>
                                             {editingPurchaseId === entry.purchaseId ? (
                                                 <select value={editingWonBy} onChange={(e) => { setEditingWonBy(e.target.value); setEditError(''); }}>
@@ -1820,6 +1850,8 @@ const DraftRoomScreen = () => {
                 <p className="draft-v2-auction-muted">These values update after each manual entry once actions are connected.</p>
             </article>
         </section>
+            );
+        })()
     );
 
     const renderTeamsTab = () => (
