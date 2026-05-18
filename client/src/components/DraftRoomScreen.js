@@ -1825,10 +1825,6 @@ const DraftRoomScreen = () => {
                 </ul>
             </article>
 
-            <article className="draft-v2-module-card full">
-                <h3>API-Backed Areas (Pending)</h3>
-                <p className="draft-v2-auction-muted">Player news, injury updates, live values, recommendation engine, and final exports will appear after backend integration.</p>
-            </article>
         </section>
     );
 
