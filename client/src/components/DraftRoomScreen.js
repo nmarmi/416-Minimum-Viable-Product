@@ -170,7 +170,8 @@ const DraftRoomScreen = () => {
     const [players, setPlayers] = useState([]);
     const [playersTotal, setPlayersTotal] = useState(0);
     const [playersLoading, setPlayersLoading] = useState(false);
-
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMorePlayers, setHasMorePlayers] = useState(false);
     const [playersError, setPlayersError] = useState('');
     const [playersPage, setPlayersPage] = useState(0);
     const [playerDataAsOf, setPlayerDataAsOf] = useState(null);
@@ -419,19 +420,35 @@ const DraftRoomScreen = () => {
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
         setPlayersError('');
-        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 500 });
+        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 200 });
         setPlayersLoading(false);
         if (res.status === 200 && res.data?.success) {
-            setPlayers(res.data.players || []);
+            const fetched = res.data.players || [];
+            setPlayers(fetched);
             setPlayersTotal(res.data.total ?? 0);
             setPlayerDataAsOf(res.data.dataAsOf || null);
             setPlayersError('');
+            setHasMorePlayers(fetched.length === 200);
             return true;
         } else {
             setPlayersError(res.data?.errorMessage || 'Failed to load players.');
             setPlayers([]);
             setPlayersTotal(0);
+            setHasMorePlayers(false);
             return false;
+        }
+    }, [fetchPlayerRows, playerSearch]);
+
+    const handleLoadMore = useCallback(async () => {
+        setLoadingMore(true);
+        const offset = playersRef.current.length;
+        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 200, offset });
+        setLoadingMore(false);
+        if (res.status === 200 && res.data?.success) {
+            const fetched = res.data.players || [];
+            setPlayers((prev) => [...prev, ...fetched]);
+            setPlayersTotal(res.data.total ?? 0);
+            setHasMorePlayers(fetched.length === 200);
         }
     }, [fetchPlayerRows, playerSearch]);
 
@@ -1270,6 +1287,18 @@ const DraftRoomScreen = () => {
                         disabled={(playersPage + 1) * PAGE_SIZE >= displayedPlayers.length}
                     >
                         Next →
+                    </button>
+                </div>
+            )}
+            {!playersLoading && !playersError && hasMorePlayers && (
+                <div className="draft-v2-load-more">
+                    <button
+                        type="button"
+                        className="draft-v2-filter-btn"
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                    >
+                        {loadingMore ? 'Loading...' : 'Load more players'}
                     </button>
                 </div>
             )}
