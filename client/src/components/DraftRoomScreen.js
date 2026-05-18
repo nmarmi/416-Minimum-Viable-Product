@@ -206,6 +206,7 @@ const DraftRoomScreen = () => {
     const [sessionLoading, setSessionLoading] = useState(Boolean(draftSessionId));
     const [sessionError, setSessionError] = useState('');
     const [valuationsMap, setValuationsMap] = useState({});
+    const [compareStatsByKey, setCompareStatsByKey] = useState({});
     const [recommendations, setRecommendations] = useState([]);
     const [positionFilter, setPositionFilter] = useState(new Set());
     const [playerSort,  setPlayerSort]  = useState({ field: 'name',   dir: 'asc' });
@@ -538,6 +539,38 @@ const DraftRoomScreen = () => {
             }
         }).catch(() => {});
     }, [draftSessionId]);
+
+    useEffect(() => {
+        if (!draftSessionId) return;
+        let cancelled = false;
+
+        const loadCompareStats = async () => {
+            const res = await getSessionPlayers(draftSessionId, { status: 'all', limit: 2000, offset: 0 });
+            if (cancelled) return;
+            if (!(res.status === 200 && res.data?.success)) return;
+
+            const map = {};
+            for (const p of (res.data.players || [])) {
+                const candidates = [
+                    getPlayerId(p),
+                    p?.playerId,
+                    p?.mlbPersonId != null ? String(p.mlbPersonId) : null,
+                    p?.mlbId != null ? String(p.mlbId) : null,
+                    p?.id,
+                    p?._id,
+                    p?.playerName,
+                    p?.name
+                ].filter((entry) => entry != null && entry !== '');
+                for (const key of candidates) {
+                    map[String(key)] = p;
+                }
+            }
+            setCompareStatsByKey(map);
+        };
+
+        loadCompareStats().catch(() => {});
+        return () => { cancelled = true; };
+    }, [draftSessionId, draftSession?.draftHistory?.length]);
 
     useEffect(() => {
         const defaultTeamId = teamOptions[0]?.teamId || FALLBACK_TEAMS[0];
@@ -1865,7 +1898,7 @@ const DraftRoomScreen = () => {
         const myTeamId = draftSession?.myTeamId;
 
         // Build a player stats lookup using multiple candidate keys.
-        const statsByPlayerKey = {};
+        const statsByPlayerKey = { ...compareStatsByKey };
         players.forEach((p) => {
             const candidates = [
                 getPlayerId(p),
