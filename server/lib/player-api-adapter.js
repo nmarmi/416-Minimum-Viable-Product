@@ -47,8 +47,13 @@ function toPlayerApiLeagueSettings(leagueSettings, { forValuations = true } = {}
         return payload;
     }
 
-    const totalRosterSlots = Object.values(rosterSlots).reduce((s, n) => s + Number(n || 0), 0);
-    return { budget, rosterSlots: totalRosterSlots };
+    const { hitterSlotsPerTeam, pitcherSlotsPerTeam } = computeRosterSlotCounts(rosterSlots);
+    return {
+        numTeams: leagueSettings?.numberOfTeams || DEFAULT_NUM_TEAMS,
+        budget,
+        hitterSlotsPerTeam,
+        pitcherSlotsPerTeam,
+    };
 }
 
 /**
