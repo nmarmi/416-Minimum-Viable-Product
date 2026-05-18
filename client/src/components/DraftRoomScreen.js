@@ -10,7 +10,7 @@ import PlayerCompareModal from './PlayerCompareModal';
 import PlayerInfoModal from './PlayerInfoModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
-const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'League Rosters', 'MLB Depth', 'Taxi', 'Settings'];
+const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'League Rosters', 'MLB Depth', 'Taxi', 'Settings'];
 const POSITION_RANK = { C: 0, '1B': 1, '2B': 2, '3B': 3, SS: 4, CI: 5, MI: 6, OF: 7, UTIL: 8, U: 8, DH: 9, SP: 10, P: 11, RP: 12, BENCH: 13 };
 const POS_COLOR = {
     C:     { background: '#dbeafe', color: '#1d4ed8', borderColor: '#93c5fd' },
@@ -1864,6 +1864,35 @@ const DraftRoomScreen = () => {
         const totalSlots = Object.values(rosterSlots).reduce((s, n) => s + Number(n || 0), 0);
         const myTeamId = draftSession?.myTeamId;
 
+        // Build a player stats lookup using multiple candidate keys.
+        const statsByPlayerKey = {};
+        players.forEach((p) => {
+            const candidates = [
+                getPlayerId(p),
+                p?.playerId,
+                p?.mlbPersonId != null ? String(p.mlbPersonId) : null,
+                p?.mlbId != null ? String(p.mlbId) : null,
+                p?.id,
+                p?._id,
+                p?.playerName,
+                p?.name
+            ].filter((entry) => entry != null && entry !== '');
+            candidates.forEach((key) => {
+                statsByPlayerKey[String(key)] = p;
+            });
+        });
+
+        const STAT_COLS = [
+            { key: 'hr', label: 'HR' },
+            { key: 'rbi', label: 'RBI' },
+            { key: 'r', label: 'R' },
+            { key: 'sb', label: 'SB' },
+            { key: 'avg', label: 'AVG' },
+            { key: 'w', label: 'W' },
+            { key: 'sv', label: 'SV' },
+            { key: 'k', label: 'K' }
+        ];
+
         // Build rows: one per team
         const rows = teams.map((team) => {
             const spent = (team.purchasedPlayers || []).reduce((s, p) => s + Number(p.price || 0), 0);
@@ -1876,7 +1905,35 @@ const DraftRoomScreen = () => {
                 const val = Number(valuationsMap[p.playerId] || 0);
                 return s + val;
             }, 0);
-            return { team, spent, remaining, filledSlots, totalSlots, totalDollars };
+            const stats = {};
+            STAT_COLS.forEach(({ key }) => { stats[key] = 0; });
+            (team.purchasedPlayers || []).forEach((p) => {
+                const candidates = [
+                    p?.playerId,
+                    p?.mlbPersonId != null ? String(p.mlbPersonId) : null,
+                    p?.mlbId != null ? String(p.mlbId) : null,
+                    p?.id,
+                    p?._id,
+                    p?.playerName,
+                    p?.name
+                ].filter((entry) => entry != null && entry !== '');
+
+                let playerData = null;
+                for (const key of candidates) {
+                    const hit = statsByPlayerKey[String(key)];
+                    if (hit) {
+                        playerData = hit;
+                        break;
+                    }
+                }
+                if (!playerData) return;
+
+                STAT_COLS.forEach(({ key }) => {
+                    stats[key] += Number(playerData[key] || 0);
+                });
+            });
+
+            return { team, spent, remaining, filledSlots, totalSlots, totalDollars, stats };
         });
 
         // US-23.2: sort
@@ -1888,7 +1945,7 @@ const DraftRoomScreen = () => {
             else if (field === 'remaining') { va = a.remaining; vb = b.remaining; }
             else if (field === 'slots')  { va = a.filledSlots;  vb = b.filledSlots; }
             else if (field === 'totalDollars') { va = a.totalDollars; vb = b.totalDollars; }
-            else { va = 0; vb = 0; }
+            else { va = a.stats[field] ?? 0; vb = b.stats[field] ?? 0; }
             if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
             return dir === 'asc' ? va - vb : vb - va;
         });
@@ -1916,11 +1973,14 @@ const DraftRoomScreen = () => {
                                         <th className="draft-v2-th-sortable" onClick={() => cycleSort('spent')}>Spent{sortIcon('spent')}</th>
                                         <th className="draft-v2-th-sortable" onClick={() => cycleSort('remaining')}>Budget Left{sortIcon('remaining')}</th>
                                         <th className="draft-v2-th-sortable" onClick={() => cycleSort('slots')}>Slots{sortIcon('slots')}</th>
+                                        {STAT_COLS.map(({ key, label }) => (
+                                            <th key={key} className="draft-v2-th-sortable" onClick={() => cycleSort(key)}>{label}{sortIcon(key)}</th>
+                                        ))}
                                         <th className="draft-v2-th-sortable" onClick={() => cycleSort('totalDollars')}>Total ${sortIcon('totalDollars')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sorted.map(({ team, spent, remaining, filledSlots, totalDollars }) => (
+                                    {sorted.map(({ team, spent, remaining, filledSlots, totalDollars, stats }) => (
                                         <tr key={team.teamId}
                                             className={team.teamId === myTeamId ? 'draft-v2-compare-my-team-row' : ''}
                                         >
@@ -1933,6 +1993,13 @@ const DraftRoomScreen = () => {
                                             <td>${Math.round(spent)}</td>
                                             <td>${Math.round(remaining)}</td>
                                             <td>{filledSlots}/{totalSlots}</td>
+                                            {STAT_COLS.map(({ key }) => (
+                                                <td key={key}>
+                                                    {key === 'avg'
+                                                        ? (stats[key] > 0 ? (stats[key] / Math.max(1, (team.purchasedPlayers || []).length)).toFixed(3) : '--')
+                                                        : Math.round(stats[key]) || '--'}
+                                                </td>
+                                            ))}
                                             <td><strong>${Math.round(totalDollars)}</strong></td>
                                         </tr>
                                     ))}
@@ -2474,6 +2541,7 @@ const DraftRoomScreen = () => {
         if (activeTab === 'My Roster') return renderRosterTab();
         if (activeTab === 'Draft Board') return renderDraftBoardTab();
         if (activeTab === 'Teams')   return renderTeamsTab();
+        if (activeTab === 'Compare') return renderCompareTab();
         if (activeTab === 'League Rosters') return renderLeagueRostersTab();
         if (activeTab === 'MLB Depth')      return renderMlbDepthTab();
         if (activeTab === 'Taxi')      return renderTaxiTab();
