@@ -1012,7 +1012,7 @@ const DraftRoomScreen = () => {
 
     const renderPlayersTab = () => (
         <>
-            <div className="draft-v2-module-grid two-col">
+            <div className="draft-v2-module-grid two-col" style={{ alignItems: 'stretch' }}>
                 <article className="draft-v2-module-card">
                     <h3>Player Search & Filters</h3>
                     <div className="draft-v2-search-actions">
@@ -1152,7 +1152,12 @@ const DraftRoomScreen = () => {
                 </article>
 
                 <article className="draft-v2-module-card">
-                    <h3>Player Profile & Glossary</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <h3 style={{ margin: 0 }}>Player Profile & Glossary</h3>
+                        <button type="button" className="draft-v2-filter-btn glossary-open-btn" onClick={() => setShowGlossary(true)}>
+                            View full glossary
+                        </button>
+                    </div>
                     <ul className="draft-v2-checklist">
                         <li>Projected stats</li>
                         <li>Role (starter / reliever / everyday)</li>
@@ -1160,9 +1165,6 @@ const DraftRoomScreen = () => {
                         <li><GlossaryTerm term="Position eligibility">Position eligibility</GlossaryTerm></li>
                         <li>Hover over the ? next to column headers for definitions.</li>
                     </ul>
-                    <button type="button" className="draft-v2-filter-btn glossary-open-btn" onClick={() => setShowGlossary(true)}>
-                        View full glossary
-                    </button>
                     <p className="draft-v2-auction-muted">
                         Stats from projection data. Pitcher columns (W, SV, <GlossaryTerm term="ERA">ERA</GlossaryTerm>, <GlossaryTerm term="WHIP">WHIP</GlossaryTerm>) show -- for batters.
                     </p>
