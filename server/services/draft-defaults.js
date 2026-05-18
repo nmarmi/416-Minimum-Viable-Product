@@ -155,6 +155,7 @@ function serializeSession(session) {
         leagueId: String(plain.leagueId),
         createdAt: plain.createdAt,
         updatedAt: plain.updatedAt,
+        startedAt: plain.startedAt || null,
         pooledAt: plain.pooledAt || null,
         leagueSettings: {
             ...plain.leagueSettings,

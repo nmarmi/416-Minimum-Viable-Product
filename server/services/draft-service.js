@@ -131,6 +131,7 @@ async function initializeDraft(draftSessionId) {
     session.purchasedPlayerIds = [];
     session.draftHistory = [];
     session.nominationOrder = 0;
+    session.startedAt = new Date();
 
     // US-19.2: remove minor league players from the auction pool before processing keepers
     const minorPlayerIds = new Set();

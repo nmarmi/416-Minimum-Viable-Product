@@ -180,6 +180,10 @@ const DraftSessionSchema = new Schema(
             type: Number,
             default: 0
         },
+        startedAt: {
+            type: Date,
+            default: null
+        },
         pooledAt: {
             type: Date,
             default: null
