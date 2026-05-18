@@ -805,6 +805,9 @@ const DraftRoomScreen = () => {
             setTimeout(() => setEntrySuccess(''), 3000);
             // US-10.4: return focus to player search so the next nomination flows quickly
             setTimeout(() => playerSearchRef.current?.focus(), 50);
+            getSessionRecommendations(draftSessionId).then((r) => {
+                if (r.status === 200 && r.data?.success) setRecommendations(r.data.recommendations || []);
+            }).catch(() => {});
         } else {
             const errorMessage = res.data?.errorMessage || 'Failed to record purchase.';
             setEntryError(errorMessage);
@@ -854,6 +857,9 @@ const DraftRoomScreen = () => {
             setPendingUndo(null);
             setRosterUndoStack((s) => s.filter((tx) => tx.purchaseId !== undoneId));
             setRosterRedoStack((s) => s.filter((tx) => tx.purchaseId !== undoneId));
+            getSessionRecommendations(draftSessionId).then((r) => {
+                if (r.status === 200 && r.data?.success) setRecommendations(r.data.recommendations || []);
+            }).catch(() => {});
         } else {
             setUndoError(res?.data?.errorMessage || 'Unable to undo this purchase.');
         }
@@ -880,6 +886,9 @@ const DraftRoomScreen = () => {
             // We don't know the purchaseId from the response so clear the full roster stacks.
             setRosterUndoStack([]);
             setRosterRedoStack([]);
+            getSessionRecommendations(draftSessionId).then((r) => {
+                if (r.status === 200 && r.data?.success) setRecommendations(r.data.recommendations || []);
+            }).catch(() => {});
         }
     };
 

@@ -604,10 +604,10 @@ const getSessionRecommendations = async (req, res) => {
         }
 
         const leagueSettings = toPlayerApiLeagueSettings(session.leagueSettings, { forValuations: false });
-        const { availablePlayerIds } = toPlayerApiDraftState(session);
+        const draftState = toPlayerApiDraftState(session);
         const teamId = session.myTeamId || null;
 
-        const data = await licensedApi.postRecommendations(leagueSettings, { availablePlayerIds }, teamId);
+        const data = await licensedApi.postRecommendations(leagueSettings, draftState, teamId);
         return res.status(200).json({
             success: true,
             recommendations: data?.recommendations || []
