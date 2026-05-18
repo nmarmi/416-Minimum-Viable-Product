@@ -453,6 +453,35 @@ const DraftRoomScreen = () => {
     }, [fetchPlayerRows, playerSearch]);
 
     useEffect(() => {
+        if (draftSessionId) return;
+        if (!leagueId) return;
+
+        let cancelled = false;
+
+        const resolveDraftSessionRoute = async () => {
+            const leaguesReady = store.leagues?.length
+                ? { status: 200, data: { success: true, leagues: store.leagues } }
+                : await store.loadLeagues();
+
+            if (cancelled) return;
+            if (!(leaguesReady.status === 200 && leaguesReady.data?.success)) return;
+
+            const leagues = leaguesReady.data?.leagues || store.leagues || [];
+            const league = leagues.find((l) => String(l._id) === String(leagueId));
+            const resolvedDraftSessionId = league?.draftSessionId;
+            if (resolvedDraftSessionId) {
+                history.replace(`/league/${leagueId}/draft-room/${resolvedDraftSessionId}`);
+            }
+        };
+
+        resolveDraftSessionRoute();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [draftSessionId, leagueId, history]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
         if (!draftSessionId) {
             setSessionLoading(false);
             return;
