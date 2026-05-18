@@ -845,6 +845,21 @@ const streamEvents = async (req, res) => {
         const session = await DraftSession.findOne({ draftSessionId: req.params.draftSessionId });
         if (!session) return res.status(404).json({ success: false, errorMessage: 'Session not found.' });
 
+        // Build a name index from the full player pool so every event can be
+        // enriched with playerName + mlbTeam before forwarding to the client.
+        // The upstream SSE payload only contains playerId, not the name.
+        const playerIndex = new Map();
+        try {
+            const poolData = await licensedApi.getPlayerPool();
+            for (const p of (poolData?.players || [])) {
+                const id = String(p.playerId || p.id || '').trim();
+                if (id) playerIndex.set(id, {
+                    playerName: p.name || p.playerName || '',
+                    mlbTeam:    p.mlbTeam || p.team || '',
+                });
+            }
+        } catch (_) {} // non-fatal — events still flow, just without name enrichment
+
         // Pass `since` through for client reconnection
         const since = req.query.since || '0';
         const playerIds = (session.availablePlayerIds || []).slice(0, 300).join(',');
@@ -868,13 +883,41 @@ const streamEvents = async (req, res) => {
             signal: abortController.signal,
         });
 
+        // Stream line-by-line so we can enrich `data:` lines with player names
+        // before forwarding. SSE lines end with \n; events are separated by \n\n.
         const reader = upstreamRes.body.getReader();
         const dec    = new TextDecoder();
+        let buf = '';
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            res.write(dec.decode(value, { stream: true }));
+
+            buf += dec.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop(); // hold the incomplete trailing fragment
+
+            for (const line of lines) {
+                if (line.startsWith('data:')) {
+                    const jsonStr = line.slice(5).trim();
+                    try {
+                        const data = JSON.parse(jsonStr);
+                        const info = data.playerId ? playerIndex.get(data.playerId) : null;
+                        if (info) {
+                            if (!data.playerName && info.playerName) data.playerName = info.playerName;
+                            if (!data.mlbTeam   && info.mlbTeam)    data.mlbTeam    = info.mlbTeam;
+                        }
+                        res.write(`data: ${JSON.stringify(data)}\n`);
+                    } catch (_) {
+                        res.write(`${line}\n`);
+                    }
+                } else {
+                    res.write(`${line}\n`);
+                }
+            }
         }
+
+        if (buf) res.write(buf); // flush any remaining partial line
         res.end();
     } catch (err) {
         if (err.name !== 'AbortError') {
