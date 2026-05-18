@@ -1049,18 +1049,32 @@ const DraftRoomScreen = () => {
                             ) : null}
                         </label>
                         <button type="button" className="draft-v2-filter-btn draft-v2-search-submit" onClick={loadPlayers}>Search</button>
-                        <button
-                            type="button"
-                            className="draft-v2-filter-btn draft-v2-search-submit"
-                            onClick={handleRefreshPlayerData}
-                            disabled={playersLoading}
-                        >
-                            {playersLoading ? 'Refreshing...' : 'Refresh player data'}
-                        </button>
+                        <div className="draft-v2-refresh-stack">
+                            <div className="draft-v2-refresh-row">
+                                <button
+                                    type="button"
+                                    className="draft-v2-filter-btn draft-v2-search-submit"
+                                    onClick={handleRefreshPlayerData}
+                                    disabled={playersLoading}
+                                >
+                                    {playersLoading ? 'Refreshing...' : 'Refresh player data'}
+                                </button>
+                                <span className="draft-v2-auction-muted">
+                                    {playerDataAsOf ? `Player data as of ${formatDataAsOf(playerDataAsOf)}.` : 'Player data refreshes from the live pool for this draft.'}
+                                </span>
+                            </div>
+                            {hasMorePlayers && (
+                                <button
+                                    type="button"
+                                    className="draft-v2-filter-btn draft-v2-search-submit"
+                                    onClick={handleLoadMore}
+                                    disabled={loadingMore}
+                                >
+                                    {loadingMore ? 'Loading...' : 'Load more players'}
+                                </button>
+                            )}
+                        </div>
                     </div>
-                    <p className="draft-v2-auction-muted">
-                        {playerDataAsOf ? `Player data as of ${formatDataAsOf(playerDataAsOf)}.` : 'Player data refreshes from the live pool for this draft.'}
-                    </p>
                     <div className="draft-v2-filter-row">
                         {/* Sort by dropdown */}
                         <div className="draft-v2-dropdown" ref={sortMenuRef}>
@@ -1289,18 +1303,6 @@ const DraftRoomScreen = () => {
                         disabled={(playersPage + 1) * PAGE_SIZE >= displayedPlayers.length}
                     >
                         Next →
-                    </button>
-                </div>
-            )}
-            {!playersLoading && !playersError && hasMorePlayers && (
-                <div className="draft-v2-load-more">
-                    <button
-                        type="button"
-                        className="draft-v2-filter-btn"
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
-                    >
-                        {loadingMore ? 'Loading...' : 'Load more players'}
                     </button>
                 </div>
             )}

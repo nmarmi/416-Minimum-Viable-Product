@@ -2331,9 +2331,20 @@ body {
   margin-bottom: 0;
 }
 
-.draft-v2-load-more {
-  text-align: center;
-  padding: 12px 0 4px;
+.draft-v2-refresh-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.draft-v2-refresh-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.draft-v2-refresh-stack .draft-v2-filter-btn {
+  width: 100%;
 }
 
 .draft-v2-filter-btn {
