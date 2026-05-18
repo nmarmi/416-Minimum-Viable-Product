@@ -358,10 +358,13 @@ const getSessionPlayers = async (req, res) => {
         let dataAsOf = null;
         let staleWarnings = [];
 
+        let apiTotal = null;
+
         if (licensedApi.hasConfig()) {
             try {
-                const data = await licensedApi.getPlayers({ search, position, team, limit: 2000 });
+                const data = await licensedApi.getPlayers({ search, position, team, limit, offset });
                 upstreamPlayers = Array.isArray(data?.players) ? data.players : [];
+                apiTotal = data?.total != null ? Number(data.total) : null;
                 dataAsOf = data?.dataAsOf || null;
                 staleWarnings = data?.staleWarnings || [];
             } catch (err) {
@@ -414,8 +417,11 @@ const getSessionPlayers = async (req, res) => {
             .filter(matchesLocalFilters)
             .map((p) => ({ ...p, isAvailable: availableSet.has(p.playerId) }));
 
-        const total = stubs.length;
-        const page = stubs.slice(offset, offset + limit);
+        // For the licensed API path, offset is already applied by the external API so
+        // stubs is the correct page — no additional slicing needed.
+        // For the db fallback path, apply server-side slicing.
+        const page = licensedApi.hasConfig() ? stubs : stubs.slice(offset, offset + limit);
+        const total = apiTotal ?? stubs.length;
 
         return res.status(200).json({
             success: true,

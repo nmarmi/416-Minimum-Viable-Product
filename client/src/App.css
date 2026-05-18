@@ -2331,6 +2331,11 @@ body {
   margin-bottom: 0;
 }
 
+.draft-v2-load-more {
+  text-align: center;
+  padding: 12px 0 4px;
+}
+
 .draft-v2-filter-btn {
   border: 1px solid #d7d9df;
   background: #f7f8fb;
