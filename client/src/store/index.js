@@ -230,8 +230,24 @@ function GlobalStoreContextProvider(props) {
         return res;
     };
 
-    store.recordPurchase = async function (draftSessionId, { playerId, playerName, teamId, price, notes }) {
-        const res = await draftSessionsRequestSender.recordPurchase(draftSessionId, { playerId, playerName, teamId, price, notes });
+    store.recordPurchase = async function (draftSessionId, {
+        playerId,
+        playerName,
+        teamId,
+        price,
+        notes,
+        nominatingTeamId,
+        mlbTeam
+    }) {
+        const res = await draftSessionsRequestSender.recordPurchase(draftSessionId, {
+            playerId,
+            playerName,
+            teamId,
+            price,
+            notes,
+            nominatingTeamId,
+            mlbTeam
+        });
         if (res.status === 200 && res.data?.success) {
             storeReducer({
                 type: GlobalStoreActionType.RECORD_PURCHASE,
