@@ -240,6 +240,7 @@ const DraftRoomScreen = () => {
     const filtersMenuRef = useRef(null);
     const playerSearchRef = useRef(null);  // US-10.4: focus target after recording purchase
     const playersRef = useRef([]);
+    const apiOffsetRef = useRef(0);
 
     const draftSession = store.currentDraftSession;
     const availablePlayerIdsKey = useMemo(
@@ -425,16 +426,20 @@ const DraftRoomScreen = () => {
         setPlayersLoading(false);
         if (res.status === 200 && res.data?.success) {
             const fetched = res.data.players || [];
+            const limit = res.data.limit || 200;
+            const total = res.data.total ?? 0;
+            apiOffsetRef.current = limit;
             setPlayers(fetched);
-            setPlayersTotal(res.data.total ?? 0);
+            setPlayersTotal(total);
             setPlayerDataAsOf(res.data.dataAsOf || null);
             setPlayersError('');
-            setHasMorePlayers(fetched.length === 200);
+            setHasMorePlayers(limit < total);
             return true;
         } else {
             setPlayersError(res.data?.errorMessage || 'Failed to load players.');
             setPlayers([]);
             setPlayersTotal(0);
+            apiOffsetRef.current = 0;
             setHasMorePlayers(false);
             return false;
         }
@@ -442,14 +447,17 @@ const DraftRoomScreen = () => {
 
     const handleLoadMore = useCallback(async () => {
         setLoadingMore(true);
-        const offset = playersRef.current.length;
+        const offset = apiOffsetRef.current;
         const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 200, offset });
         setLoadingMore(false);
         if (res.status === 200 && res.data?.success) {
             const fetched = res.data.players || [];
+            const limit = res.data.limit || 200;
+            const total = res.data.total ?? 0;
+            apiOffsetRef.current = offset + limit;
             setPlayers((prev) => [...prev, ...fetched]);
-            setPlayersTotal(res.data.total ?? 0);
-            setHasMorePlayers(fetched.length === 200);
+            setPlayersTotal(total);
+            setHasMorePlayers(offset + limit < total);
         }
     }, [fetchPlayerRows, playerSearch]);
 
