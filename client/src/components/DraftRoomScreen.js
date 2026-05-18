@@ -19,7 +19,7 @@ const MLB_TEAMS = [
     'HOU','KC','LAA','LAD','MIA','MIL','MIN','NYM','NYY','ATH',
     'PHI','PIT','SD','SEA','SF','STL','TB','TEX','TOR','WSH',
 ];
-const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Depth', 'Value', 'ADP', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
+const TABLE_HEADERS = ['Player', 'Team', 'Pos', 'Depth', 'Value', 'Age', 'HR', 'RBI', 'R', 'SB', 'AVG', 'W', 'SV', 'K', 'ERA', 'WHIP'];
 const FALLBACK_TEAMS = ['Your Team', 'Example 1', 'Example 2', 'Example 3'];
 const DRAFT_STATUS_META = {
     setup: { label: 'Setup', className: 'setup' },
@@ -358,7 +358,7 @@ const DraftRoomScreen = () => {
                 return null;
             }
             const statMap = {
-                adp: () => pickFirstDefined(p, ['adp', 'ADP']),
+                age: () => pickFirstDefined(p, ['age', 'playerAge', 'Age']),
                 hr:  () => p?.hr,
                 rbi: () => p?.rbi,
                 r:   () => p?.r,
@@ -1131,7 +1131,7 @@ const DraftRoomScreen = () => {
                                 <th><GlossaryTerm term="Position eligibility">Pos</GlossaryTerm></th>
                                 <th>Depth</th>
                                 <th className="draft-v2-th-sortable" onClick={() => handleColSort('dollar')}><GlossaryTerm term="Value">$ Value</GlossaryTerm>{sortIcon('dollar')}</th>
-                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('adp')}><GlossaryTerm term="ADP">ADP</GlossaryTerm>{sortIcon('adp')}</th>
+                                <th className="draft-v2-th-sortable" onClick={() => handleColSort('age')}>Age{sortIcon('age')}</th>
                                 <th className="draft-v2-th-sortable" onClick={() => handleColSort('hr')}>HR{sortIcon('hr')}</th>
                                 <th className="draft-v2-th-sortable" onClick={() => handleColSort('rbi')}>RBI{sortIcon('rbi')}</th>
                                 <th className="draft-v2-th-sortable" onClick={() => handleColSort('r')}>R{sortIcon('r')}</th>
@@ -1192,7 +1192,7 @@ const DraftRoomScreen = () => {
                                             </span>
                                         </td>
                                         <td>{getPlayerValuation(player)}</td>
-                                        <td>{formatStat(pickFirstDefined(player, ['adp', 'ADP']))}</td>
+                                        <td>{formatStat(pickFirstDefined(player, ['age', 'playerAge', 'Age']))}</td>
                                         <td>{formatStat(player.hr)}</td>
                                         <td>{formatStat(player.rbi)}</td>
                                         <td>{formatStat(player.r)}</td>
