@@ -461,7 +461,10 @@ const DraftRoomScreen = () => {
         const loadDraftSession = async () => {
             setSessionLoading(true);
             setSessionError('');
-            const res = await store.loadDraftSession(draftSessionId);
+            const [res] = await Promise.all([
+                store.loadDraftSession(draftSessionId),
+                store.leagues?.length ? Promise.resolve() : store.loadLeagues(),
+            ]);
             if (!res.data?.success) {
                 setSessionError(res.data?.errorMessage || 'Unable to load draft session.');
             }
