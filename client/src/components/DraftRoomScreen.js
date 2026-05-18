@@ -2471,8 +2471,9 @@ const DraftRoomScreen = () => {
 
     const draftTitle = draftSession?.name || 'Fantasy Baseball League';
     const draftStatus = getDraftStatusMeta(draftSession?.status);
+    const currentLeagueName = (store.leagues || []).find((l) => l._id === leagueId)?.name || leagueId;
     const draftSubtitle = draftSession
-        ? `${draftStatus.label} draft session for league ${leagueId}.`
+        ? `${draftStatus.label} draft session for league ${currentLeagueName}.`
         : 'Welcome back. Draft room data will appear once API integration is enabled.';
 
     // US-6.5: sidebar metrics bind to `myTeam` (explicit or fallback).
