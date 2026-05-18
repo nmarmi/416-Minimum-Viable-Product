@@ -2307,17 +2307,17 @@ const DraftRoomScreen = () => {
                                             </strong>
                                             <span className="draft-v2-auction-muted" style={{ fontSize: '0.75rem' }}>${team.budgetRemaining ?? '--'}</span>
                                         </div>
-                                        <div style={{ border: '1px solid #d5d8e1', background: '#fff' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <div style={{ border: '1px solid #d5d8e1', background: '#fff', overflow: 'hidden' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                                 <tbody>
                                                     {rows.map(({ pos, entry }, idx) => {
                                                         const tdBase = { padding: '4px 6px', borderBottom: '1px solid #edf0f6', whiteSpace: 'nowrap' };
                                                         if (!entry) {
                                                             return (
                                                                 <tr key={`${pos}-${idx}`} style={{ opacity: 0.45 }}>
-                                                                    <td style={{ ...tdBase, fontSize: '0.75rem', color: '#8892a4', fontWeight: 600, width: 36 }}>{pos}</td>
+                                                                    <td style={{ ...tdBase, fontSize: '0.75rem', color: '#8892a4', fontWeight: 600, width: 42 }}>{pos}</td>
                                                                     <td colSpan={3} style={{ ...tdBase, color: '#b0b8c8', fontSize: '0.75rem', fontStyle: 'italic' }}>—</td>
-                                                                    <td style={tdBase} />
+                                                                    <td style={{ ...tdBase, width: 28 }} />
                                                                 </tr>
                                                             );
                                                         }
@@ -2371,45 +2371,28 @@ const DraftRoomScreen = () => {
                                                                 <td style={{ ...tdBase, fontWeight: 700, fontSize: '0.8rem', color: '#16a34a' }}>
                                                                     ${h.price}
                                                                 </td>
-                                                                <td style={{ ...tdBase, padding: '3px 4px' }}>
-                                                                    {rosterTransferState?.purchaseId === h.purchaseId ? (
-                                                                        <span className="draft-v2-transfer-active">
-                                                                            <select
-                                                                                className="draft-v2-transfer-select"
-                                                                                defaultValue=""
-                                                                                onChange={async (e) => {
-                                                                                    const newTeamId = e.target.value;
-                                                                                    const oldTeamId = team.teamId;
-                                                                                    if (!newTeamId) return;
-                                                                                    const res = await store.editPurchase(draftSessionId, h.purchaseId, { newTeamId });
-                                                                                    if (res.status === 200 && res.data?.success) {
-                                                                                        pushRosterTransaction({ type: 'transferTeam', purchaseId: h.purchaseId, playerName: h.playerName, oldTeamId, newTeamId });
-                                                                                        setRosterTransferState(null);
-                                                                                    } else {
-                                                                                        showToast('error', res.data?.errorMessage || 'Could not transfer player.');
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                <option value="">Move to…</option>
-                                                                                {teams.filter((t) => t.teamId !== team.teamId).map((t) => (
-                                                                                    <option key={t.teamId} value={t.teamId}>{getTeamName(t)}</option>
-                                                                                ))}
-                                                                            </select>
-                                                                            <button
-                                                                                type="button"
-                                                                                className="draft-v2-transfer-cancel"
-                                                                                onClick={() => setRosterTransferState(null)}
-                                                                                title="Cancel"
-                                                                            >✕</button>
-                                                                        </span>
-                                                                    ) : (
-                                                                        <button
-                                                                            type="button"
-                                                                            className="draft-v2-transfer-btn"
-                                                                            onClick={() => setRosterTransferState({ purchaseId: h.purchaseId })}
-                                                                            title="Transfer to another team"
-                                                                        >⇄</button>
-                                                                    )}
+                                                                <td style={{ ...tdBase, padding: '3px 4px', width: 28 }}>
+                                                                    <select
+                                                                        className="draft-v2-transfer-btn-select"
+                                                                        value=""
+                                                                        title="Transfer to another team"
+                                                                        onChange={async (e) => {
+                                                                            const newTeamId = e.target.value;
+                                                                            const oldTeamId = team.teamId;
+                                                                            if (!newTeamId) return;
+                                                                            const res = await store.editPurchase(draftSessionId, h.purchaseId, { newTeamId });
+                                                                            if (res.status === 200 && res.data?.success) {
+                                                                                pushRosterTransaction({ type: 'transferTeam', purchaseId: h.purchaseId, playerName: h.playerName, oldTeamId, newTeamId });
+                                                                            } else {
+                                                                                showToast('error', res.data?.errorMessage || 'Could not transfer player.');
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <option value="">⇄</option>
+                                                                        {teams.filter((t) => t.teamId !== team.teamId).map((t) => (
+                                                                            <option key={t.teamId} value={t.teamId}>{getTeamName(t)}</option>
+                                                                        ))}
+                                                                    </select>
                                                                 </td>
                                                             </tr>
                                                         );
