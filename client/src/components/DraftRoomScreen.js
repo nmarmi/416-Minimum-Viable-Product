@@ -49,6 +49,7 @@ const DRAFT_STATUS_META = {
 const formatStat = (val) => (val != null && Number.isFinite(val) ? (val > 0 && val < 1 ? val.toFixed(3) : String(Math.round(val))) : '--');
 // Rate stat formatter for ERA/WHIP: always 2 decimal places (e.g. 3.40, 1.15)
 const formatRate = (val) => (val != null && Number.isFinite(val) && val > 0 ? Number(val).toFixed(2) : '--');
+const formatPitcherRate = (val) => (val != null && Number.isFinite(val) && val > 0 ? Number(val).toFixed(2) : 'N/A');
 
 const getDraftStatusMeta = (status) => {
     const normalizedStatus = String(status || 'setup').toLowerCase();
@@ -1217,8 +1218,8 @@ const DraftRoomScreen = () => {
                                         <td>{formatStat(pickFirstDefined(player, ['w', 'wins', 'W']))}</td>
                                         <td>{formatStat(pickFirstDefined(player, ['sv', 'saves', 'SV']))}</td>
                                         <td>{formatStat(player.k)}</td>
-                                        <td>{formatRate(pickFirstDefined(player, ['era', 'ERA']))}</td>
-                                        <td>{formatRate(pickFirstDefined(player, ['whip', 'WHIP']))}</td>
+                                        <td>{formatPitcherRate(pickFirstDefined(player, ['era', 'ERA']))}</td>
+                                        <td>{formatPitcherRate(pickFirstDefined(player, ['whip', 'WHIP']))}</td>
                                         <td className="draft-v2-td-compare">
                                             <button
                                                 type="button"
