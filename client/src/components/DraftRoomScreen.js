@@ -1835,21 +1835,6 @@ const DraftRoomScreen = () => {
         const totalSlots = Object.values(rosterSlots).reduce((s, n) => s + Number(n || 0), 0);
         const myTeamId = draftSession?.myTeamId;
 
-        // Build a player stats lookup from the local player array
-        const statsByPlayerId = {};
-        players.forEach((p) => { statsByPlayerId[getPlayerId(p)] = p; });
-
-        const STAT_COLS = [
-            { key: 'hr',  label: 'HR' },
-            { key: 'rbi', label: 'RBI' },
-            { key: 'r',   label: 'R' },
-            { key: 'sb',  label: 'SB' },
-            { key: 'avg', label: 'AVG' },
-            { key: 'w',   label: 'W' },
-            { key: 'sv',  label: 'SV' },
-            { key: 'k',   label: 'K' },
-        ];
-
         // Build rows: one per team
         const rows = teams.map((team) => {
             const spent = (team.purchasedPlayers || []).reduce((s, p) => s + Number(p.price || 0), 0);
@@ -1862,16 +1847,7 @@ const DraftRoomScreen = () => {
                 const val = Number(valuationsMap[p.playerId] || 0);
                 return s + val;
             }, 0);
-            const stats = {};
-            STAT_COLS.forEach(({ key }) => { stats[key] = 0; });
-            (team.purchasedPlayers || []).forEach((p) => {
-                const playerData = statsByPlayerId[p.playerId];
-                if (!playerData) return;
-                STAT_COLS.forEach(({ key }) => {
-                    stats[key] += Number(playerData[key] || 0);
-                });
-            });
-            return { team, spent, remaining, filledSlots, totalSlots, totalDollars, stats };
+            return { team, spent, remaining, filledSlots, totalSlots, totalDollars };
         });
 
         // US-23.2: sort
@@ -1883,7 +1859,7 @@ const DraftRoomScreen = () => {
             else if (field === 'remaining') { va = a.remaining; vb = b.remaining; }
             else if (field === 'slots')  { va = a.filledSlots;  vb = b.filledSlots; }
             else if (field === 'totalDollars') { va = a.totalDollars; vb = b.totalDollars; }
-            else { va = a.stats[field] ?? 0; vb = b.stats[field] ?? 0; }
+            else { va = 0; vb = 0; }
             if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
             return dir === 'asc' ? va - vb : vb - va;
         });
@@ -1911,14 +1887,11 @@ const DraftRoomScreen = () => {
                                         <th className="draft-v2-th-sortable" onClick={() => cycleSort('spent')}>Spent{sortIcon('spent')}</th>
                                         <th className="draft-v2-th-sortable" onClick={() => cycleSort('remaining')}>Budget Left{sortIcon('remaining')}</th>
                                         <th className="draft-v2-th-sortable" onClick={() => cycleSort('slots')}>Slots{sortIcon('slots')}</th>
-                                        {STAT_COLS.map(({ key, label }) => (
-                                            <th key={key} className="draft-v2-th-sortable" onClick={() => cycleSort(key)}>{label}{sortIcon(key)}</th>
-                                        ))}
                                         <th className="draft-v2-th-sortable" onClick={() => cycleSort('totalDollars')}>Total ${sortIcon('totalDollars')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sorted.map(({ team, spent, remaining, filledSlots, totalDollars, stats }) => (
+                                    {sorted.map(({ team, spent, remaining, filledSlots, totalDollars }) => (
                                         <tr key={team.teamId}
                                             className={team.teamId === myTeamId ? 'draft-v2-compare-my-team-row' : ''}
                                         >
@@ -1931,13 +1904,6 @@ const DraftRoomScreen = () => {
                                             <td>${Math.round(spent)}</td>
                                             <td>${Math.round(remaining)}</td>
                                             <td>{filledSlots}/{totalSlots}</td>
-                                            {STAT_COLS.map(({ key }) => (
-                                                <td key={key}>
-                                                    {key === 'avg'
-                                                        ? (stats[key] > 0 ? (stats[key] / Math.max(1, (team.purchasedPlayers || []).length)).toFixed(3) : '--')
-                                                        : Math.round(stats[key]) || '--'}
-                                                </td>
-                                            ))}
                                             <td><strong>${Math.round(totalDollars)}</strong></td>
                                         </tr>
                                     ))}
