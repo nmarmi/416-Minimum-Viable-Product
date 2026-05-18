@@ -2176,6 +2176,9 @@ const DraftRoomScreen = () => {
                 setTaxiPlayer(null); setTaxiSearch(''); setTaxiResults([]);
                 await store.loadDraftSession(draftSessionId);
                 showToast('success', `${getPlayerName(taxiPlayer)} → ${getTeamName(teams.find((t) => t.teamId === taxiTeamId))}`);
+                getSessionRecommendations(draftSessionId).then((r) => {
+                    if (r.status === 200 && r.data?.success) setRecommendations(r.data.recommendations || []);
+                }).catch(() => {});
             } else {
                 setTaxiWarning(res.data?.errorMessage || 'Could not record pick.');
             }
@@ -2187,6 +2190,9 @@ const DraftRoomScreen = () => {
             if (res.status === 200 && res.data?.success) {
                 await store.loadDraftSession(draftSessionId);
                 showToast('success', 'Taxi pick undone.');
+                getSessionRecommendations(draftSessionId).then((r) => {
+                    if (r.status === 200 && r.data?.success) setRecommendations(r.data.recommendations || []);
+                }).catch(() => {});
             } else {
                 showToast('error', res.data?.errorMessage || 'Could not undo pick.');
             }
