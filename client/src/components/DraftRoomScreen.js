@@ -48,7 +48,7 @@ const DRAFT_STATUS_META = {
 // Generic stat formatter: integers for counting stats, 3-decimal for sub-1 values (e.g. AVG)
 const formatStat = (val) => (val != null && Number.isFinite(val) ? (val > 0 && val < 1 ? val.toFixed(3) : String(Math.round(val))) : '--');
 // Rate stat formatter for ERA/WHIP: always 2 decimal places (e.g. 3.40, 1.15)
-const formatRate = (val) => (val != null && Number.isFinite(val) && val > 0 ? Number(val).toFixed(2) : '--');
+//const formatRate = (val) => (val != null && Number.isFinite(val) && val > 0 ? Number(val).toFixed(2) : '--'); // currently unused causes build to fail
 const formatPitcherRate = (val) => (val != null && Number.isFinite(val) && val > 0 ? Number(val).toFixed(2) : 'N/A');
 
 const getDraftStatusMeta = (status) => {
