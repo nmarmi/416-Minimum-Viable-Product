@@ -10,7 +10,7 @@ import PlayerCompareModal from './PlayerCompareModal';
 import PlayerInfoModal from './PlayerInfoModal';
 
 const DEFAULT_ROSTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'OF', 'UTIL', 'SP', 'RP'];
-const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'Compare', 'League Rosters', 'MLB Depth', 'Taxi', 'Settings'];
+const TABS = ['Players', 'Purchased', 'My Roster', 'Draft Board', 'Teams', 'League Rosters', 'MLB Depth', 'Taxi', 'Settings'];
 const POSITION_RANK = { C: 0, '1B': 1, '2B': 2, '3B': 3, SS: 4, CI: 5, MI: 6, OF: 7, UTIL: 8, U: 8, DH: 9, SP: 10, P: 11, RP: 12, BENCH: 13 };
 const POS_COLOR = {
     C:     { background: '#dbeafe', color: '#1d4ed8', borderColor: '#93c5fd' },
@@ -2474,7 +2474,6 @@ const DraftRoomScreen = () => {
         if (activeTab === 'My Roster') return renderRosterTab();
         if (activeTab === 'Draft Board') return renderDraftBoardTab();
         if (activeTab === 'Teams')   return renderTeamsTab();
-        if (activeTab === 'Compare')        return renderCompareTab();
         if (activeTab === 'League Rosters') return renderLeagueRostersTab();
         if (activeTab === 'MLB Depth')      return renderMlbDepthTab();
         if (activeTab === 'Taxi')      return renderTaxiTab();
