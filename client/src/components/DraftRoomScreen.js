@@ -422,7 +422,10 @@ const DraftRoomScreen = () => {
     const loadPlayers = useCallback(async () => {
         setPlayersLoading(true);
         setPlayersError('');
-        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 200 });
+        apiOffsetRef.current = 0;
+        const params = { search: playerSearch.trim(), limit: 200 };
+        if (positionFilter.size === 1) params.position = [...positionFilter][0];
+        const res = await fetchPlayerRows(params);
         setPlayersLoading(false);
         if (res.status === 200 && res.data?.success) {
             const fetched = res.data.players || [];
@@ -439,16 +442,17 @@ const DraftRoomScreen = () => {
             setPlayersError(res.data?.errorMessage || 'Failed to load players.');
             setPlayers([]);
             setPlayersTotal(0);
-            apiOffsetRef.current = 0;
             setHasMorePlayers(false);
             return false;
         }
-    }, [fetchPlayerRows, playerSearch]);
+    }, [fetchPlayerRows, playerSearch, positionFilter]);
 
     const handleLoadMore = useCallback(async () => {
         setLoadingMore(true);
         const offset = apiOffsetRef.current;
-        const res = await fetchPlayerRows({ search: playerSearch.trim(), limit: 200, offset });
+        const params = { search: playerSearch.trim(), limit: 200, offset };
+        if (positionFilter.size === 1) params.position = [...positionFilter][0];
+        const res = await fetchPlayerRows(params);
         setLoadingMore(false);
         if (res.status === 200 && res.data?.success) {
             const fetched = res.data.players || [];
@@ -459,7 +463,7 @@ const DraftRoomScreen = () => {
             setPlayersTotal(total);
             setHasMorePlayers(offset + limit < total);
         }
-    }, [fetchPlayerRows, playerSearch]);
+    }, [fetchPlayerRows, playerSearch, positionFilter]);
 
     useEffect(() => {
         if (draftSessionId) return;
@@ -2667,7 +2671,7 @@ const DraftRoomScreen = () => {
     const currentLeagueName = (store.leagues || []).find((l) => l._id === leagueId)?.name || leagueId;
     const draftSubtitle = draftSession
         ? `${draftStatus.label} draft session for league ${currentLeagueName}.`
-        : 'Welcome back. Draft room data will appear once API integration is enabled.';
+        : 'Welcome to DraftIQ';
 
     // US-6.5: sidebar metrics bind to `myTeam` (explicit or fallback).
     const sidebarTeam = myTeam;
